@@ -1,0 +1,119 @@
+name: Homebrew tap
+
+# Updates Formula/casebook.rb in jameskbb/homebrew-tap when a maintainer
+# publishes a release (the release workflow only drafts it, and a draft's
+# assets get public download URLs only when it is published), so `brew install jameskbb/tap/casebook`
+# installs the new version. Prereleases are skipped.
+#
+# Optional secret (repository Settings, Secrets and variables, Actions):
+#   HOMEBREW_TAP_TOKEN  a fine-grained personal access token with Contents
+#                       read and write on jameskbb/homebrew-tap only
+# Without it the job prints a notice and succeeds; the maintainer can then
+# update the tap by hand (docs/building-releases.md). The token reaches only
+# the one step that writes to the tap, through the GitHub CLI, so no
+# third-party action ever holds it.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish to the tap, for example v1.2.3"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homebrew-tap
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  formula:
+    name: Update the formula
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+      TAP_REPO: jameskbb/homebrew-tap
+    steps:
+      - name: Tap update skipped
+        if: env.HAS_TAP_TOKEN != 'true'
+        run: echo "::notice::Homebrew tap update skipped (HOMEBREW_TAP_TOKEN is not set); update Formula/casebook.rb in jameskbb/homebrew-tap by hand, see docs/building-releases.md"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAS_TAP_TOKEN == 'true'
+        with:
+          persist-credentials: false
+
+      # Tag names reach the shell only through env.
+      - name: Resolve the release
+        id: rel
+        if: env.HAS_TAP_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            tag="$EVENT_TAG"
+          else
+            tag="$INPUT_TAG"
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "error: '$tag' is not a release tag" >&2
+            exit 1
+          fi
+          info="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease --jq '"\(.isDraft) \(.isPrerelease)"')"
+          skip=false
+          case "$info" in
+            "false false") ;;
+            "true "*)
+              echo "::notice::$tag is still a draft; publish it first"
+              skip=true
+              ;;
+            *)
+              echo "::notice::$tag is a prerelease; the tap tracks stable releases only"
+              skip=true
+              ;;
+          esac
+          {
+            echo "tag=$tag"
+            echo "skip=$skip"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Render the formula
+        if: env.HAS_TAP_TOKEN == 'true' && steps.rel.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS.txt --dir "$RUNNER_TEMP/release"
+          scripts/render-homebrew-formula.sh --version "$TAG" --sums "$RUNNER_TEMP/release/SHA256SUMS.txt" \
+            --out "$RUNNER_TEMP/casebook.rb"
+          cat "$RUNNER_TEMP/casebook.rb"
+
+      # One commit through the contents API: no clone, and the token never
+      # lands in a git config file.
+      - name: Commit the formula to the tap
+        if: env.HAS_TAP_TOKEN == 'true' && steps.rel.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          path=Formula/casebook.rb
+          sha="$(gh api "repos/$TAP_REPO/contents/$path" --jq .sha 2>/dev/null || true)"
+          args=(-X PUT "repos/$TAP_REPO/contents/$path"
+            -f "message=casebook $TAG"
+            -f "content=$(base64 -w0 "$RUNNER_TEMP/casebook.rb")")
+          if [ -n "$sha" ]; then
+            args+=(-f "sha=$sha")
+          fi
+          gh api "${args[@]}" --jq '.commit.html_url'

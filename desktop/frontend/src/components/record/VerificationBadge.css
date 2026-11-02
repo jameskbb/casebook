@@ -1,0 +1,27 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-regular);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.badge-icon {
+  flex: none;
+}
+
+.badge-verified .badge-icon {
+  color: var(--claim);
+}
+
+.badge-ai .badge-icon {
+  color: var(--ink-muted);
+}
+
+.badge-disputed {
+  color: var(--disputed);
+  font-weight: var(--weight-semibold);
+}

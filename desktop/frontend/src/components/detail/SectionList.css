@@ -1,0 +1,133 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+}
+
+.section-icon {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.section-evidence .section-icon {
+  color: var(--evidence);
+}
+
+.section-claim .section-icon {
+  color: var(--claim);
+}
+
+.section-hypothesis .section-icon {
+  color: var(--hypothesis);
+}
+
+.section-question .section-icon {
+  color: var(--question);
+}
+
+.section-heading {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.section-add {
+  flex: none;
+  margin-right: calc(-1 * var(--space-2));
+}
+
+.section-rows {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+.section-rows > li {
+  border-bottom: 1px solid var(--rule);
+}
+
+.section-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.section-empty-text {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-muted);
+}
+
+/* Rows already provide the top gap; the disclosure sits right under them. */
+.section-ruled-out {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.section-disclosure {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--icon-button);
+  padding: 0 var(--space-2);
+  margin-left: calc(-1 * var(--space-2));
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.section-disclosure:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.section-disclosure-icon {
+  flex: none;
+  transition: transform var(--duration-hover) ease-out;
+}
+
+.section-disclosure-icon.is-open {
+  transform: rotate(180deg);
+}
+
+/* A short list above a section's own rows (Still open: Explanations still
+   open, then the questions). */
+.section-lead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.section-subheading {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
+/* A subheading directly above the section's own rows (Still open's
+   Questions, under the open explanations). */
+.section-subheading-rows {
+  margin-bottom: var(--space-2);
+}

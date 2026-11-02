@@ -1,0 +1,18 @@
+/* Check for updates (ADR 0022): a short status line and up to four footer
+   buttons, which wrap rather than overflow on a narrow window. */
+.update-dialog .dialog-footer {
+  flex-wrap: wrap;
+}
+
+.update-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.update-error {
+  color: var(--disputed);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  overflow-wrap: anywhere;
+}

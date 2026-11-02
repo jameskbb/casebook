@@ -1,0 +1,14 @@
+{
+  "title": "CSV export drops the last order of each page (control: a quick fix that needs no case)",
+  "kind": "control",
+  "sessions": [
+    "Customers say the orders CSV export is missing some orders. Can you find out why and fix it?"
+  ],
+  "root_cause": "(size - 1|size-1|off.by.one|end index|last (item|order))",
+  "ruled_out": "",
+  "fixed_check": {
+    "file": "internal/export/export.go",
+    "absent": "size - 1"
+  },
+  "redo_patterns": ""
+}

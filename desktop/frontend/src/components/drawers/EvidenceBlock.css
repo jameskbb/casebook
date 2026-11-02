@@ -1,0 +1,109 @@
+/* A linked piece of evidence in a claim or hypothesis drawer: the evidence
+   kind rule on the left, no card and no shadow; the whole block opens the
+   evidence drawer. */
+.evidence-block {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.evidence-block:hover {
+  background: var(--surface-hover);
+}
+
+.evidence-block-hit {
+  border-radius: inherit;
+}
+
+.evidence-block-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  pointer-events: none;
+}
+
+.evidence-block-line,
+.evidence-block-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.evidence-block-ref {
+  color: var(--ink-muted);
+}
+
+.evidence-block-title {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.evidence-block-summary {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.evidence-block-source {
+  color: var(--ink-muted);
+}
+
+.evidence-block-source > span {
+  overflow-wrap: anywhere;
+}
+
+/* References are plain selectable text, never links: clicks on them select
+   text instead of opening the drawer. */
+.evidence-block-reference {
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+  pointer-events: auto;
+}
+
+.evidence-block-captured {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+.evidence-block-captured-label {
+  font-weight: var(--weight-semibold);
+}
+
+.evidence-block-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0 var(--space-4) var(--space-2) var(--space-2);
+}
+
+.evidence-block-actions .btn-ghost {
+  color: var(--ink-muted);
+}
+
+.evidence-block-actions .btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.evidence-block-actions:empty {
+  display: none;
+}

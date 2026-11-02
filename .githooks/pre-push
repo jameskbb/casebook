@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Runs the full local test suite before any push that updates main, so a red
+# commit never lands there. It is the local gate in front of CI, which runs
+# after the push; the release workflow reruns CI before it builds anything.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip in an emergency:    CASEBOOK_SKIP_PREPUSH=1 git push ...
+set -euo pipefail
+
+[ "${CASEBOOK_SKIP_PREPUSH:-}" = 1 ] && exit 0
+
+pushes_main=false
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = refs/heads/main ] && [ "$local_sha" != 0000000000000000000000000000000000000000 ]; then
+    pushes_main=true
+  fi
+done
+$pushes_main || exit 0
+
+cd "$(git rev-parse --show-toplevel)"
+for tool in go npm; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "pre-push: $tool is not on PATH, so the tests cannot run; fix PATH or set CASEBOOK_SKIP_PREPUSH=1" >&2
+    exit 1
+  fi
+done
+echo "pre-push: running the test suite before updating main" >&2
+CGO_ENABLED=0 go vet ./...
+CGO_ENABLED=0 go test -count=1 ./...
+npm --prefix desktop/frontend test -- --run
+bash scripts/test-scripts.sh
+bash scripts/check-docs.sh
+echo "pre-push: all checks passed" >&2

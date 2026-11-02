@@ -1,0 +1,167 @@
+/* Evidence drawer body. */
+.evidence-head {
+  gap: var(--space-2);
+}
+
+.evidence-drawer-title {
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.evidence-drawer-title.is-retired {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.evidence-drawer-summary {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* Source: label above value on narrow drawers, side by side otherwise. */
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.source-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  column-gap: var(--space-4);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.source-row dt {
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.source-row dd {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Paths, URLs and ticket keys: selectable plain text that wraps anywhere. */
+.source-reference {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* Raw detail and metadata: the one monospace use (preformatted source
+   content), capped so a 64 KiB value scrolls inside the block. */
+.raw-detail {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-code);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.disclosure-button .btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.disclosure-icon {
+  flex: none;
+  transition: transform var(--duration-hover) ease-out;
+}
+
+.disclosure-icon.is-open {
+  transform: rotate(180deg);
+}
+
+/* Used by: one button per claim or hypothesis, with its kind rule. */
+.used-by-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.used-by-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: transparent;
+  text-align: left;
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.used-by-item:hover {
+  background: var(--surface-hover);
+}
+
+.used-by-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.used-by-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.used-by-ref {
+  color: var(--ink-muted);
+}
+
+.used-by-relation {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.used-by-minus {
+  color: var(--disputed);
+}
+
+.used-by-status {
+  color: var(--ink-muted);
+}
+
+.used-by-statement.is-retired {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.used-by-statement {
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.evidence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

@@ -1,0 +1,1018 @@
+name: Release
+
+# Builds the Windows and macOS release assets from one stamped version,
+# checksums them and, for a v* tag push only, attaches them to a draft
+# GitHub release that a maintainer reviews and publishes by hand.
+#
+# Assets (docs/building-releases.md and the README rely on these names):
+#   Casebook-<version>-windows-amd64-portable.zip
+#   Casebook-<version>-windows-arm64-portable.zip
+#                                               portable: Casebook.exe,
+#                                               bin/casebook.exe and README.txt
+#                                               (the primary Windows asset)
+#   Casebook-<version>-windows-amd64-installer.exe
+#   Casebook-<version>-windows-arm64-installer.exe
+#   Casebook-<version>-macos-universal.dmg      Casebook.app with Contents/MacOS/bin/casebook
+#   casebook-cli-<version>-linux-amd64.tar.gz   CLI only: casebook, LICENSE and
+#   casebook-cli-<version>-linux-arm64.tar.gz   THIRD_PARTY_NOTICES.txt, flat
+#   casebook-cli-<version>-darwin-amd64.tar.gz  (scripts/install.sh and the
+#   casebook-cli-<version>-darwin-arm64.tar.gz  Homebrew formula use these)
+#   casebook-cli-<version>-windows-amd64.zip    CLI only: casebook.exe, LICENSE
+#   casebook-cli-<version>-windows-arm64.zip    and THIRD_PARTY_NOTICES.txt
+#   THIRD_PARTY_NOTICES.txt                     license texts of every bundled
+#                                               Go module and npm package
+#   SHA256SUMS.txt                              sha256sum of the twelve files above
+#
+# The authoritative list is RELEASE_ASSETS below: the checksums job
+# requires exactly those files and the publish job writes the release
+# body's "Which file do I need?" table from the same lines, so a renamed
+# asset cannot drift between the two.
+#
+# The portable zips and Casebook.app (Contents/Resources) also carry LICENSE
+# and THIRD_PARTY_NOTICES.txt. The darwin CLI archives hold the arm64 and
+# x86_64 slices of the signed (and, with the secrets, notarized) universal
+# CLI from Casebook.app; the windows CLI zips hold the signed bin/casebook.exe.
+#
+# The layout follows docs/decisions/0012-cli-placement.md. A workflow_dispatch
+# run is a dry run: it builds everything and uploads the release-bundle
+# artifact but never creates a release.
+#
+# Optional signing secrets (repository Settings, Secrets and variables,
+# Actions). Each group runs only when all of its secrets are set; otherwise
+# the job prints a notice and the release still succeeds unsigned.
+# docs/building-releases.md documents them.
+#   WINDOWS_CERT_PFX_BASE64  base64 of the Windows code signing .pfx
+#   WINDOWS_CERT_PASSWORD    password of that .pfx
+#   APPLE_CERT_P12_BASE64    base64 of the Developer ID Application .p12
+#   APPLE_CERT_PASSWORD      password of that .p12
+#   APPLE_SIGNING_IDENTITY   identity name, for example
+#                            "Developer ID Application: Name (TEAMID)"
+#   APPLE_ID                 Apple ID email used for notarization
+#   APPLE_APP_PASSWORD       app-specific password for that Apple ID
+#   APPLE_TEAM_ID            Apple Developer Team ID
+# Secret values appear only in the env block of the one step that needs
+# them; job env carries only HAS_* flags, because the build steps run npm
+# lifecycle scripts and other third-party code. Never enable xtrace in a
+# step that holds a secret.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp for a dry run, for example v0.0.0-dryrun.1; empty means git describe"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Release mode for every script: a missing track (cmd/casebook or desktop/)
+  # fails the run instead of shipping a partial product.
+  CASEBOOK_RELEASE: "1"
+  # The twelve release assets besides SHA256SUMS.txt, one per line, as
+  # group|file|what it is. @V@ stands for the version. The checksums job
+  # requires exactly these files; the publish job turns the desktop and cli
+  # lines, in this order, into the release body's download table. The text
+  # is Markdown and is mirrored in docs/install.md ("Which file do I need?").
+  RELEASE_ASSETS: |
+    desktop|Casebook-@V@-windows-amd64-portable.zip|Windows, most PCs (64-bit Intel or AMD). Portable (recommended). Not sure? Take this one. Unzip and run `Casebook.exe`; nothing to install, and your data lives in `%LocalAppData%\Casebook` either way. Includes the command line tool at `bin\casebook.exe`.
+    desktop|Casebook-@V@-windows-arm64-portable.zip|The same portable zip for Windows on Arm.
+    desktop|Casebook-@V@-windows-amd64-installer.exe|Windows, most PCs (64-bit Intel or AMD). Installer: Start menu entry, uninstaller, optional PATH entry. The same app and command line tool.
+    desktop|Casebook-@V@-windows-arm64-installer.exe|The same installer for Windows on Arm.
+    desktop|Casebook-@V@-macos-universal.dmg|macOS 11 or later, Apple Silicon and Intel. Drag to Applications. The command line tool is inside the app.
+    cli|casebook-cli-@V@-linux-amd64.tar.gz|Linux, 64-bit Intel or AMD. `scripts/install.sh` downloads this for you.
+    cli|casebook-cli-@V@-linux-arm64.tar.gz|The same for Linux on 64-bit Arm.
+    cli|casebook-cli-@V@-darwin-arm64.tar.gz|macOS, Apple Silicon. `scripts/install.sh` downloads this for you.
+    cli|casebook-cli-@V@-darwin-amd64.tar.gz|The same for Intel Macs.
+    cli|casebook-cli-@V@-windows-amd64.zip|Windows, 64-bit Intel or AMD: `casebook.exe` alone, no desktop app.
+    cli|casebook-cli-@V@-windows-arm64.zip|Windows on Arm: `casebook.exe` alone, no desktop app.
+    notices|THIRD_PARTY_NOTICES.txt|the license texts of everything Casebook bundles; the same file is inside every download.
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # The full CI suite (Go on Linux, Windows and macOS, the race detector,
+  # frontend, scripts and docs) must pass on the tagged commit before
+  # anything is built.
+  tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    name: Version
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      numeric: ${{ steps.v.outputs.numeric }}
+      commit: ${{ steps.v.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Release preflight
+        run: scripts/preflight.sh --release
+
+      # Tag names and dispatch inputs reach the shell only through env.
+      # scripts/version.sh rejects anything outside [0-9A-Za-z._+-] (exit 2).
+      # A release version must not contain +: the version is part of every
+      # asset name, and GitHub renames uploaded assets with special
+      # characters, which would break SHA256SUMS.txt.
+      - name: Resolve version
+        id: v
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          tag_re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          if [ "$EVENT_NAME" = "push" ] && [ "$REF_TYPE" = "tag" ]; then
+            if ! [[ "$REF_NAME" =~ $tag_re ]]; then
+              echo "error: tag $REF_NAME is not a release tag (expected vMAJOR.MINOR.PATCH with an optional -prerelease suffix; +build metadata is not allowed)" >&2
+              exit 1
+            fi
+            CASEBOOK_VERSION="$REF_NAME"
+          elif [ -n "$INPUT_VERSION" ]; then
+            CASEBOOK_VERSION="$INPUT_VERSION"
+          else
+            CASEBOOK_VERSION=""
+          fi
+          export CASEBOOK_VERSION
+          version="$(scripts/version.sh version)"
+          if [[ "$version" == *+* ]]; then
+            echo "error: version $version contains +, which GitHub rewrites in release asset names" >&2
+            exit 1
+          fi
+          numeric="$(scripts/version.sh numeric)"
+          commit="$(scripts/version.sh commit)"
+          {
+            echo "version=$version"
+            echo "numeric=$numeric"
+            echo "commit=$commit"
+          } >>"$GITHUB_OUTPUT"
+          echo "version: $version (numeric $numeric, commit $commit)"
+
+      # No release ships with placeholder documentation: FINALIZE(phase 6)
+      # markers or a missing track file fail here, before anything builds.
+      # For a stable tag the check also needs CHANGELOG.md, desktop/wails.json
+      # and the frontend package to carry that version (check 7 in
+      # scripts/check-docs.sh); a prerelease or dry run skips that part.
+      - name: Release docs check
+        env:
+          CASEBOOK_VERSION: ${{ steps.v.outputs.version }}
+        run: scripts/check-docs.sh --release
+
+  # docs/decisions/0011-license.md: binary releases carry the license texts
+  # of everything they bundle. One file covers both executables; every build
+  # job downloads it, and it is also a release asset of its own.
+  notices:
+    name: License notices
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # The same locked install the build jobs and the CI frontend job use;
+      # no dependency install script runs.
+      - name: Install the frontend dependencies
+        working-directory: desktop/frontend
+        run: npm ci --ignore-scripts
+
+      - name: Write THIRD_PARTY_NOTICES.txt
+        run: |
+          if [ ! -f LICENSE ]; then
+            echo "error: LICENSE is missing at the repository root; a release ships its license" >&2
+            exit 1
+          fi
+          go mod download
+          scripts/third-party-notices.sh --release --out dist/notices/THIRD_PARTY_NOTICES.txt
+          grep -E '^(Go module|npm package|Go standard library)' dist/notices/THIRD_PARTY_NOTICES.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: casebook-third-party-notices
+          path: dist/notices/THIRD_PARTY_NOTICES.txt
+          if-no-files-found: error
+          retention-days: 3 # read by later jobs in this run (and a re-run of failed jobs); release-bundle is the copy to keep
+
+  # The Linux CLI archives. Linux has no desktop package: the CLI with its
+  # MCP server is the whole product there. CGO-free, so it cross-compiles.
+  cli-linux:
+    name: CLI (linux)
+    needs: [version, notices]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CASEBOOK_VERSION: ${{ needs.version.outputs.version }}
+      CASEBOOK_COMMIT: ${{ needs.version.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: casebook-third-party-notices
+          path: dist/notices
+
+      - name: Build and package the Linux CLI
+        run: |
+          for arch in amd64 arm64; do
+            scripts/build-cli.sh --release --os linux --arch "$arch" --out "dist/linux-$arch/casebook"
+            scripts/package-cli.sh --release --os linux --arch "$arch" --bin "dist/linux-$arch/casebook" \
+              --notices dist/notices/THIRD_PARTY_NOTICES.txt --out dist/out
+          done
+          out="$(dist/linux-amd64/casebook --version)"
+          if ! grep -F -q -- "$CASEBOOK_VERSION" <<<"$out"; then
+            echo "error: casebook --version printed '$out', not $CASEBOOK_VERSION" >&2
+            exit 1
+          fi
+          echo "ok: casebook --version printed: $out"
+          for arch in amd64 arm64; do
+            have="$(tar -tzf "dist/out/casebook-cli-$CASEBOOK_VERSION-linux-$arch.tar.gz" | LC_ALL=C sort)"
+            want="$(printf '%s\n' LICENSE THIRD_PARTY_NOTICES.txt casebook | LC_ALL=C sort)"
+            if [ "$have" != "$want" ]; then
+              echo "error: the linux-$arch CLI archive does not hold exactly casebook, LICENSE and THIRD_PARTY_NOTICES.txt" >&2
+              exit 1
+            fi
+          done
+          ls -l dist/out
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: casebook-cli-linux
+          path: dist/out/*
+          if-no-files-found: error
+          retention-days: 3 # read by later jobs in this run (and a re-run of failed jobs); release-bundle is the copy to keep
+
+  windows:
+    name: Windows (${{ matrix.arch }})
+    needs: [version, notices]
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    defaults:
+      run:
+        shell: bash
+    env:
+      CASEBOOK_VERSION: ${{ needs.version.outputs.version }}
+      CASEBOOK_COMMIT: ${{ needs.version.outputs.commit }}
+      CASEBOOK_NUMERIC_VERSION: ${{ needs.version.outputs.numeric }}
+      ARCH: ${{ matrix.arch }}
+      HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERT_PFX_BASE64 != '' && secrets.WINDOWS_CERT_PASSWORD != '' }}
+    steps:
+      # Git on Windows runners converts checkouts to CRLF by default, which
+      # breaks the bash scripts and changes file bytes. .gitattributes already
+      # forces LF; this also covers any file type it does not list.
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Release preflight
+        run: scripts/preflight.sh --release
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: casebook-third-party-notices
+          path: dist/notices
+
+      # Same Wails version as go.mod; the Go checksum database pins it.
+      - name: Install the Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+
+      # windows-2022 images shipped NSIS; windows-2025 does not, so NSIS is
+      # installed here. First choice is the pinned Chocolatey package
+      # (community packages are immutable once approved). The Chocolatey feed
+      # answers 503 and 504 now and then (the v0.4.0 release lost both
+      # Windows jobs to an outage), so after two attempts the step falls back
+      # to the official NSIS 3.11 zip from SourceForge, checked against the
+      # SHA-256 of the file SourceForge publishes (its MD5 listing agrees:
+      # b7c063bee3afc8127dca0fd64c4e22ce). The zip is the portable layout:
+      # makensis.exe at its root finds Stubs, Include and Plugins beside it.
+      - name: Ensure NSIS
+        shell: pwsh
+        env:
+          NSIS_ZIP_URL: https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip
+          NSIS_ZIP_SHA256: c7d27f780ddb6cffb4730138cd1591e841f4b7edb155856901cdf5f214394fa1
+        run: |
+          if (Get-Command makensis -ErrorAction SilentlyContinue) {
+            Write-Host "makensis is on the runner image"
+            exit 0
+          }
+          $rc = 1
+          foreach ($attempt in 1, 2) {
+            choco install nsis --version 3.11.0 -y --no-progress
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { break }
+            Write-Host "choco install nsis failed with exit code $rc (attempt $attempt of 2)"
+            if ($attempt -lt 2) { Start-Sleep -Seconds 15 }
+          }
+          if ($rc -eq 0) {
+            Add-Content -Path $env:GITHUB_PATH -Value (Join-Path ${env:ProgramFiles(x86)} 'NSIS')
+            exit 0
+          }
+          Write-Host "Chocolatey is unavailable; installing NSIS 3.11 from the official zip"
+          $zip = Join-Path $env:RUNNER_TEMP 'nsis-3.11.zip'
+          Invoke-WebRequest -Uri $env:NSIS_ZIP_URL -OutFile $zip -MaximumRetryCount 3 -RetryIntervalSec 15
+          $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($got -ne $env:NSIS_ZIP_SHA256) {
+            throw "nsis-3.11.zip SHA-256 is $got, expected $env:NSIS_ZIP_SHA256"
+          }
+          $dest = Join-Path $env:RUNNER_TEMP 'nsis'
+          Expand-Archive -LiteralPath $zip -DestinationPath $dest -Force
+          $bin = Join-Path $dest 'nsis-3.11'
+          if (-not (Test-Path -LiteralPath (Join-Path $bin 'makensis.exe'))) {
+            throw "makensis.exe is not at $bin after extracting the zip"
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+
+      # Wails prints a warning and exits 0 when makensis is missing, so check
+      # for it here where a failure is explicit.
+      - name: Check makensis
+        shell: pwsh
+        run: makensis /VERSION
+
+      # Runner-only edit, never committed: the exe version resource, the NSIS
+      # VIProductVersion (numeric x.y.z) and the macOS bundle version follow
+      # the release version. frontend:install becomes npm ci --ignore-scripts,
+      # so wails build installs exactly the lockfile that the CI frontend job
+      # tested (the Wails default, npm install, may resolve differently and
+      # rewrite it) and no dependency lifecycle script runs on the runner that
+      # later signs the binaries. The only first-party script, the
+      # node_modules go.mod fence, is not needed here: nothing in this job
+      # runs a ./... Go pattern after the frontend install.
+      - name: Set the product version and frontend install command
+        run: |
+          if ! [[ "$CASEBOOK_NUMERIC_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "error: numeric version '$CASEBOOK_NUMERIC_VERSION' is not MAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            const file = "desktop/wails.json";
+            const cfg = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (cfg.info === undefined || cfg.info === null) cfg.info = {};
+            cfg.info.productVersion = process.env.CASEBOOK_NUMERIC_VERSION;
+            cfg["frontend:install"] = "npm ci --ignore-scripts";
+            fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n");
+          '
+          echo "desktop/wails.json info.productVersion: $CASEBOOK_NUMERIC_VERSION, frontend:install: npm ci --ignore-scripts"
+
+      - name: Build the CLI
+        run: |
+          scripts/build-cli.sh --release --os windows --arch "$ARCH" --out dist/stage/bin/casebook.exe
+          echo "CASEBOOK_CLI_BINARY=$(cygpath -w "$PWD/dist/stage/bin/casebook.exe")" >>"$GITHUB_ENV"
+
+      # project.nsi needs CASEBOOK_CLI_BINARY (set above) to install
+      # bin\casebook.exe next to Casebook.exe. Wails keeps a project.nsi that
+      # already exists and regenerates wails_tools.nsh on every build.
+      - name: Install the NSIS customization
+        run: |
+          mkdir -p desktop/build/windows/installer
+          cp -f packaging/windows/* desktop/build/windows/installer/
+          ls -l desktop/build/windows/installer
+
+      # -buildvcs=false keeps the tag's VCS version out of the build
+      # information, so only the -X stamp can put the version marker in.
+      - name: Build the desktop app and installer
+        working-directory: desktop
+        env:
+          GOFLAGS: -buildvcs=false
+        run: |
+          ldflags="$(../scripts/version.sh ldflags)"
+          wails build -clean -m -nosyncgomod -trimpath -nsis -platform "windows/$ARCH" -ldflags "$ldflags"
+
+      - name: Check build outputs
+        run: |
+          if [ ! -f desktop/build/bin/Casebook.exe ]; then
+            echo "error: desktop/build/bin/Casebook.exe was not built" >&2
+            exit 1
+          fi
+          shopt -s nullglob
+          installers=(desktop/build/bin/*-installer.exe)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "error: expected exactly one desktop/build/bin/*-installer.exe, found ${#installers[@]}; makensis output was missing" >&2
+            exit 1
+          fi
+          echo "installer: ${installers[0]}"
+          # The build must not rewrite the module files or the lockfile.
+          git diff --exit-code -- go.mod go.sum desktop/frontend/package-lock.json
+
+      # docs/decisions/0012-cli-placement.md: the GUI and the CLI are two
+      # different files, and both carry the release version (PKG-06). The
+      # stamp check looks for the marker casebook-version=<version>, which
+      # only the -X flags produce; the bare version string can also come
+      # from Go's build information (VCS tag, dependency versions).
+      - name: Stage and check the executables
+        run: |
+          gui=dist/stage/Casebook.exe
+          cli=dist/stage/bin/casebook.exe
+          marker="$(scripts/version.sh marker)"
+          cp -f desktop/build/bin/Casebook.exe "$gui"
+          for f in "$gui" "$cli"; do
+            if [ ! -f "$f" ]; then
+              echo "error: $f is missing" >&2
+              exit 1
+            fi
+          done
+          # The full ADR-0012 guard, as in scripts/build-windows.sh and
+          # scripts/package-macos.sh: not the same file, not paths that
+          # differ only by case, not identical contents.
+          if [ "$gui" -ef "$cli" ]; then
+            echo "error: $gui and $cli are the same file; see docs/decisions/0012-cli-placement.md" >&2
+            exit 1
+          fi
+          if [ "$(printf '%s' "$gui" | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$cli" | tr '[:upper:]' '[:lower:]')" ]; then
+            echo "error: $gui and $cli differ only by case; see docs/decisions/0012-cli-placement.md" >&2
+            exit 1
+          fi
+          if cmp -s "$gui" "$cli"; then
+            echo "error: $gui and $cli are identical; see docs/decisions/0012-cli-placement.md" >&2
+            exit 1
+          fi
+          for f in "$gui" "$cli"; do
+            if ! grep -a -F -q -- "$marker" "$f"; then
+              echo "error: $f does not contain the stamp marker $marker (is internal/version linked and stamped?)" >&2
+              exit 1
+            fi
+            echo "ok: $f carries $marker"
+          done
+          # Only the amd64 CLI runs on this runner.
+          if [ "$ARCH" = "amd64" ]; then
+            reported=0
+            for arg in --version version; do
+              if out="$("$cli" "$arg" 2>&1)" && grep -F -q -- "$CASEBOOK_VERSION" <<<"$out"; then
+                echo "ok: casebook.exe $arg printed: $out"
+                reported=1
+                break
+              fi
+            done
+            if [ "$reported" -ne 1 ]; then
+              echo "error: neither 'casebook.exe --version' nor 'casebook.exe version' printed $CASEBOOK_VERSION" >&2
+              exit 1
+            fi
+          fi
+
+      # Sign both executables, rebuild the installer from the signed files
+      # (CASEBOOK_CLI_BINARY already points at dist/stage/bin/casebook.exe),
+      # then sign the installer.
+      - name: Sign Windows executables and installer
+        if: env.HAS_WINDOWS_CERT == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'casebook-signing.pfx'
+          try {
+            [System.IO.File]::WriteAllBytes($pfx, [System.Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+
+            $kits = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
+            $signtool = Get-ChildItem -Path $kits -Recurse -Filter 'signtool.exe' -File -ErrorAction SilentlyContinue |
+              Where-Object { $_.Directory.Name -eq 'x64' } |
+              Sort-Object -Descending -Property @{ Expression = {
+                $v = $null
+                if ([System.Version]::TryParse($_.Directory.Parent.Name, [ref]$v)) { $v } else { [System.Version]'0.0' }
+              } } |
+              Select-Object -First 1
+            if (-not $signtool) { throw "no x64 signtool.exe under $kits" }
+            $signtoolPath = $signtool.FullName
+            Write-Output "signtool: $signtoolPath"
+
+            function Invoke-Sign([string]$File) {
+              & $signtoolPath sign /f $pfx /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $File
+              if ($LASTEXITCODE -ne 0) { throw "signtool sign failed for $File" }
+            }
+
+            $gui = (Resolve-Path 'dist/stage/Casebook.exe').Path
+            $cli = (Resolve-Path 'dist/stage/bin/casebook.exe').Path
+            Invoke-Sign $gui
+            Invoke-Sign $cli
+
+            Get-ChildItem -Path 'desktop/build/bin' -Filter '*-installer.exe' | Remove-Item -Force
+            $define = "-DARG_WAILS_$($env:ARCH.ToUpperInvariant())_BINARY=$gui"
+            Push-Location 'desktop/build/windows/installer'
+            try {
+              & makensis $define 'project.nsi'
+              if ($LASTEXITCODE -ne 0) { throw "makensis failed with exit code $LASTEXITCODE" }
+            }
+            finally {
+              Pop-Location
+            }
+            $installers = @(Get-ChildItem -Path 'desktop/build/bin' -Filter '*-installer.exe')
+            if ($installers.Count -ne 1) { throw "expected exactly one rebuilt installer, found $($installers.Count)" }
+            $installer = $installers[0].FullName
+            Invoke-Sign $installer
+
+            foreach ($f in @($gui, $cli, $installer)) {
+              & $signtoolPath verify /pa $f
+              if ($LASTEXITCODE -ne 0) { throw "signtool verify failed for $f" }
+            }
+          }
+          finally {
+            if (Test-Path -LiteralPath $pfx) { Remove-Item -LiteralPath $pfx -Force }
+          }
+
+      - name: Windows signing skipped
+        if: env.HAS_WINDOWS_CERT != 'true'
+        run: echo "::notice::Windows signing skipped (WINDOWS_CERT_PFX_BASE64 and WINDOWS_CERT_PASSWORD are not both set); the executables and installer are unsigned"
+
+      - name: Remove signing material
+        if: always()
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'casebook-signing.pfx'
+          if (Test-Path -LiteralPath $pfx) { Remove-Item -LiteralPath $pfx -Force }
+
+      - name: Package the zip and installer
+        run: |
+          if ! command -v 7z >/dev/null 2>&1; then
+            echo "error: 7z is not on PATH (7-Zip is expected on windows runners)" >&2
+            exit 1
+          fi
+          shopt -s nullglob
+          installers=(desktop/build/bin/*-installer.exe)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "error: expected exactly one desktop/build/bin/*-installer.exe, found ${#installers[@]}" >&2
+            exit 1
+          fi
+          # README.txt explains the portable folder (data location, how to
+          # update); it gets the version and CRLF line endings for Notepad.
+          sed -e "s|@VERSION@|$CASEBOOK_VERSION|g" -e 's/$/\r/' packaging/windows/README.txt >dist/stage/README.txt
+          if grep -q '@VERSION@' dist/stage/README.txt; then
+            echo "error: dist/stage/README.txt still holds the @VERSION@ placeholder" >&2
+            exit 1
+          fi
+          # ADR 0011: the license and the third-party notices travel with
+          # the binaries.
+          cp -f LICENSE dist/stage/LICENSE
+          cp -f dist/notices/THIRD_PARTY_NOTICES.txt dist/stage/THIRD_PARTY_NOTICES.txt
+          mkdir -p dist/out
+          zip="Casebook-$CASEBOOK_VERSION-windows-$ARCH-portable.zip"
+          (cd dist/stage && 7z a -tzip "../out/$zip" Casebook.exe bin README.txt LICENSE THIRD_PARTY_NOTICES.txt)
+          7z l "dist/out/$zip"
+          # The zip holds exactly the portable layout (ADR-0012 plus
+          # README.txt and the license files). The first Path line is the
+          # archive itself; the bin directory entry is dropped and \134 (a
+          # backslash) becomes /.
+          have="$(7z l -slt "dist/out/$zip" | tr -d '\r' | sed -n 's/^Path = //p' | tail -n +2 | tr '\134' '/' | grep -v -x 'bin' | LC_ALL=C sort)"
+          want="$(printf '%s\n' Casebook.exe README.txt LICENSE THIRD_PARTY_NOTICES.txt bin/casebook.exe | LC_ALL=C sort)"
+          if [ "$have" != "$want" ]; then
+            echo "error: $zip does not hold exactly Casebook.exe, bin/casebook.exe, README.txt, LICENSE and THIRD_PARTY_NOTICES.txt" >&2
+            diff <(printf '%s\n' "$want") <(printf '%s\n' "$have") >&2 || true
+            exit 1
+          fi
+          cp -f "${installers[0]}" "dist/out/Casebook-$CASEBOOK_VERSION-windows-$ARCH-installer.exe"
+          # The CLI-only zip, from the same (signed when the secrets exist)
+          # bin/casebook.exe.
+          scripts/package-cli.sh --release --os windows --arch "$ARCH" --bin dist/stage/bin/casebook.exe \
+            --notices dist/notices/THIRD_PARTY_NOTICES.txt --out dist/out
+          cli_zip="casebook-cli-$CASEBOOK_VERSION-windows-$ARCH.zip"
+          have="$(7z l -slt "dist/out/$cli_zip" | tr -d '\r' | sed -n 's/^Path = //p' | tail -n +2 | LC_ALL=C sort)"
+          want="$(printf '%s\n' casebook.exe LICENSE THIRD_PARTY_NOTICES.txt | LC_ALL=C sort)"
+          if [ "$have" != "$want" ]; then
+            echo "error: $cli_zip does not hold exactly casebook.exe, LICENSE and THIRD_PARTY_NOTICES.txt" >&2
+            diff <(printf '%s\n' "$want") <(printf '%s\n' "$have") >&2 || true
+            exit 1
+          fi
+          ls -l dist/out
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: casebook-windows-${{ matrix.arch }}
+          path: dist/out/*
+          if-no-files-found: error
+          retention-days: 3 # read by later jobs in this run (and a re-run of failed jobs); release-bundle is the copy to keep
+
+  macos:
+    name: macOS (universal)
+    needs: [version, notices]
+    runs-on: macos-latest
+    # Two notarization waits (the app, then the DMG) of up to 30 minutes each.
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      CASEBOOK_VERSION: ${{ needs.version.outputs.version }}
+      CASEBOOK_COMMIT: ${{ needs.version.outputs.commit }}
+      CASEBOOK_NUMERIC_VERSION: ${{ needs.version.outputs.numeric }}
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERT_P12_BASE64 != '' && secrets.APPLE_CERT_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' }}
+      HAS_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Release preflight
+        run: scripts/preflight.sh --release
+
+      - name: Install the Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+
+      # Same runner-only edit as the windows job.
+      - name: Set the product version and frontend install command
+        run: |
+          if ! [[ "$CASEBOOK_NUMERIC_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "error: numeric version '$CASEBOOK_NUMERIC_VERSION' is not MAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            const file = "desktop/wails.json";
+            const cfg = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (cfg.info === undefined || cfg.info === null) cfg.info = {};
+            cfg.info.productVersion = process.env.CASEBOOK_NUMERIC_VERSION;
+            cfg["frontend:install"] = "npm ci --ignore-scripts";
+            fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n");
+          '
+          echo "desktop/wails.json info.productVersion: $CASEBOOK_NUMERIC_VERSION, frontend:install: npm ci --ignore-scripts"
+
+      - name: Build the universal desktop app
+        working-directory: desktop
+        env:
+          GOFLAGS: -buildvcs=false
+        run: |
+          ldflags="$(../scripts/version.sh ldflags)"
+          wails build -clean -m -nosyncgomod -trimpath -platform darwin/universal -ldflags "$ldflags"
+
+      - name: Check build outputs
+        run: |
+          if [ ! -d desktop/build/bin/Casebook.app ]; then
+            echo "error: desktop/build/bin/Casebook.app was not built" >&2
+            exit 1
+          fi
+          # The build must not rewrite the module files or the lockfile.
+          git diff --exit-code -- go.mod go.sum desktop/frontend/package-lock.json
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: casebook-third-party-notices
+          path: dist/notices
+
+      # ADR 0011: the license texts travel inside the app. They go in before
+      # signing, so the bundle seal covers them.
+      - name: Add the license files to the app
+        run: |
+          res=desktop/build/bin/Casebook.app/Contents/Resources
+          mkdir -p "$res"
+          cp -f LICENSE "$res/LICENSE"
+          cp -f dist/notices/THIRD_PARTY_NOTICES.txt "$res/THIRD_PARTY_NOTICES.txt"
+
+      # A temporary keychain that only this job uses; the "Remove keychain"
+      # step deletes it whatever happens.
+      - name: Import Developer ID certificate
+        id: keychain
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          keychain="$RUNNER_TEMP/casebook-signing.keychain-db"
+          p12="$RUNNER_TEMP/casebook-signing.p12"
+          kc_pass="$(openssl rand -base64 32)"
+          printf '%s' "$APPLE_CERT_P12_BASE64" | base64 --decode >"$p12"
+          security create-keychain -p "$kc_pass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$kc_pass" "$keychain"
+          security import "$p12" -k "$keychain" -f pkcs12 -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kc_pass" "$keychain" >/dev/null
+          # Put the new keychain first and keep the existing search list.
+          existing=()
+          while IFS= read -r line; do
+            line="${line#"${line%%[![:space:]]*}"}"
+            line="${line#\"}"
+            line="${line%\"}"
+            if [ -n "$line" ]; then
+              existing+=("$line")
+            fi
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" "${existing[@]}"
+          identities="$(security find-identity -v -p codesigning "$keychain")"
+          if ! grep -F -q -- "$APPLE_SIGNING_IDENTITY" <<<"$identities"; then
+            echo "error: the imported certificate does not provide the identity named in APPLE_SIGNING_IDENTITY" >&2
+            exit 1
+          fi
+          rm -f "$p12"
+          echo "path=$keychain" >>"$GITHUB_OUTPUT"
+          echo "Developer ID identity imported into a temporary keychain"
+
+      - name: macOS signing skipped
+        if: env.HAS_APPLE_CERT != 'true'
+        run: echo "::notice::Developer ID signing skipped (APPLE_CERT_P12_BASE64, APPLE_CERT_PASSWORD and APPLE_SIGNING_IDENTITY are not all set); the app gets an ad-hoc signature only"
+
+      - name: Notarization skipped
+        if: env.HAS_APPLE_CERT != 'true' || env.HAS_NOTARY != 'true'
+        run: echo "::notice::Notarization skipped (needs the Developer ID certificate secrets plus APPLE_ID, APPLE_APP_PASSWORD and APPLE_TEAM_ID)"
+
+      # Builds the universal CLI into Contents/MacOS/bin/casebook, checks both
+      # executables carry the version, signs the CLI then the app, and writes
+      # exactly one DMG. With notarization it notarizes and staples the app
+      # before building the DMG, then notarizes and staples the DMG too.
+      # Without the certificate the identity is empty (ad-hoc signing only);
+      # notarization is requested only when both secret groups are present.
+      - name: Package the DMG
+        id: package
+        env:
+          CASEBOOK_SIGN_IDENTITY: ${{ env.HAS_APPLE_CERT == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
+          CASEBOOK_KEYCHAIN: ${{ steps.keychain.outputs.path }}
+          CASEBOOK_NOTARIZE: ${{ env.HAS_APPLE_CERT == 'true' && env.HAS_NOTARY == 'true' && '1' || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/package-macos.sh --release --app desktop/build/bin/Casebook.app --out dist/out
+
+      # The darwin CLI archives are the two slices of the universal CLI that
+      # package-macos.sh signed (and notarized, inside the app) in
+      # Casebook.app. Each slice keeps its own code signature, which
+      # codesign verifies here; nothing is rebuilt or re-signed.
+      - name: Package the macOS CLI archives
+        run: |
+          cli=desktop/build/bin/Casebook.app/Contents/MacOS/bin/casebook
+          for goarch in arm64 amd64; do
+            case "$goarch" in
+              arm64) slice=arm64 ;;
+              amd64) slice=x86_64 ;;
+            esac
+            mkdir -p "dist/darwin-$goarch"
+            lipo "$cli" -thin "$slice" -output "dist/darwin-$goarch/casebook"
+            if [ "$(lipo -archs "dist/darwin-$goarch/casebook")" != "$slice" ]; then
+              echo "error: dist/darwin-$goarch/casebook is not a $slice-only executable" >&2
+              exit 1
+            fi
+            codesign --verify --strict --verbose=2 "dist/darwin-$goarch/casebook"
+            scripts/package-cli.sh --release --os darwin --arch "$goarch" --bin "dist/darwin-$goarch/casebook" \
+              --notices dist/notices/THIRD_PARTY_NOTICES.txt --out dist/out
+          done
+          native=arm64
+          if [ "$(uname -m)" = x86_64 ]; then
+            native=amd64
+          fi
+          out="$("dist/darwin-$native/casebook" --version)"
+          if ! grep -F -q -- "$CASEBOOK_VERSION" <<<"$out"; then
+            echo "error: casebook --version printed '$out', not $CASEBOOK_VERSION" >&2
+            exit 1
+          fi
+          echo "ok: darwin-$native casebook --version printed: $out"
+          ls -l dist/out
+
+      - name: Remove keychain
+        if: always()
+        run: |
+          keychain="$RUNNER_TEMP/casebook-signing.keychain-db"
+          if [ -f "$keychain" ]; then
+            security delete-keychain "$keychain" || true
+          fi
+          rm -f "$RUNNER_TEMP/casebook-signing.p12"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: casebook-macos-universal
+          path: |
+            dist/out/*.dmg
+            dist/out/*.tar.gz
+          if-no-files-found: error
+          retention-days: 3 # read by later jobs in this run (and a re-run of failed jobs); release-bundle is the copy to keep
+
+  checksums:
+    name: Checksums
+    needs: [version, notices, cli-linux, windows, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CASEBOOK_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: casebook-*
+          merge-multiple: true
+          path: release
+
+      # The twelve assets from RELEASE_ASSETS (workflow env), in the byte
+      # order SHA256SUMS.txt lists them.
+      - name: List the expected assets
+        run: |
+          names=()
+          while IFS='|' read -r group file _; do
+            if [ -z "$group" ]; then
+              continue
+            fi
+            names+=("${file//@V@/$CASEBOOK_VERSION}")
+          done <<<"$RELEASE_ASSETS"
+          if [ "${#names[@]}" -ne 12 ]; then
+            echo "error: RELEASE_ASSETS lists ${#names[@]} files, expected 12" >&2
+            exit 1
+          fi
+          printf '%s\n' "${names[@]}" | LC_ALL=C sort >"$RUNNER_TEMP/expected.txt"
+          cat "$RUNNER_TEMP/expected.txt"
+
+      - name: Check the asset set
+        working-directory: release
+        run: |
+          want="$(cat "$RUNNER_TEMP/expected.txt")"
+          have="$(find . -mindepth 1 -maxdepth 1 -printf '%P\n' | LC_ALL=C sort)"
+          if [ "$have" != "$want" ]; then
+            echo "error: release assets do not match the expected set" >&2
+            diff <(printf '%s\n' "$want") <(printf '%s\n' "$have") >&2 || true
+            exit 1
+          fi
+          while IFS= read -r f; do
+            if [ ! -f "$f" ] || [ ! -s "$f" ]; then
+              echo "error: $f is missing or empty" >&2
+              exit 1
+            fi
+          done <"$RUNNER_TEMP/expected.txt"
+          ls -l
+
+      # The sums are written outside release/ first so they never cover
+      # themselves.
+      - name: Write SHA256SUMS.txt
+        working-directory: release
+        run: |
+          mapfile -t expected <"$RUNNER_TEMP/expected.txt"
+          sha256sum -- "${expected[@]}" >"$RUNNER_TEMP/SHA256SUMS.txt"
+          mv "$RUNNER_TEMP/SHA256SUMS.txt" SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-bundle
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7 # long enough to download a dry run; a tag release keeps its own copy
+
+  publish:
+    name: Draft release
+    needs: [version, checksums]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The only job with write access.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-bundle
+          path: release
+
+      - name: Verify checksums
+        working-directory: release
+        run: |
+          sha256sum -c SHA256SUMS.txt
+          count="$(find . -mindepth 1 -maxdepth 1 -type f | wc -l)"
+          if [ "$count" -ne 13 ]; then
+            echo "error: expected 13 files in the release bundle, found $count" >&2
+            exit 1
+          fi
+
+      # The "Which file do I need?" table that opens the release body, from
+      # RELEASE_ASSETS (workflow env), the same list the checksums job
+      # required. Every file the table names must be in the bundle.
+      - name: Write the release notes
+        working-directory: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          desktop=""
+          cli=""
+          notices=""
+          while IFS='|' read -r group file what; do
+            if [ -z "$group" ]; then
+              continue
+            fi
+            name="${file//@V@/$VERSION}"
+            what="${what//|/\\|}" # a pipe in the text would end the table cell
+            if [ ! -f "$name" ]; then
+              echo "error: the download table names $name, which is not in the release bundle" >&2
+              exit 1
+            fi
+            case "$group" in
+              desktop) desktop+="| \`$name\` | $what |"$'\n' ;;
+              cli) cli+="| \`$name\` | $what |"$'\n' ;;
+              notices) notices+="\`$name\`: $what"$'\n' ;;
+              *)
+                echo "error: RELEASE_ASSETS has an unknown group '$group' for $file" >&2
+                exit 1
+                ;;
+            esac
+          done <<<"$RELEASE_ASSETS"
+          if [ -z "$desktop" ] || [ -z "$cli" ] || [ -z "$notices" ]; then
+            echo "error: RELEASE_ASSETS needs desktop, cli and notices lines" >&2
+            exit 1
+          fi
+          how="https://github.com/$GITHUB_REPOSITORY/blob/$TAG/docs/install.md#check-your-download"
+          # shellcheck disable=SC2016 # Markdown backticks, not expansions
+          {
+            printf '## Which file do I need?\n\n'
+            printf '### Desktop app\n\n'
+            printf '| File | What it is |\n|---|---|\n'
+            printf '%s' "$desktop"
+            printf '\n### Command line tool only (also the MCP server)\n\n'
+            printf '| File | What it is |\n|---|---|\n'
+            printf '%s' "$cli"
+            printf '\nFiles ending in `-portable.zip` run where you unzip them; files ending in `-installer.exe` install with a Start menu entry and an uninstaller.\n\n'
+            printf 'Check your download against `SHA256SUMS.txt` ([how](%s)). Release builds are not code signed yet; SmartScreen and Gatekeeper warn on first open.\n\n' "$how"
+            printf '%s\n' "$notices"
+          } >"$notes"
+          # Read the changelog at the release tag, so direct commits are
+          # described alongside GitHub's generated pull request list.
+          gh api "repos/$GITHUB_REPOSITORY/contents/CHANGELOG.md?ref=$TAG" --jq .content |
+            base64 --decode >"$RUNNER_TEMP/changelog.md"
+          awk -v version="${VERSION#v}" '
+            index($0, "## " version " (") == 1 { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' "$RUNNER_TEMP/changelog.md" >"$RUNNER_TEMP/release-changes.md"
+          if [ -s "$RUNNER_TEMP/release-changes.md" ]; then
+            printf '\n## Changes in %s\n\n' "$VERSION" >>"$notes"
+            cat "$RUNNER_TEMP/release-changes.md" >>"$notes"
+          fi
+          cat "$notes"
+
+      # Draft only: a maintainer reviews the assets and publishes by hand.
+      # The GitHub CLI preinstalled on the runner creates the release, so no
+      # third-party action ever holds this job's write token. A rerun stops
+      # when a release for the tag already exists instead of adding a
+      # second draft. The download table goes in with --notes: gh prepends
+      # notes given together with --generate-notes to GitHub's generated
+      # notes (gh release create --help), so the table comes first and the
+      # commit list follows.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          tags="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName')"
+          if grep -F -x -q -- "$TAG" <<<"$tags"; then
+            echo "error: a release for $TAG already exists (draft or published); delete it before rerunning this job" >&2
+            exit 1
+          fi
+          args=(--repo "$GITHUB_REPOSITORY" --verify-tag --draft
+            --title "Casebook $VERSION" --generate-notes --notes "$(cat "$RUNNER_TEMP/notes.md")")
+          if [[ "$VERSION" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "$TAG" "${args[@]}" release/*

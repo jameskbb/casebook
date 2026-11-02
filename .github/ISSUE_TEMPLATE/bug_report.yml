@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in Casebook does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not report security vulnerabilities here; follow SECURITY.md to report them privately.
+        Do not paste secrets, credentials or private case data; a placeholder works just as well.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. casebook case create --title "..." --activate
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Casebook version
+      description: Output of `casebook --version`, or the commit if you built from source.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Desktop app
+        - casebook CLI
+        - MCP server (casebook mcp)
+        - Claude Code setup or hooks
+        - Codex setup
+        - Install or packaging
+        - Docs
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and AI client
+      placeholder: Windows 11, Claude Code inside WSL
+  - type: textarea
+    id: doctor
+    attributes:
+      label: casebook doctor output
+      description: Optional. Remove anything private before pasting.
+      render: text

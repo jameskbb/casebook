@@ -1,0 +1,116 @@
+/* The summary sheet: the report on a light sheet in both themes (it is the
+   page someone receives, not Casebook's chrome). */
+
+:root,
+:root[data-theme='light'] {
+  --note-paper: #ffffff;
+  --note-ink: #1d2126;
+  --note-edge: #d3d9de;
+  --note-desk: #e9edec;
+}
+
+:root[data-theme='dark'] {
+  /* A slightly dimmed sheet, so the page does not glare in a dark window. */
+  --note-paper: #eef1f3;
+  --note-ink: #1d2126;
+  --note-edge: #3a4550;
+  --note-desk: #10151a;
+}
+
+/* The sheet sits on a quiet desk; the scroll box holds the sheet. */
+.note-paper-frame {
+  border-radius: var(--radius-lg);
+  background: var(--note-desk);
+  padding: var(--space-4);
+}
+
+.note-paper {
+  position: relative;
+  max-height: calc(92vh - 300px);
+  min-height: 240px;
+  overflow: auto;
+  border-radius: var(--radius-md);
+}
+
+.note-paper:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.note-paper-body,
+.note-paper-text {
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--note-edge);
+  border-radius: var(--radius-sm);
+  background: var(--note-paper);
+  color: var(--note-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.note-paper-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.note-paper-body h1,
+.note-paper-body h2,
+.note-paper-body h3,
+.note-paper-body h4 {
+  margin: 0.9em 0 0.35em;
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+}
+
+.note-paper-body h1 {
+  font-size: 24px;
+}
+
+.note-paper-body h2 {
+  font-size: 20px;
+}
+
+.note-paper-body h3 {
+  font-size: 17px;
+}
+
+.note-paper-body h4 {
+  font-size: 15px;
+}
+
+.note-paper-body p {
+  margin: 0 0 0.5em;
+}
+
+.note-paper-body ul,
+.note-paper-body ol {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.5em;
+}
+
+.note-paper-body ul {
+  list-style: disc;
+}
+
+.note-paper-body ol {
+  list-style: decimal;
+}
+
+.note-paper-body li {
+  margin: 0.2em 0;
+}
+
+.note-paper-body hr {
+  border: 0;
+  border-top: 1px solid var(--note-edge);
+  margin: 0.75em 0;
+}
+
+@media (max-width: 1100px) {
+  .note-paper {
+    max-height: 360px;
+  }
+}

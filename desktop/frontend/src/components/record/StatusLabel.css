@@ -1,0 +1,60 @@
+.status-label {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-regular);
+}
+
+.status-new {
+  color: var(--ink-muted);
+}
+
+.status-investigating {
+  color: var(--primary);
+}
+
+.status-blocked {
+  color: var(--disputed);
+}
+
+.status-resolved {
+  color: var(--claim);
+}
+
+.archived-tag {
+  display: inline-flex;
+  align-items: center;
+  height: var(--chip-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.record-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.record-status-icon {
+  flex: none;
+}
+
+.record-status-open .record-status-icon {
+  color: var(--hypothesis);
+}
+
+.record-status-supported .record-status-icon,
+.record-status-resolved .record-status-icon {
+  color: var(--claim);
+}
+
+.record-status-deferred .record-status-icon {
+  color: var(--ink-muted);
+}

@@ -1,0 +1,9 @@
+# A casebook server registered by hand, not by casebook setup codex.
+model = "o3"
+
+[mcp_servers.casebook]
+command = "/usr/local/bin/casebook-by-hand"
+args = ["mcp", "--db", "/srv/handwritten.db"]
+
+[mcp_servers.casebook.env]
+CASEBOOK_TOKEN = "placeholder-handwritten-value"

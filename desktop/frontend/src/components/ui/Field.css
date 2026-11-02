@@ -1,0 +1,73 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field-label {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.field-hint,
+.field-note {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+.field-input {
+  width: 100%;
+  min-height: var(--control-height);
+  margin-top: var(--space-1);
+  padding: 5px var(--space-3);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.field-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.field-input:focus-visible,
+.field-input:focus {
+  border-color: var(--primary);
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+}
+
+.field-input:disabled {
+  opacity: 0.48;
+}
+
+.field-textarea {
+  resize: vertical;
+  field-sizing: content;
+  min-height: calc(3 * var(--leading-body) + 12px);
+  max-height: calc(12 * var(--leading-body) + 12px);
+  overflow-wrap: anywhere;
+}
+
+.field-invalid .field-input {
+  border-color: var(--disputed);
+}
+
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--disputed);
+}
+
+.field-error svg {
+  flex: none;
+  margin-top: 2px;
+}

@@ -1,0 +1,42 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.banner-boxed {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.banner-bar {
+  flex: none;
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--rule);
+}
+
+.banner-info {
+  background: var(--bg);
+}
+
+.banner-warning {
+  background: var(--disputed-tint);
+}
+
+.banner-icon {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.banner-warning .banner-icon {
+  color: var(--disputed);
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink);
+}

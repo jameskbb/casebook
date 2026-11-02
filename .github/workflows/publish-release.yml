@@ -1,0 +1,149 @@
+name: Publish release
+
+# Publishes a draft release that the Release workflow built, after checking
+# that it is complete: the tag is a release tag, the release is still a
+# draft, it holds the thirteen files, and SHA256SUMS.txt matches every one
+# of them. A maintainer runs it from the Actions tab or with
+#
+#   gh workflow run publish-release.yml -f tag=v1.2.3
+#
+# After publishing a stable release it marks every earlier published release
+# as superseded (a notice at the top of its notes, pointing at the new
+# release; nothing is deleted and no file is removed) and starts the
+# Homebrew tap workflow, which a workflow publish does not trigger on its
+# own (GitHub never starts a workflow from an ordinary event created with the
+# Actions token; workflow_dispatch is the exception, so the tap is started
+# explicitly). A pre-release supersedes nothing and does not update the tap.
+#
+# With supersede_only=true it skips the publish and only writes the notices
+# for the releases older than an already published tag, for example after
+# publishing by hand from the Releases page:
+#
+#   gh workflow run publish-release.yml -f tag=v1.2.3 -f supersede_only=true
+#
+# Only the GitHub CLI preinstalled on the runner is used, so no third-party
+# action ever holds this job's write token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (vMAJOR.MINOR.PATCH, optionally -prerelease)"
+        required: true
+        type: string
+      supersede_only:
+        description: "Skip the publish: only mark the releases older than this already published tag as superseded"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      SUPERSEDE_ONLY: ${{ inputs.supersede_only }}
+    steps:
+      - name: Check the tag
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "error: $TAG is not a release tag (expected vMAJOR.MINOR.PATCH with an optional -prerelease suffix)" >&2
+            exit 1
+          fi
+          is_draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')"
+          if [ "$SUPERSEDE_ONLY" = "true" ]; then
+            if [ "$is_draft" != "false" ]; then
+              echo "error: supersede_only needs a published release, and $TAG is still a draft" >&2
+              exit 1
+            fi
+          elif [ "$is_draft" != "true" ]; then
+            echo "error: the release for $TAG is not a draft; it was published already (use supersede_only=true to write the notices)" >&2
+            exit 1
+          fi
+
+      - name: Check the draft
+        if: ${{ !inputs.supersede_only }}
+        run: |
+          json="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets)"
+          count="$(jq '.assets | length' <<<"$json")"
+          if [ "$count" -ne 13 ]; then
+            echo "error: expected 13 files on the draft release, found $count" >&2
+            jq -r '.assets[].name' <<<"$json" >&2
+            exit 1
+          fi
+
+      - name: Verify the checksums
+        if: ${{ !inputs.supersede_only }}
+        run: |
+          mkdir release
+          cd release
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY"
+          sha256sum -c SHA256SUMS.txt
+
+      - name: Publish
+        if: ${{ !inputs.supersede_only }}
+        run: |
+          flags=(--draft=false)
+          if [[ "$TAG" == *-* ]]; then
+            flags+=(--prerelease)
+          else
+            flags+=(--latest)
+          fi
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,url \
+            --jq '"published \(.url) (draft: \(.isDraft))"'
+
+      # Every published release with a lower version gets one notice line at
+      # the top of its notes. An earlier notice (from a previous release) is
+      # replaced, so each old release always names the newest one. Drafts,
+      # the release itself and newer versions are left alone.
+      - name: Supersede earlier releases
+        if: ${{ !contains(inputs.tag, '-') }}
+        run: |
+          new_url="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq '.url')"
+          notice="> **Superseded by [$TAG]($new_url).** This release stays for history; download the newest release instead."
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName,isDraft \
+            --jq '.[] | select(.isDraft | not) | .tagName' | while IFS= read -r old; do
+            [ "$old" = "$TAG" ] && continue
+            [[ "$old" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || continue
+            # Keep only versions below the new one. sort -V puts v1.2.3-rc.1
+            # above v1.2.3, so compare the bare versions first; with the same
+            # bare version, the one with a suffix is the pre-release and is
+            # the lower one.
+            old_base="${old%%-*}"
+            new_base="${TAG%%-*}"
+            if [ "$old_base" = "$new_base" ]; then
+              [[ "$old" == *-* ]] || continue
+            elif [ "$(printf '%s\n%s\n' "$old_base" "$new_base" | sort -V | tail -n 1)" != "$new_base" ]; then
+              continue
+            fi
+            gh release view "$old" --repo "$GITHUB_REPOSITORY" --json body --jq '.body' >old-body.md
+            # Drop an earlier notice (the first line) and the blank line after it.
+            awk 'NR == 1 && /^> \*\*Superseded by / { skip = 1; next }
+                 skip == 1 { skip = 0; if ($0 == "") next }
+                 { print }' old-body.md >stripped.md
+            { printf '%s\n\n' "$notice"; cat stripped.md; } >new-body.md
+            if cmp -s old-body.md new-body.md; then
+              echo "$old: notice already current"
+              continue
+            fi
+            gh release edit "$old" --repo "$GITHUB_REPOSITORY" --notes-file new-body.md
+            echo "$old: superseded by $TAG"
+          done
+
+      - name: Update the Homebrew tap
+        if: ${{ !inputs.supersede_only && !contains(inputs.tag, '-') }}
+        run: |
+          gh workflow run homebrew.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f "tag=$TAG"
+          echo "started the Homebrew tap workflow for $TAG"

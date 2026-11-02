@@ -1,0 +1,78 @@
+.startup-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-8);
+  background: var(--surface);
+}
+
+.startup-error-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 560px;
+  text-align: center;
+}
+
+.startup-error-icon {
+  color: var(--disputed);
+}
+
+.startup-error-heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+}
+
+.startup-error-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  margin-bottom: var(--space-4);
+}
+
+.startup-error-location {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.startup-error-path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.startup-error-path-label {
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
+.startup-error-path-text {
+  font-family: var(--font-code);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.startup-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.startup-error-problem {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--disputed);
+  overflow-wrap: anywhere;
+}

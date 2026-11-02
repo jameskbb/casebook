@@ -1,0 +1,43 @@
+.review-findings {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.review-toolbar, .review-actions, .review-labels {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.review-toolbar { justify-content: space-between; }
+.review-toolbar h2 { font-size: var(--text-heading); margin: 0; }
+.review-intro, .review-empty, .review-source, .review-confidence { color: var(--ink-muted); }
+.review-intro { margin: 0; max-width: 70ch; }
+.review-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: var(--space-8); }
+.review-statement h3, .review-sources h3 { margin: 0 0 var(--space-3); font-size: var(--text-body); }
+.review-statement { align-self: start; position: sticky; top: 72px; }
+.review-statement h3:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+.review-labels { font-size: var(--text-label); color: var(--ink-muted); }
+.review-statement-text { font-family: var(--font-serif); font-size: var(--text-heading); line-height: var(--leading-heading-serif); white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-rationale { white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-sources { border-left: 1px solid var(--rule); padding-left: var(--space-8); }
+.review-sources > section + section { margin-top: var(--space-8); }
+.review-evidence + .review-evidence { border-top: 1px solid var(--rule); padding-top: var(--space-6); margin-top: var(--space-6); }
+.review-evidence h4, .review-warnings h4 { margin: var(--space-2) 0; font-size: var(--text-body); }
+.review-evidence p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-reference { font-size: var(--text-label); overflow-wrap: anywhere; }
+.review-evidence summary { cursor: pointer; color: var(--primary); }
+.review-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-label); max-height: 360px; overflow: auto; }
+.review-warnings { margin-top: var(--space-8); color: var(--disputed); }
+.review-warnings ul { padding-left: var(--space-6); }
+.review-actions { border-top: 1px solid var(--rule); padding-top: var(--space-6); margin-top: var(--space-6); }
+.review-result { color: var(--claim); margin: 0; }
+.review-finished h3 { margin: 0; font-size: var(--text-heading); }
+@media (max-width: 1100px) {
+  .review-statement { position: static; }
+  .review-comparison { grid-template-columns: minmax(0, 1fr); }
+  .review-sources { border-left: 0; padding-left: 0; border-top: 1px solid var(--rule); padding-top: var(--space-6); }
+}

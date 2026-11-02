@@ -1,0 +1,50 @@
+/* One quiet row: the Data menu on the left, the theme switch on the right,
+   so the list above keeps its height on short windows. */
+.sidebar-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.sidebar-footer-data {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  margin-left: calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-regular);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.sidebar-footer-data svg {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.sidebar-footer-data .sidebar-footer-chevron {
+  transition: transform var(--duration-hover) ease-out;
+}
+
+.sidebar-footer-data[aria-expanded='true'] .sidebar-footer-chevron {
+  transform: rotate(180deg);
+}
+
+.sidebar-footer-data:hover,
+.sidebar-footer-data[aria-expanded='true'] {
+  background: var(--sidebar-hover);
+}
+
+.theme-switch .segmented {
+  background: var(--sidebar-hover);
+}

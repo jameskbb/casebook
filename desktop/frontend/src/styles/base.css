@@ -1,0 +1,120 @@
+/* Reset, base typography, focus ring and reduced motion. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* Refs, counts, dates and times: tabular numerals of the sans, never a
+   monospace face. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visually hidden but announced by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Headings and overlay panels take focus only programmatically (tabindex
+   -1) so screen readers start there; they are not controls and draw no
+   ring. Interactive controls keep the ring above. */
+:is(h1, h2, h3, [role='dialog'], [role='menu'])[tabindex='-1']:focus,
+:is(h1, h2, h3, [role='dialog'], [role='menu'])[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
+/* Thin scrollbars in the app's own colours instead of the classic Windows
+   bar with arrows. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-border) transparent;
+}
+
+::selection {
+  background: var(--primary-tint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}

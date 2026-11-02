@@ -1,0 +1,96 @@
+/* Shared row chrome for record, evidence and question rows: padding 12px
+   16px with the kind rule on the left, no cards and no shadows. */
+.detail-row {
+  padding: var(--space-3) var(--space-4);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.detail-row.is-openable:hover {
+  background: var(--surface-hover);
+}
+
+/* The stretched button that opens the row's record. Content sits above it
+   and lets clicks through, except for its own controls (chips). */
+.row-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.row-hit:focus-visible {
+  outline-offset: -2px;
+}
+
+.row-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.is-openable .row-content {
+  pointer-events: none;
+}
+
+.is-openable .row-content button {
+  pointer-events: auto;
+}
+
+.row-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.row-ref {
+  color: var(--ink-muted);
+}
+
+.record-statement {
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.record-statement.is-retired {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.record-foot {
+  margin-top: var(--space-1);
+}
+
+.chip-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A ruled-out row names the evidence that ruled it out, in full. */
+.record-ruled-out-by {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Still open repeats an open explanation as a compact row: ref, labels and
+   statement only; the full row sits under What might explain it. */
+.detail-row.is-compact {
+  padding-block: var(--space-2);
+}

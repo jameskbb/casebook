@@ -1,0 +1,187 @@
+/* Connect AI clients (INT-10): sections separated by rules, commands and
+   configuration in the code face with a copy button beside them. */
+.connect-dialog {
+  width: 640px;
+}
+
+.connect-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.connect-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.connect-section-title {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+}
+
+.connect-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+}
+
+.connect-status.is-ok {
+  color: var(--claim);
+}
+
+.connect-status.is-warn {
+  color: var(--disputed);
+}
+
+.connect-status.is-off {
+  color: var(--ink-muted);
+}
+
+.connect-status-icon {
+  flex: none;
+}
+
+.connect-status-icon.is-warn {
+  color: var(--disputed);
+}
+
+.connect-label {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.connect-muted {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+.connect-wrap {
+  overflow-wrap: anywhere;
+}
+
+.connect-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--disputed-tint);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.connect-note .connect-status-icon {
+  margin-top: 2px;
+}
+
+.connect-code-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.connect-code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-code);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.connect-snippet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.connect-pre {
+  align-self: stretch;
+  margin: 0;
+  padding: var(--space-3);
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.connect-error {
+  color: var(--disputed);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.connect-disclosure {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.connect-disclosure > summary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  padding: var(--space-2) 0;
+  font-weight: var(--weight-semibold);
+}
+
+.connect-disclosure > summary:hover {
+  color: var(--ink);
+}
+
+.connect-disclosure > summary::marker {
+  color: var(--ink-muted);
+}
+
+.connect-details-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-2) 0 var(--space-3);
+}
+
+.connect-details-body > .btn {
+  align-self: flex-start;
+}
+
+.connect-prompt {
+  padding: var(--space-3);
+  background: var(--bg);
+  border-radius: var(--radius-md);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  user-select: text;
+}
+
+.connect-section > .btn {
+  align-self: flex-start;
+}
+
+@media (max-width: 600px) {
+  .connect-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

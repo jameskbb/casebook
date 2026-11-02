@@ -1,0 +1,11 @@
+{
+  "title": "Flaky TestCheckoutTotals (shared package-level map under t.Parallel)",
+  "kind": "investigation",
+  "sessions": [
+    "TestCheckoutTotals in internal/checkout fails about once in 20 CI runs and never on my machine. The October CI logs are in ci/logs. Can you start digging into why? Don't change any code yet. I have a meeting in a few minutes, so get as far as you can, then tell me your leading theory and what you've ruled out; we'll pick it up later.",
+    "Back on the flaky TestCheckoutTotals from this morning. Let's pin down the root cause now and confirm it. Still no code changes, just tell me what's going on."
+  ],
+  "root_cause": "(cartCache|cart cache|package-level map|shared (map|cache)|concurrent map|data race|race).*|.*(t\\.Parallel|parallel).*(cache|map|cart-1|overwrit)",
+  "ruled_out": "midnight|day boundary|date (flip|boundary|rollover)|truncat|time zone|timezone|utc",
+  "redo_patterns": "midnight|hour|%H|strftime|substr\\(a\\[2\\]|T(00|23):|00:00|pricingDay|Truncate"
+}

@@ -1,0 +1,108 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  transition: background-color var(--duration-hover) ease-out, border-color var(--duration-hover) ease-out;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-icon {
+  flex: none;
+}
+
+.btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: var(--primary-hover);
+  filter: brightness(0.92);
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--control-border);
+  color: var(--ink);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.btn-secondary:active:not(:disabled) {
+  background: var(--rule);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  padding: 0 var(--space-2);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.btn-ghost:active:not(:disabled) {
+  background: var(--rule);
+}
+
+.btn-destructive {
+  background: var(--disputed);
+  color: var(--on-primary);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: var(--disputed-hover);
+}
+
+.btn-destructive:active:not(:disabled) {
+  background: var(--disputed-hover);
+  filter: brightness(0.92);
+}
+
+.btn:disabled {
+  opacity: 0.48;
+}
+
+/* A text link button (an inline ref that opens a record, a small heading
+   link): ink text with an underline, never the accent (the History ref
+   treatment). */
+.text-button {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--control-border);
+  text-underline-offset: 3px;
+}
+
+.text-button:hover {
+  text-decoration-color: var(--ink);
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Developer ID signature of Casebook.app, applied by
+  scripts/package-macos.sh together with the hardened runtime.
+
+  The set is deliberately empty:
+  - Casebook is distributed outside the Mac App Store, so it does not opt
+    into the App Sandbox.
+  - The Go code needs no JIT and no unsigned executable memory.
+  - WKWebView runs JavaScript in WebKit's own processes, so the app itself
+    needs no JIT entitlement.
+  - Casebook's one network request (the check for updates a person
+    starts, ADR 0022) needs no entitlement outside the App Sandbox, and the
+    app reads files only through its data directory and native file
+    dialogs.
+
+  The hardened runtime with this empty set is what notarization requires.
+  Add an entitlement only with a documented reason.
+-->
+<plist version="1.0">
+<dict/>
+</plist>

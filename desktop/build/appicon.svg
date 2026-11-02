@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Casebook</title>
+  <rect x="48" y="48" width="928" height="928" rx="204" fill="#23476B"/>
+  <rect x="204" y="236" width="248" height="164" rx="36" fill="#F2F4F3"/>
+  <rect x="204" y="292" width="552" height="448" rx="44" fill="#F2F4F3"/>
+  <rect x="284" y="420" width="392" height="36" rx="18" fill="#23476B" fill-opacity="0.38"/>
+  <rect x="284" y="504" width="336" height="36" rx="18" fill="#23476B" fill-opacity="0.38"/>
+  <rect x="284" y="588" width="232" height="36" rx="18" fill="#23476B" fill-opacity="0.38"/>
+  <circle cx="728" cy="712" r="176" fill="#23476B"/>
+  <circle cx="728" cy="712" r="142" fill="#2E6B4E"/>
+  <line x1="660" y1="716" x2="708" y2="764" stroke-width="42" stroke-linecap="round" stroke="#FFFFFF"/>
+  <line x1="708" y1="764" x2="798" y2="664" stroke-width="42" stroke-linecap="round" stroke="#FFFFFF"/>
+</svg>

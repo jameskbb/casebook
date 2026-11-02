@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an improvement to Casebook
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Casebook stays small on purpose: no orchestration, workflow engines, schedulers, event sourcing, or vector and embedding infrastructure. Requests in that direction will be declined.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What were you investigating, and where did Casebook get in the way or fall short?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: The behavior you want. Sketching a CLI command, an MCP tool or a desktop change is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

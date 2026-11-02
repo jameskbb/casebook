@@ -1,0 +1,17 @@
+.imported-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--chip-height);
+  padding: 0 var(--space-2);
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  white-space: nowrap;
+}
+
+.imported-tag-icon {
+  flex: none;
+}

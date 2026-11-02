@@ -1,0 +1,233 @@
+name: CI
+
+# Runs on every push (any branch or tag) and every pull request, as PKG-01
+# requires, plus on demand (workflow_dispatch). The release workflow also
+# calls it (workflow_call) and builds nothing unless every job passes. A pull request from a branch
+# in this repository therefore runs twice; that is accepted so no pushed
+# commit goes untested. No secrets are used anywhere in this workflow and
+# the token is read-only, so pull requests from forks are safe.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# github.workflow is the caller's name when the release workflow calls this
+# one, so a release's test run never cancels (or waits on) the CI run for
+# the same tag push.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      # Git on Windows runners converts checkouts to CRLF by default, which
+      # breaks every bash script with a carriage-return error. .gitattributes
+      # already forces LF; this also covers any file type it does not list.
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # desktop/ embeds frontend/dist; a placeholder lets vet and tests
+      # compile it before the frontend is built (skips until track A lands).
+      - name: Stub frontend dist
+        run: bash scripts/stub-frontend-dist.sh
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -count=1 ./...
+
+      # Proves the -ldflags string from scripts/version.sh reaches the real
+      # internal/version symbols (a wrong -X path is silently ignored).
+      - name: Version stamping
+        if: runner.os == 'Linux'
+        run: |
+          export CASEBOOK_VERSION=v0.0.0-ci
+          CASEBOOK_EXPECT_VERSION="$CASEBOOK_VERSION"
+          CASEBOOK_EXPECT_COMMIT="$(scripts/version.sh commit)"
+          export CASEBOOK_EXPECT_VERSION CASEBOOK_EXPECT_COMMIT
+          ldflags="$(scripts/version.sh ldflags)"
+          echo "ldflags: $ldflags"
+          go test -count=1 -v -run '^TestStamped$' -ldflags "$ldflags" ./internal/version | tee "$RUNNER_TEMP/stamped.log"
+          grep -q -- '--- PASS: TestStamped' "$RUNNER_TEMP/stamped.log"
+
+      # Skips until cmd/casebook lands (track B), builds the CLI afterwards.
+      - name: CLI build script
+        if: runner.os == 'Linux'
+        run: scripts/build-cli.sh
+
+      # What `go install github.com/jameskbb/casebook/cmd/casebook@latest`
+      # does: a CGO-free build of cmd/casebook with no -ldflags. The
+      # unstamped binary must still start and report a version.
+      - name: go install path
+        if: runner.os == 'Linux'
+        run: |
+          GOBIN="$RUNNER_TEMP/gobin" CGO_ENABLED=0 go install ./cmd/casebook
+          out="$("$RUNNER_TEMP/gobin/casebook" --version)"
+          echo "$out"
+          grep -E -q '^casebook [^ ]+$' <<<"$out"
+
+  race:
+    name: Go race (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      # gcc is present on ubuntu runners; default build tags keep Wails off
+      # webkit and cgo, so only the race detector needs cgo here.
+      CGO_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Stub frontend dist
+        run: scripts/stub-frontend-dist.sh
+
+      - name: go test -race
+        run: go test -race -count=1 -timeout 20m ./...
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect desktop/frontend
+        id: detect
+        run: |
+          if [ -f desktop/frontend/package.json ]; then
+            echo "present=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "skip: desktop/frontend not present yet (track A)"
+            echo "present=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.detect.outputs.present == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+
+      # Same install as the release jobs: no dependency lifecycle scripts, so
+      # a dependency that needs one fails here first. The first-party
+      # postinstall (the node_modules go.mod fence) then runs explicitly.
+      - name: npm ci
+        if: steps.detect.outputs.present == 'true'
+        working-directory: desktop/frontend
+        run: |
+          npm ci --ignore-scripts
+          node scripts/fence-node-modules.mjs
+
+      # Each script runs only when package.json defines it; a failing lint,
+      # test or build fails the job.
+      - name: npm run lint, test, build
+        if: steps.detect.outputs.present == 'true'
+        working-directory: desktop/frontend
+        run: |
+          for name in lint test build; do
+            if node -e 'const s = require("./package.json").scripts || {}; process.exit(Object.hasOwn(s, process.argv[1]) ? 0 : 1)' "$name"; then
+              echo "::group::npm run $name"
+              npm run --if-present "$name"
+              echo "::endgroup::"
+            else
+              echo "skip: npm script $name not defined in desktop/frontend/package.json"
+            fi
+          done
+
+  scripts:
+    name: Scripts and workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          fi
+          shellcheck --version
+
+      - name: shellcheck
+        run: |
+          shopt -s nullglob globstar
+          files=(scripts/*.sh packaging/**/*.sh .githooks/pre-push)
+          shellcheck "${files[@]}"
+
+      - name: actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/*.yml
+
+      - name: Script self-tests
+        run: scripts/test-scripts.sh
+
+      # Em dashes, broken relative links, the README guide index, secret
+      # name parity between release.yml and docs/building-releases.md, and
+      # FINALIZE(phase 6) markers (listed here, errors only with --release).
+      - name: Docs check
+        run: scripts/check-docs.sh
+
+      # Two tracked paths that differ only by case break checkouts on the
+      # case-insensitive default file systems of Windows and macOS (the same
+      # hazard docs/decisions/0012-cli-placement.md addresses).
+      - name: Case-collision check
+        run: |
+          dups="$(git ls-files | sort -f | uniq -di)"
+          if [ -n "$dups" ]; then
+            echo "error: tracked paths differ only by case:"
+            printf '%s\n' "$dups"
+            exit 1
+          fi

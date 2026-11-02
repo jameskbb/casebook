@@ -1,0 +1,10 @@
+.env*
+.claude/settings.local.json
+.planning/
+docs/src/node_modules/
+.claude/worktrees/
+
+# Maintainer-only image tooling and notes, kept as untracked local copies.
+docs/INTERNAL.md
+docs/src/
+desktop/scripts/win-screenshots.sh

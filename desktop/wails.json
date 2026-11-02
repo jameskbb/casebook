@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Casebook",
+  "outputfilename": "Casebook",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "James",
+    "email": "125927975+jameskbb@users.noreply.github.com"
+  },
+  "info": {
+    "productName": "Casebook",
+    "productVersion": "0.8.1",
+    "companyName": "James Krape",
+    "copyright": "Copyright (c) 2026 James Krape. MIT License.",
+    "comments": "Durable memory for investigations"
+  }
+}

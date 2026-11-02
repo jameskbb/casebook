@@ -1,0 +1,163 @@
+/* Drawer (UI-SPEC Drawers, Overlays stacking, Motion): scrim at z 40, the
+   panel at z 50, so dialogs (60), menus (70) and toasts (80) sit above. */
+.drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+}
+
+.drawer-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: drawer-fade var(--duration-drawer) var(--ease-out);
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  width: min(var(--drawer-width), calc(100vw - var(--sidebar-width) - 48px));
+  min-width: 320px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-drawer);
+  animation: drawer-in var(--duration-drawer) var(--ease-out);
+}
+
+.drawer-header {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer-back.btn-ghost {
+  margin: calc(-1 * var(--space-2)) 0 0 calc(-1 * var(--space-2));
+  color: var(--ink-muted);
+}
+
+.drawer-back.btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.drawer-kind-icon {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.drawer-kind-evidence {
+  color: var(--evidence);
+}
+
+.drawer-kind-claim {
+  color: var(--claim);
+}
+
+.drawer-kind-hypothesis {
+  color: var(--hypothesis);
+}
+
+.drawer-heading {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+}
+
+/* The heading takes focus only so screen readers start there; it is not a
+   control, so it shows no ring. */
+.drawer-heading:focus,
+.drawer-heading:focus-visible {
+  outline: none;
+}
+
+.drawer-title-row .icon-btn {
+  margin-right: calc(-1 * var(--space-1));
+}
+
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-6) var(--space-12);
+  scroll-padding-top: var(--space-6);
+}
+
+/* Drawer groups: an h3 then content, 32px apart (the body gap). A group
+   action (a disclosure, an edit button) sits at the right of the heading. */
+.drawer-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+}
+
+.drawer-group-head .btn-ghost {
+  margin-right: calc(-1 * var(--space-2));
+}
+
+.drawer-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.drawer-group-heading {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.drawer-empty {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-muted);
+}
+
+.drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

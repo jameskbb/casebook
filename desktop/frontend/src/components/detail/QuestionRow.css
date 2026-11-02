@@ -1,0 +1,62 @@
+.question-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.question-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.question-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.question-row-text,
+.question-row-answer,
+.question-row-note {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.question-row-text {
+  color: var(--ink);
+}
+
+.question-row-text.is-closed {
+  color: var(--ink-muted);
+}
+
+.question-row-answer {
+  color: var(--ink);
+}
+
+.question-row-note {
+  color: var(--ink-muted);
+}
+
+.question-row-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.question-row-actions .btn-ghost {
+  padding: 0 var(--space-2);
+}
+
+/* The question being resolved or deferred, quoted at the top of its dialog. */
+.dialog-quote {
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--question);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

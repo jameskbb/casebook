@@ -1,0 +1,18 @@
+# Codex settings for the fixture user.
+# Keep this file tidy: comments, spacing and key order must survive.
+model = "o3"
+approval_policy   = "on-request"  # aligned on purpose
+
+[profiles.fast]
+model = "o4-mini"
+model_reasoning_effort = "low"
+
+# Servers this user wrote by hand.
+[mcp_servers.other]
+command = "npx"
+args = ["-y", "@example/other-server", "--port", "4100"]
+
+[mcp_servers.other.env]
+OTHER_API_KEY = "placeholder-other-key"
+
+# trailing comment: the end of the user's file

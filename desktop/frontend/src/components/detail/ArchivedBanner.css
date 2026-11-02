@@ -1,0 +1,5 @@
+/* A section's 48px gap would separate the banner from what it describes;
+   keep it close to the question. */
+.reading-column > .archived-banner {
+  margin-bottom: calc(-1 * var(--space-6));
+}

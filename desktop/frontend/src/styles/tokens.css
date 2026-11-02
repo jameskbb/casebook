@@ -1,0 +1,131 @@
+/* Design tokens from the UI-SPEC (02-UI-SPEC.md). Light values apply by
+   default and with data-theme="light"; dark mode redefines every color token
+   (D-14). Components use only these custom properties. */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f2f4f3;
+  --surface: #ffffff;
+  --surface-hover: #f4f6f7;
+  --sidebar-hover: #e8eceb;
+  --sidebar-selected: #ffffff;
+  --ink: #18212b;
+  --ink-muted: #5a6472;
+  --rule: #dadfe3;
+  --control-border: #7d8792;
+  --primary: #23476b;
+  --primary-hover: #1b3955;
+  --on-primary: #ffffff;
+  --primary-tint: #e9eff5;
+  --focus: #23476b;
+  --evidence: #3f5f82;
+  --claim: #2e6b4e;
+  --hypothesis: #946a12;
+  --question: #62508f;
+  --disputed: #a63a3a;
+  --disputed-hover: #8c3030;
+  --disputed-tint: #f8eceb;
+  --claim-tint: #e7f1eb;
+  --mark: #fbefc9;
+  --scrim: rgba(24, 33, 43, 0.32);
+  --shadow-overlay: 0 16px 48px rgba(24, 33, 43, 0.18);
+  --shadow-drawer: -16px 0 48px rgba(24, 33, 43, 0.18);
+  --shadow-menu: 0 4px 16px rgba(24, 33, 43, 0.18);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #12171d;
+  --surface: #1a2129;
+  --surface-hover: #202833;
+  --sidebar-hover: #1a2129;
+  --sidebar-selected: #232c36;
+  --ink: #e4e8ec;
+  --ink-muted: #9aa5b1;
+  --rule: #2c3641;
+  --control-border: #6b7785;
+  --primary: #8cb4dd;
+  --primary-hover: #a6c6e7;
+  --on-primary: #12171d;
+  --primary-tint: #1e2a37;
+  --focus: #8cb4dd;
+  --evidence: #93aecd;
+  --claim: #74c29a;
+  --hypothesis: #ddb25a;
+  --question: #b3a2dd;
+  --disputed: #e8857a;
+  --disputed-hover: #eea095;
+  --disputed-tint: #2e1f1f;
+  --claim-tint: #1a2b23;
+  --mark: #4a3a12;
+  --scrim: rgba(0, 0, 0, 0.56);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-drawer: -16px 0 48px rgba(0, 0, 0, 0.5);
+  --shadow-menu: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+:root {
+  /* Spacing scale (multiples of 4). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* Fonts (D-13): bundled through @fontsource, never loaded from a network. */
+  --font-sans: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-serif: 'Literata', Georgia, 'Times New Roman', serif;
+  --font-code: ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace;
+
+  /* Type scale: four sizes, weights 400 and 600. */
+  --text-label: 14px;
+  --leading-label: 20px;
+  --text-body: 16px;
+  --leading-body: 24px;
+  --text-heading: 20px;
+  --leading-heading: 26px;
+  --leading-heading-serif: 28px;
+  --text-display: 28px;
+  --leading-display: 36px;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+
+  /* Fixed dimensions. */
+  --sidebar-width: 320px;
+  --reading-width: 760px;
+  --header-height: 56px;
+  --control-height: 36px;
+  --icon-button: 32px;
+  --chip-height: 24px;
+  --drawer-width: 480px;
+  --dialog-form-width: 560px;
+  --dialog-confirm-width: 440px;
+  --toast-width: 360px;
+
+  /* Overlay z-order. */
+  --z-header: 10;
+  --z-scrim: 40;
+  --z-drawer: 50;
+  --z-dialog: 60;
+  --z-menu: 70;
+  --z-toast: 80;
+
+  /* Motion. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --duration-drawer: 200ms;
+  --duration-dialog: 120ms;
+  --duration-toast: 160ms;
+  --duration-hover: 80ms;
+}
