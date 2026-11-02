@@ -6,12 +6,12 @@
 </picture>
 
 <p align="center">
-  <a href="https://github.com/jameskbb/casebook/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/jameskbb/casebook/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
-  <a href="https://github.com/jameskbb/casebook/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jameskbb/casebook?sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=2e6b4e"></a>
-  <a href="go.mod"><img alt="Go version" src="https://img.shields.io/github/go-mod/go-version/jameskbb/casebook?style=for-the-badge&logo=go&logoColor=white&label=Go&color=00ADD8"></a>
-  <a href="docs/install.md"><img alt="Platforms: Windows, macOS, Linux CLI" src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20CLI-23476b?style=for-the-badge"></a>
-  <a href="docs/mcp.md"><img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge&logo=modelcontextprotocol&logoColor=white"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/jameskbb/casebook?style=for-the-badge&label=License&color=blue"></a>
+  <a href="https://github.com/jameskbb/casebook/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/jameskbb/casebook/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="https://github.com/jameskbb/casebook/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/jameskbb/casebook?sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=2e6b4e"></a>
+  <a href="go.mod"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/jameskbb/casebook?style=for-the-badge&logo=go&logoColor=white&label=Go&color=00ADD8"></a>
+  <a href="docs/install.md"><img alt="Platforms" src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20CLI-23476b?style=for-the-badge"></a>
+  <a href="docs/mcp.md"><img alt="MCP" src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge&logo=modelcontextprotocol&logoColor=white"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/jameskbb/casebook?style=for-the-badge&label=License&color=blue"></a>
 </p>
 
 **Evidence your agents can't forget. Claims only you can verify.**
