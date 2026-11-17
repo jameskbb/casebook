@@ -1,0 +1,33 @@
+# Keep LF line endings in every checkout, including Git for Windows with its
+# default core.autocrlf=true. The bash scripts fail with CRLF line endings
+# (set: pipefail\r: invalid option name), and release builds must see the
+# same bytes on every runner.
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.go    text eol=lf
+*.mod   text eol=lf
+*.sum   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.nsi   text eol=lf
+*.nsh   text eol=lf
+*.ps1   text eol=lf
+*.plist text eol=lf
+
+*.ico   binary
+*.icns  binary
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.syso  binary
+*.exe   binary
+*.dmg   binary
+*.zip   binary

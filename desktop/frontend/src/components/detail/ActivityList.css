@@ -1,0 +1,58 @@
+.activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.activity-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity-sentence {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Inline ref links: ink text with an underline, never the accent. */
+.activity-ref {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--control-border);
+  text-underline-offset: 3px;
+}
+
+.activity-ref:hover {
+  text-decoration-color: var(--ink);
+}
+
+.activity-summary {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.activity-time {
+  flex: none;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.activity-more {
+  margin-top: calc(-1 * var(--space-3));
+  margin-left: calc(-1 * var(--space-2));
+}

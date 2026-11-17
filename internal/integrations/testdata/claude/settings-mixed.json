@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send done"
+          },
+          {
+            "type": "command",
+            "command": "/usr/local/bin/casebook hook checkpoint",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "theme": "dark"
+}

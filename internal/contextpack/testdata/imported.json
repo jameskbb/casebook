@@ -1,0 +1,288 @@
+{
+  "format": "casebook.context",
+  "version": 1,
+  "investigation": {
+    "ref": "INV-0001",
+    "title": "September cloud bill up 38%",
+    "status": "investigating",
+    "primary_question": "Why did the cloud bill rise 38% in September when traffic was flat?"
+  },
+  "conclusion": {
+    "text": "Debug logging requested for payments only reached every service and drove most of the increase.",
+    "confidence": "high",
+    "rationale": "The change, the pricing page and the billing export agree; the remaining 29% is still open.",
+    "verification": "ai_generated",
+    "supporting_claims": [],
+    "contradicting_claims": [],
+    "reviewed_at": "",
+    "review_basis": "",
+    "needs_review": true
+  },
+  "established_claims": [
+    {
+      "ref": "C-001",
+      "statement": "A shared platform default moved every service to debug logging on August 28; only payments asked for it.",
+      "confidence": "high",
+      "verification": "ai_generated",
+      "rationale": "The chart diff and the head of platform agree.",
+      "supporting_evidence": [
+        "E-001",
+        "E-004"
+      ],
+      "contradicting_evidence": [],
+      "imported": true
+    },
+    {
+      "ref": "C-002",
+      "statement": "Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.",
+      "confidence": "high",
+      "verification": "ai_generated",
+      "rationale": "The pricing model and the billing export agree.",
+      "supporting_evidence": [
+        "E-002",
+        "E-003"
+      ],
+      "contradicting_evidence": [],
+      "imported": true
+    },
+    {
+      "ref": "C-004",
+      "statement": "The payments values file was never changed.",
+      "confidence": "medium",
+      "verification": "human_verified",
+      "rationale": "",
+      "supporting_evidence": [
+        "E-005"
+      ],
+      "contradicting_evidence": [],
+      "imported": false
+    }
+  ],
+  "disputed_claims": [],
+  "hypotheses": [
+    {
+      "ref": "H-001",
+      "statement": "The new tracing agent may also be shipping some services' logs twice.",
+      "confidence": "medium",
+      "status": "open",
+      "verification": "ai_generated",
+      "rationale": "",
+      "supporting_evidence": [],
+      "contradicting_evidence": [],
+      "imported": true
+    }
+  ],
+  "open_questions": [
+    {
+      "ref": "Q-001",
+      "question": "Can every service except payments go back to info level today?",
+      "note": "",
+      "imported": true
+    },
+    {
+      "ref": "Q-002",
+      "question": "Who owns the chart default now?",
+      "note": "",
+      "imported": false
+    }
+  ],
+  "deferred_questions": [],
+  "disproven_hypotheses": [
+    {
+      "ref": "H-002",
+      "text": "Data transfer from the region move doubled the network line.",
+      "contradicting_evidence": [
+        "E-003"
+      ],
+      "imported": true,
+      "verification": "ai_generated"
+    }
+  ],
+  "evidence_index": [
+    {
+      "ref": "E-001",
+      "verification": "ai_generated",
+      "title": "Service chart default log level set to debug",
+      "source_label": "Platform Helm chart",
+      "source_type": "code",
+      "imported": true
+    },
+    {
+      "ref": "E-002",
+      "verification": "ai_generated",
+      "title": "Logs are billed per GB ingested in the month",
+      "source_label": "Provider pricing page",
+      "source_type": "documentation",
+      "imported": true
+    },
+    {
+      "ref": "E-003",
+      "verification": "ai_generated",
+      "title": "Log ingestion is 71% of the September increase",
+      "source_label": "Billing export query",
+      "source_type": "sql_query",
+      "imported": true
+    },
+    {
+      "ref": "E-004",
+      "verification": "ai_generated",
+      "title": "Head of platform: debug was requested for payments only",
+      "source_label": "Head of platform, in person",
+      "source_type": "user_statement",
+      "imported": true
+    },
+    {
+      "ref": "E-005",
+      "verification": "human_verified",
+      "title": "Local check: payments values file still lacks the debug override",
+      "source_label": "Local review",
+      "source_type": "user_statement",
+      "imported": false
+    }
+  ],
+  "evidence_verification": [
+    {
+      "ref": "E-001",
+      "verification": "ai_generated"
+    },
+    {
+      "ref": "E-002",
+      "verification": "ai_generated"
+    },
+    {
+      "ref": "E-003",
+      "verification": "ai_generated"
+    },
+    {
+      "ref": "E-004",
+      "verification": "ai_generated"
+    },
+    {
+      "ref": "E-005",
+      "verification": "human_verified"
+    }
+  ],
+  "recent_changes": [
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "human",
+        "client": "casebook-ui"
+      },
+      "action": "question.add",
+      "target_ref": "Q-002",
+      "summary": "Added question Q-002: Who owns the chart default now?",
+      "imported": false
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "human",
+        "client": "casebook-ui"
+      },
+      "action": "claim.add",
+      "target_ref": "C-004",
+      "summary": "Added claim C-004 [medium] with 1 evidence link",
+      "imported": false
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "human",
+        "client": "casebook-ui"
+      },
+      "action": "evidence.add",
+      "target_ref": "E-005",
+      "summary": "Added evidence E-005 \"Local check: payments values file still lacks the debug override\"",
+      "imported": false
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "import",
+        "client": "casebook-ui"
+      },
+      "action": "import",
+      "target_ref": "INV-0001",
+      "summary": "Imported INV-0001 (4 evidence, 3 claims, 2 hypotheses, 1 questions); 3 verifications reset to ai_generated",
+      "imported": false
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "human",
+        "client": "casebook-ui"
+      },
+      "action": "conclusion.update",
+      "target_ref": "INV-0001",
+      "summary": "Updated conclusion of INV-0001 (confidence high)",
+      "imported": true
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "human",
+        "client": "casebook-ui"
+      },
+      "action": "question.add",
+      "target_ref": "Q-001",
+      "summary": "Added question Q-001: Can every service except payments go back to info level today?",
+      "imported": true
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "ai",
+        "client": "claude-code"
+      },
+      "action": "hypothesis.update",
+      "target_ref": "H-002",
+      "summary": "Updated hypothesis H-002: status disproven",
+      "imported": true
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "ai",
+        "client": "claude-code"
+      },
+      "action": "hypothesis.add",
+      "target_ref": "H-002",
+      "summary": "Added hypothesis H-002 [low] with 1 evidence link",
+      "imported": true
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "ai",
+        "client": "claude-code"
+      },
+      "action": "hypothesis.add",
+      "target_ref": "H-001",
+      "summary": "Added hypothesis H-001 [medium]",
+      "imported": true
+    },
+    {
+      "at": "2026-01-15T09:00:00.000Z",
+      "actor": {
+        "kind": "ai",
+        "client": "claude-code"
+      },
+      "action": "claim.supersede",
+      "target_ref": "C-003",
+      "summary": "C-003 superseded by C-002",
+      "imported": true
+    }
+  ],
+  "truncated": false,
+  "omitted_sections": [],
+  "omitted": {
+    "established_claims": 0,
+    "disputed_claims": 0,
+    "hypotheses": 0,
+    "open_questions": 0,
+    "disproven_hypotheses": 0,
+    "evidence_outside_findings": 0
+  },
+  "max_bytes": 0
+}

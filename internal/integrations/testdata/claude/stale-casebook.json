@@ -1,0 +1,25 @@
+{
+  "numStartups": 9,
+  "mcpServers": {
+    "other": {
+      "type": "stdio",
+      "command": "/usr/bin/other",
+      "args": [
+        "serve"
+      ],
+      "env": {}
+    },
+    "casebook": {
+      "type": "stdio",
+      "command": "/old/path/casebook",
+      "args": [
+        "mcp"
+      ],
+      "env": {}
+    },
+    "zeta": {
+      "command": "/usr/bin/zeta"
+    }
+  },
+  "userID": "fixture-user-id-placeholder"
+}

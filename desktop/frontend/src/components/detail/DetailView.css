@@ -1,0 +1,76 @@
+.detail {
+  min-height: 100%;
+  background: var(--surface);
+}
+
+.detail-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-8);
+  color: var(--ink-muted);
+}
+
+.reading-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  max-width: var(--reading-width);
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-8) var(--space-16);
+}
+
+/* Loading skeleton (after 300 ms only): quiet bars in the rule color. */
+.skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--rule);
+}
+
+.skeleton-label {
+  width: 96px;
+  height: 10px;
+}
+
+.skeleton-display {
+  height: 24px;
+}
+
+.skeleton-heading {
+  width: 180px;
+  height: 18px;
+}
+
+.skeleton-short {
+  width: 60%;
+}
+
+.skeleton-panel {
+  height: 160px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-tint);
+}
+
+/* The record sections keep the 48px rhythm of the reading column. */
+.reading-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+/* On a wide window an open drawer leaves the reading column in view: the
+   column moves to the left edge of the main pane (sidebar 320 + column 760
+   + drawer 480 = 1560) instead of sitting under the drawer. */
+@media (min-width: 1560px) {
+  body:has(.drawer-layer) .reading-column {
+    margin-left: 0;
+  }
+}

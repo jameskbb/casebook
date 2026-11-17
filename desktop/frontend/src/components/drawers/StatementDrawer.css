@@ -1,0 +1,143 @@
+/* Claim and hypothesis drawer body. Groups sit 32px apart (the drawer body
+   gap); statements use Literata, everything else Public Sans. */
+.statement-group {
+  gap: var(--space-2);
+}
+
+.drawer-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  min-height: var(--leading-label);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.drawer-meta-line:empty {
+  display: none;
+}
+
+.drawer-statement {
+  font-family: var(--font-serif);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading-serif);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.drawer-statement.is-retired {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.drawer-text {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.drawer-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-8);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.drawer-facts dt {
+  font-weight: var(--weight-semibold);
+}
+
+.drawer-facts dd {
+  color: var(--ink-muted);
+}
+
+.superseded-by {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-muted);
+}
+
+.evidence-block-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.statement-editor,
+.confidence-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.drawer-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.drawer-more {
+  margin-top: var(--space-2);
+}
+
+.drawer-selects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.drawer-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--disputed);
+}
+
+.drawer-summary {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--disputed-tint);
+  color: var(--disputed);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.drawer-link-actions {
+  display: flex;
+}
+
+.evidence-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.drawer-edit-button.btn-ghost {
+  margin-left: calc(-1 * var(--space-2));
+}
+
+/* A quiet line under a control group that explains why it is disabled. */
+.drawer-hint {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+/* The delete action sits last, apart from the everyday controls. */
+.drawer-delete {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}

@@ -1,0 +1,150 @@
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.search-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.search-group-header {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-4) 0;
+}
+
+.search-group-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.search-group-line:first-child {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.search-group-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.search-group-ref {
+  color: var(--ink-muted);
+}
+
+.search-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-hit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.search-hit:hover {
+  background: var(--sidebar-hover);
+}
+
+.search-hit:focus-visible {
+  outline-offset: -2px;
+}
+
+.search-hit-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search-hit-icon {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.search-hit-evidence .search-hit-icon {
+  color: var(--evidence);
+}
+
+.search-hit-claim .search-hit-icon {
+  color: var(--claim);
+}
+
+.search-hit-hypothesis .search-hit-icon {
+  color: var(--hypothesis);
+}
+
+.search-hit-question .search-hit-icon {
+  color: var(--question);
+}
+
+.search-hit-ref {
+  color: var(--ink-muted);
+}
+
+.search-hit-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.search-hit-snippet mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--mark);
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.search-empty-icon {
+  margin-bottom: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.search-empty-heading {
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.search-empty-body {
+  color: var(--ink-muted);
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Staging ignores SVC_PORT (entrypoint passes -port from PORT, and the file overrides the environment)",
+  "kind": "investigation",
+  "sessions": [
+    "In staging we set SVC_PORT=9090 (see deploy/staging) but the service still listens on 8080. Can you figure out why? Don't fix anything yet, just find the cause."
+  ],
+  "root_cause": "(entrypoint|-port|PORT:-8080|\\$\\{PORT|flag).*|.*(file|svc\\.conf).*(after|overrid|wins|precedence|order)",
+  "ruled_out": "",
+  "redo_patterns": ""
+}

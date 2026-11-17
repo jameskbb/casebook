@@ -1,0 +1,8 @@
+.env*
+.claude/settings.local.json
+.planning/
+.claude/worktrees/
+
+# Local-only files.
+CLAUDE.md
+AGENTS.md

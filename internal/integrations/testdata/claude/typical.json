@@ -1,0 +1,39 @@
+{
+  "numStartups": 42,
+  "theme": "dark",
+  "tipsHistory": {
+    "new-user-warmup": 1,
+    "memory-command": 12,
+    "ratio": 0.25
+  },
+  "mcpServers": {
+    "other": {
+      "type": "stdio",
+      "command": "/usr/bin/other",
+      "args": [
+        "serve"
+      ],
+      "env": {
+        "OTHER_TOKEN": "fixture-not-a-secret"
+      }
+    }
+  },
+  "projects": {
+    "/home/user/caf\u00e9": {
+      "allowedTools": [],
+      "history": [
+        {
+          "display": "compare 1e3 with 1.50",
+          "pastedContents": {}
+        }
+      ],
+      "lastCost": 1.50,
+      "bigNumber": 1e3,
+      "negativeZero": -0,
+      "escaped": "a\/b \u00e9 é \"q\" <tag> & \n",
+      "zKey": true,
+      "aKey": null
+    }
+  },
+  "userID": "fixture-user-id-placeholder"
+}

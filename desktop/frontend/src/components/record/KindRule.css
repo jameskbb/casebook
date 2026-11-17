@@ -1,0 +1,50 @@
+/* Kind rules sit in a pseudo element so every variant (3px solid, 3px
+   dashed, 4px hatched) occupies the same place without moving the row
+   content. */
+.kind-rule {
+  position: relative;
+}
+
+.kind-rule::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: 3px solid var(--kind-rule-color, var(--rule));
+  pointer-events: none;
+}
+
+.kind-rule-evidence {
+  --kind-rule-color: var(--evidence);
+}
+
+.kind-rule-claim {
+  --kind-rule-color: var(--claim);
+}
+
+.kind-rule-hypothesis-open {
+  --kind-rule-color: var(--hypothesis);
+}
+
+.kind-rule-hypothesis-open::before {
+  border-left-style: dashed;
+}
+
+.kind-rule-hypothesis-supported {
+  --kind-rule-color: var(--hypothesis);
+}
+
+.kind-rule-question {
+  --kind-rule-color: var(--question);
+}
+
+.kind-rule-retired {
+  --kind-rule-color: var(--rule);
+}
+
+.kind-rule-disputed::before {
+  width: 4px;
+  border-left: 0;
+  background: repeating-linear-gradient(135deg, var(--disputed) 0 3px, transparent 3px 6px);
+}

@@ -1,0 +1,20 @@
+.select-wrap {
+  position: relative;
+  display: block;
+}
+
+.select {
+  appearance: none;
+  height: var(--control-height);
+  padding-right: calc(var(--space-3) + 16px + var(--space-2));
+  cursor: pointer;
+}
+
+.select-chevron {
+  position: absolute;
+  right: var(--space-3);
+  top: calc(50% + 2px);
+  transform: translateY(-50%);
+  color: var(--ink-muted);
+  pointer-events: none;
+}

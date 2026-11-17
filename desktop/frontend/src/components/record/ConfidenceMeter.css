@@ -1,0 +1,46 @@
+.confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+.confidence-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Sized and filled to stay readable when a screenshot is shown at half
+   size (the README). */
+.confidence-seg {
+  display: block;
+  width: 14px;
+  height: 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 2px;
+  background: transparent;
+}
+
+.confidence-seg.is-filled {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.confidence-lg .confidence-seg {
+  width: 20px;
+  height: 10px;
+}
+
+.confidence-lg .confidence-seg.is-filled {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.confidence-lg .confidence-label {
+  color: var(--ink);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}

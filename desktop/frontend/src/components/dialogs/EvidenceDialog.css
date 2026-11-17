@@ -1,0 +1,74 @@
+/* Evidence dialog: short fields share a row when the dialog is wide enough. */
+.evidence-dialog-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-6) var(--space-4);
+  align-items: end;
+}
+
+.evidence-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Disclosure buttons in dialogs (Add raw detail, Advanced): ghost, aligned
+   with the field labels, chevron first. */
+.dialog .disclosure-button.btn-ghost {
+  margin-left: calc(-1 * var(--space-2));
+}
+
+.dialog .disclosure-button .btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dialog .disclosure-icon {
+  flex: none;
+  transition: transform var(--duration-hover) ease-out;
+}
+
+.dialog .disclosure-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.evidence-raw-input {
+  min-height: calc(6 * var(--leading-body) + 12px);
+}
+
+.evidence-capture-guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  overflow-wrap: anywhere;
+}
+
+.evidence-capture-guide-content p,
+.evidence-capture-guide-content ul,
+.evidence-capture-guide-content dl,
+.evidence-capture-guide-content dd {
+  margin: 0;
+}
+
+.evidence-capture-guide-content ul {
+  padding-left: var(--space-6);
+}
+
+.evidence-capture-guide-content li + li {
+  margin-top: var(--space-2);
+}
+
+.evidence-capture-guide-content dt,
+.evidence-capture-example-label {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+.evidence-capture-guide-content dd + dt {
+  margin-top: var(--space-3);
+}

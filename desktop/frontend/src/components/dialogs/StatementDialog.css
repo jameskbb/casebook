@@ -1,0 +1,76 @@
+/* Add claim or hypothesis: the statement in Literata (as it reads in the
+   column), then one row per piece of evidence with its relation. */
+.statement-input {
+  font-family: var(--font-serif);
+}
+
+.statement-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.statement-links > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.statement-links-empty {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-muted);
+}
+
+.statement-link-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.statement-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.statement-link-row + .statement-link-row {
+  border-top: 1px solid var(--rule);
+}
+
+.statement-link-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 160px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.statement-link-ref {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}
+
+.statement-link-title {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.statement-link-choice {
+  flex: none;
+}
+
+.statement-link-choice.segmented-field {
+  gap: var(--space-1);
+}

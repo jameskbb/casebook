@@ -1,0 +1,301 @@
+# CI failures for shop/internal/checkout, October 2026 (go test ./... on every push)
+
+run 48111  2026-10-01T23:23:48Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48127  2026-10-03T12:08:19Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48132  2026-10-03T19:01:23Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48133  2026-10-03T19:34:25Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48156  2026-10-05T04:01:38Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48174  2026-10-06T06:51:59Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48178  2026-10-06T11:16:43Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48201  2026-10-08T02:18:19Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48210  2026-10-08T11:56:36Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48231  2026-10-10T11:21:41Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48238  2026-10-10T20:01:57Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48239  2026-10-10T23:05:34Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48249  2026-10-11T15:50:18Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48273  2026-10-12T22:14:14Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48311  2026-10-15T16:45:51Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48358  2026-10-19T11:45:33Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48376  2026-10-21T06:43:33Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48416  2026-10-24T10:19:54Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48432  2026-10-25T10:00:13Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48438  2026-10-25T20:49:43Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48457  2026-10-27T01:10:58Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48474  2026-10-28T14:19:35Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+
+run 48480  2026-10-28T21:05:08Z  runner=ci-4core
+=== RUN   TestCheckoutTotals
+=== PAUSE TestCheckoutTotals
+=== RUN   TestCheckoutDiscounts
+=== PAUSE TestCheckoutDiscounts
+=== CONT  TestCheckoutTotals
+=== CONT  TestCheckoutDiscounts
+    totals_test.go:14: expected 3 line items, got 2
+--- FAIL: TestCheckoutTotals (0.01s)
+--- PASS: TestCheckoutDiscounts (0.00s)
+FAIL
+FAIL	shop/internal/checkout	0.031s
+

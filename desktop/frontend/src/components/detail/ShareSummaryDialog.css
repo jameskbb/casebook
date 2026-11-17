@@ -1,0 +1,163 @@
+/* Share summary: the report on the summary sheet, wider than a form dialog
+   so the write-up reads as a page. */
+.share-summary-dialog,
+.share-summary-dialog.dialog-form {
+  width: min(760px, 92vw);
+  max-height: 92vh;
+}
+
+/* The sheet is the scroll box and keeps a usable preview (except while the
+   guidance is open, when it gives way to 160px, below). When the selection is
+   open and the window is short, the dialog body scrolls instead of squeezing
+   the sheet away. */
+.share-summary-dialog .dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.share-summary-lede {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-muted);
+}
+
+.share-summary-dialog .note-paper-frame {
+  flex: 1 1 auto;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.share-summary-dialog .note-paper {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.share-summary-error {
+  color: var(--disputed);
+}
+
+/* With the guidance open the sheet gives way to it, so the dialog does not
+   scroll on top of the sheet; close the guidance to read the summary. */
+.share-summary-dialog .dialog-body:has(.share-summary-elsewhere[open]) .note-paper-frame {
+  flex: 0 0 160px;
+  min-height: 160px;
+}
+
+.share-summary-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.share-summary-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.share-summary-toolbar select {
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.share-summary-selection {
+  margin-top: var(--space-3);
+}
+
+.share-summary-selection summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.share-summary-selection p,
+.share-summary-snapshot {
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.share-summary-choices {
+  max-height: min(190px, 30vh);
+  overflow: auto;
+}
+
+.share-summary-choices fieldset {
+  border: 0;
+  padding: 0;
+  margin: var(--space-2) 0;
+  min-width: 0;
+}
+
+.share-summary-choices legend {
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.share-summary-choice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  overflow-wrap: anywhere;
+}
+
+.share-summary-choice small {
+  display: block;
+  color: var(--ink-muted);
+}
+
+/* Use it elsewhere: short guidance under the preview, closed by default so
+   the sheet keeps its height; it opens like the findings selection. */
+.share-summary-elsewhere {
+  flex: none;
+  margin-top: var(--space-3);
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.share-summary-elsewhere summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.share-summary-elsewhere p {
+  margin: var(--space-2) 0;
+}
+
+.share-summary-example {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.share-summary-example-text {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.share-summary-elsewhere .share-summary-example-text {
+  margin: 0;
+}

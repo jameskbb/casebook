@@ -1,0 +1,28 @@
+.status-picker {
+  flex: none;
+  gap: var(--space-1);
+  height: var(--icon-button);
+  padding: 0 var(--space-2);
+}
+
+.status-picker .status-label {
+  font-weight: var(--weight-semibold);
+}
+
+.status-picker-chevron {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.status-picker[aria-expanded='true'] .status-picker-chevron {
+  transform: rotate(180deg);
+}
+
+.status-picker .status-archived {
+  color: var(--ink-muted);
+}
+
+/* The disabled archived picker reads as a plain label, not a faded control. */
+.status-picker:disabled {
+  opacity: 1;
+}

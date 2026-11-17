@@ -1,0 +1,27 @@
+.active-toggle {
+  flex: none;
+}
+
+.active-toggle.is-on {
+  background: var(--primary-tint);
+  border-color: var(--control-border);
+  color: var(--primary);
+}
+
+.active-toggle.is-on:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.active-toggle-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* A quick round trip should not flash the disabled look. */
+.active-toggle[aria-busy='true'] {
+  opacity: 1;
+  cursor: progress;
+}

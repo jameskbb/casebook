@@ -1,0 +1,3 @@
+# environment for the staging deployment
+SVC_PORT=9090
+SVC_LOG_LEVEL=info

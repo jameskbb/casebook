@@ -1,0 +1,18 @@
+/* Supersede: replacement statements in Literata, clamped to two lines. */
+.choice-statement {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.choice-body > .choice-ref {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
