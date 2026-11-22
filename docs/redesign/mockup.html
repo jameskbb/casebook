@@ -1,0 +1,351 @@
+<!doctype html>
+<!-- Static mock-up of the redesign (directions 1-3). Not wired to the app.
+     Uses the app's design tokens, copied from desktop/frontend/src/styles/tokens.css,
+     and the built-in fictional Northeast margin case. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casebook redesign mock-up</title>
+<style>
+@font-face { font-family: 'Public Sans'; font-weight: 400; src: url('../../desktop/frontend/node_modules/@fontsource/public-sans/files/public-sans-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Public Sans'; font-weight: 600; src: url('../../desktop/frontend/node_modules/@fontsource/public-sans/files/public-sans-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Literata'; font-weight: 400; src: url('../../desktop/frontend/node_modules/@fontsource/literata/files/literata-latin-400-normal.woff2') format('woff2'); }
+
+:root {
+  color-scheme: light;
+  --bg: #f2f4f3; --surface: #ffffff; --surface-hover: #f4f6f7; --ink: #18212b; --ink-muted: #5a6472;
+  --rule: #dadfe3; --control-border: #7d8792; --primary: #23476b; --on-primary: #ffffff; --primary-tint: #e9eff5;
+  --evidence: #3f5f82; --claim: #2e6b4e; --hypothesis: #946a12; --question: #62508f;
+  --disputed: #a63a3a; --disputed-tint: #f8eceb; --claim-tint: #e7f1eb; --mark: #fbefc9;
+  --font-sans: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-serif: 'Literata', Georgia, 'Times New Roman', serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #12171d; --surface: #1a2129; --surface-hover: #202833; --ink: #e4e8ec; --ink-muted: #9aa5b1;
+    --rule: #2c3641; --control-border: #6b7785; --primary: #8cb4dd; --on-primary: #12171d; --primary-tint: #1e2a37;
+    --evidence: #93aecd; --claim: #74c29a; --hypothesis: #ddb25a; --question: #b3a2dd;
+    --disputed: #e8857a; --disputed-tint: #2e1f1f; --claim-tint: #1a2b23; --mark: #4a3a12;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/24px var(--font-sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+.muted { color: var(--ink-muted); }
+.label { font-size: 14px; line-height: 20px; }
+
+/* Mock-up chrome: not part of the app. */
+.mock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: var(--mark); font-size: 14px; }
+.mock-bar strong { margin-right: 8px; }
+.mock-bar button { height: 32px; padding: 0 12px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); }
+.mock-bar button[aria-pressed='true'] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.mock-bar label { margin-left: auto; }
+
+.app { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 48px); }
+.sidebar { border-right: 1px solid var(--rule); padding: 16px 8px; }
+.sidebar h1 { font-size: 16px; font-weight: 600; padding: 0 8px 12px; }
+.side-btn { display: block; width: calc(100% - 16px); margin: 0 8px 12px; height: 36px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); }
+.side-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 16px; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; }
+.side-item:hover { background: var(--surface-hover); }
+.side-item[aria-current='true'] { background: var(--surface); border-left-color: var(--primary); }
+.side-item b { display: block; font-weight: 600; font-size: 14px; line-height: 20px; }
+.side-group { padding: 16px 16px 4px; font-size: 14px; font-weight: 600; color: var(--ink-muted); }
+
+.main { background: var(--surface); min-width: 0; }
+.column { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 32px; }
+.view[hidden] { display: none; }
+
+.eyebrow { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-muted); }
+.display { font: 400 28px/36px var(--font-serif); }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.section-head h2 { font-size: 20px; line-height: 26px; font-weight: 600; }
+.btn { height: 36px; padding: 0 16px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+
+/* Record IDs are hidden until asked for. */
+.ref { display: none; color: var(--ink-muted); font-size: 14px; margin-right: 8px; }
+body.show-refs .ref { display: inline; }
+
+.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; color: var(--ink-muted); white-space: nowrap; }
+.tag::before { content: ''; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; }
+.tag.human { color: var(--claim); font-weight: 600; } .tag.human::before { background: currentColor; }
+.tag.source { color: var(--evidence); } .tag.source::before { background: currentColor; }
+.tag.disputed { color: var(--disputed); font-weight: 600; } .tag.disputed::before { background: currentColor; }
+.meter { display: inline-flex; gap: 3px; vertical-align: middle; margin-right: 6px; }
+.meter i { width: 14px; height: 6px; border-radius: 2px; border: 1px solid var(--ink); }
+.meter i.on { background: var(--ink); }
+
+/* Answer panel */
+.answer { border-left: 4px solid var(--primary); background: var(--primary-tint); border-radius: 0 8px 8px 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.answer p.text { font: 400 20px/28px var(--font-serif); }
+.answer .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 14px; }
+
+/* Reasons with their evidence nested underneath */
+.reason { border-left: 3px solid var(--claim); padding: 12px 0 12px 16px; border-bottom: 1px solid var(--rule); }
+.reason.disputed { border-left: 3px dashed var(--disputed); }
+.reason.ruled-out { border-left-color: var(--hypothesis); }
+.reason.open { border-left: 3px dashed var(--question); }
+.reason .statement { font: 400 16px/24px var(--font-serif); }
+.reason.ruled-out .statement { text-decoration: line-through; text-decoration-color: var(--ink-muted); }
+.reason .line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 4px; font-size: 14px; }
+.ev { list-style: none; margin: 8px 0 0; padding: 0; }
+.ev li { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; font-size: 14px; line-height: 20px; }
+.ev li:hover { background: var(--surface-hover); }
+.ev .sign { font-weight: 600; color: var(--claim); text-align: center; }
+.ev .against .sign { color: var(--disputed); }
+.ev .src { display: block; color: var(--ink-muted); }
+
+/* How we got here: the ledger */
+.trail { list-style: none; margin: 0; padding: 0; }
+.trail li { display: grid; grid-template-columns: 136px 104px 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 14px; line-height: 20px; }
+.trail .who { font-weight: 600; }
+.trail .who.you { color: var(--claim); }
+
+/* Home */
+.todo { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+.todo h3 { font: 400 20px/28px var(--font-serif); }
+.todo .needs { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
+.todo .needs b { font-weight: 600; }
+.answered { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.answered h3 { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-muted); }
+.answered p { font: 400 16px/24px var(--font-serif); }
+
+/* Notes view */
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 20px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); }
+th { color: var(--ink-muted); font-weight: 600; }
+.notes li { margin-bottom: 8px; }
+
+@media (max-width: 800px) {
+  .app { grid-template-columns: 1fr; } .sidebar { display: none; }
+  .trail li { grid-template-columns: 1fr; gap: 2px; } .todo { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <strong>Mock-up, not the app</strong>
+  <button data-view="start" aria-pressed="false">0. First open</button>
+  <button data-view="home" aria-pressed="true">1. Home</button>
+  <button data-view="case" aria-pressed="false">2. Question</button>
+  <button data-view="notes" aria-pressed="false">3. Wording and what was cut</button>
+  <label><input type="checkbox" id="refs"> Show record IDs</label>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <h1>Casebook</h1>
+    <button class="side-btn">+ New question</button>
+    <button class="side-btn" style="text-align:left;padding:0 12px;color:var(--ink-muted)">Search answers and evidence</button>
+    <button class="side-item" data-view="home" aria-current="true"><b>To check</b><span class="label muted">2 questions</span></button>
+    <div class="side-group">Working on it</div>
+    <button class="side-item" data-view="case"><b>Northeast margin down 6 points in Q3</b><span class="label muted">High confidence · 1 hour ago</span></button>
+    <div class="side-group">Waiting</div>
+    <button class="side-item"><b>Checkout outage on October 2</b><span class="label muted">No answer yet · yesterday</span></button>
+    <div class="side-group">Answered</div>
+    <button class="side-item"><b>31 former employees still have active SSO accounts</b><span class="label muted">High confidence · yesterday</span></button>
+    <button class="side-item"><b>TestCheckoutTotals flakes in CI</b><span class="label muted">High confidence · Oct 24</span></button>
+  </aside>
+
+  <main class="main">
+
+    <!-- 1. HOME -->
+    <section class="view" id="home"><div class="column">
+      <div>
+        <p class="eyebrow">Sunday, November 1</p>
+        <h1 class="display">2 questions have findings to check</h1>
+        <p class="muted">Findings your AI saved that you have not checked yet.</p>
+      </div>
+
+      <div>
+        <div class="todo">
+          <div>
+            <h3>Northeast margin down 6 points in Q3</h3>
+            <div class="needs">
+              <span><b>5</b> findings not checked</span>
+              <span class="tag disputed">1 claim with conflicting evidence</span>
+              <span>Changed by Claude Code 1 hour ago</span>
+            </div>
+          </div>
+          <button class="btn primary" data-view="case">Check</button>
+        </div>
+        <div class="todo">
+          <div>
+            <h3>Checkout outage on October 2</h3>
+            <div class="needs">
+              <span><b>2</b> open questions waiting on you</span>
+              <span>No answer yet</span>
+            </div>
+          </div>
+          <button class="btn">Open</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>Answered</h2></div>
+        <div class="answered">
+          <h3>31 former employees still have active SSO accounts</h3>
+          <p>The offboarding job skipped contractors created before the HR system migration.</p>
+          <span class="tag human">You checked this</span>
+        </div>
+        <div class="answered">
+          <h3>TestCheckoutTotals flakes in CI</h3>
+          <p>Two tests share one cart fixture and fail when they run in the same second.</p>
+          <span class="tag source">AI checked the source</span>
+        </div>
+      </div>
+    </div></section>
+
+    <!-- 2. CASE -->
+    <section class="view" id="case" hidden><div class="column">
+      <div>
+        <p class="eyebrow">The question</p>
+        <h1 class="display">Why did Northeast gross margin fall from 41% to 35% in Q3 while revenue grew 4%?</h1>
+      </div>
+
+      <div class="answer">
+        <p class="eyebrow">The answer so far</p>
+        <p class="text">White-glove onboarding, given away free on every deal above $250k since July, drove most of the margin drop.</p>
+        <div class="row">
+          <span><span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i></span>High confidence</span>
+          <span class="tag human">You reviewed this answer on November 1</span>
+          <span class="muted">Rests on 2 claims and 7 pieces of evidence</span>
+        </div>
+        <div class="row"><button class="btn primary">Share summary</button><button class="btn">Check findings (5)</button></div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>Why we believe it</h2></div>
+        <div class="reason">
+          <p class="statement"><span class="ref">C-003</span>The July 6 playbook update made white-glove onboarding free on every deal above $250k; seven Northeast deals got it and none was charged.</p>
+          <div class="line"><span class="tag human">You checked this</span><span class="muted">High confidence</span></div>
+          <ul class="ev">
+            <li><span class="sign">+</span><span><span class="ref">E-008</span>Playbook v7 adds "included at no charge on every deal above $250k"; v6 listed it as a $120k to $180k add-on.<span class="src">Sales playbook v7, section 4</span></span><span class="tag source">AI checked the source</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-009</span>Seven Northeast deals above $250k since July 6, onboarding fee $0 on every one.<span class="src">Deal desk approvals export</span></span><span class="tag">Not checked</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-010</span>Regional sales-ops lead: free onboarding was never meant for every deal.<span class="src">Conversation with sales-ops lead</span></span><span class="tag human">You checked this</span></li>
+          </ul>
+        </div>
+        <div class="reason">
+          <p class="statement"><span class="ref">C-002</span>Implementation services are $1.9M of the $2.3M cost rise; three accounts moved to white-glove onboarding in July carry $1.4M of it.</p>
+          <div class="line"><span class="tag">Not checked</span><span class="muted">High confidence</span></div>
+          <ul class="ev">
+            <li><span class="sign">+</span><span><span class="ref">E-001</span>Q3 revenue $27.0M (+4%), cost of delivery $17.6M (+15%), gross margin 35% against 41%.<span class="src">Q3 regional P&amp;L</span></span><span class="tag">Not checked</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-005</span>Implementation services rose from $2.4M to $4.3M; contractor rate flat, hours up 78%.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-007</span>Pinecrest Logistics, Pellston Health and Ridgeway Mutual carry $1.4M of the $1.9M.<span class="src">Implementation hours query</span></span><span class="tag">Not checked</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>Where the evidence conflicts</h2><span class="label muted">Stays here until you decide</span></div>
+        <div class="reason disputed">
+          <p class="statement"><span class="ref">C-001</span>Deep discounts on the quarter's two biggest deals caused most of the margin drop.</p>
+          <div class="line"><span class="tag disputed">Conflicting evidence</span><span class="muted">Low confidence</span></div>
+          <ul class="ev">
+            <li><span class="sign">+</span><span><span class="ref">E-003</span>Sales VP: we cut prices hard to win the quarter's two biggest deals.<span class="src">Said in the Monday pipeline call</span></span><span class="tag">Not checked</span></li>
+            <li class="against"><span class="sign">&minus;</span><span><span class="ref">E-006</span>Discounts are flat: 11.6% in Q3 against 11.8% in Q2; the two biggest deals got 12% and 14%.<span class="src">Deal desk discount query</span></span><span class="tag">Not checked</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>What we ruled out</h2></div>
+        <div class="reason ruled-out">
+          <p class="statement"><span class="ref">H-001</span>July contractor hires raised the cost of each onboarding.</p>
+          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-005</span>The blended contractor rate is $141 an hour against $140. Hours rose, not the rate.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li></ul>
+        </div>
+        <div class="reason ruled-out">
+          <p class="statement"><span class="ref">H-002</span>The weaker Canadian dollar inflated delivery cost on the Canadian accounts.</p>
+          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-005</span>Currency revaluation explains $40k of the $2.3M.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li></ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>Still open</h2></div>
+        <div class="reason open">
+          <p class="statement"><span class="ref">H-004</span>Travel for on-site white-glove sessions may be growing with the same accounts.</p>
+          <div class="line"><span class="tag">Not checked</span><span class="muted">Not tested</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head"><h2>How we got here</h2><span class="label muted">Who did what, in order</span></div>
+        <ol class="trail">
+          <li><span class="muted">Oct 30, 5:55 PM</span><span class="who">Claude Code</span><span>Pulled the regional P&amp;L and the cost ledger. Saved 3 pieces of evidence.</span></li>
+          <li><span class="muted">Oct 30, 6:55 PM</span><span class="who">Claude Code</span><span>Found three accounts carrying $1.4M. Added the claim about implementation services.</span></li>
+          <li><span class="muted">Oct 31, 10:10 AM</span><span class="who">Codex</span><span>Ruled out contractor rates and currency. Found discount data that conflicts with the discount claim.</span></li>
+          <li><span class="muted">Nov 1, 3:55 PM</span><span class="who">Claude Code</span><span>Compared playbook v6 and v7 against the source document.</span></li>
+          <li><span class="muted">Nov 1, 5:20 PM</span><span class="who you">You</span><span>Confirmed with the sales-ops lead. Checked the playbook claim.</span></li>
+          <li><span class="muted">Nov 1, 5:50 PM</span><span class="who you">You</span><span>Reviewed the answer and set it to high confidence.</span></li>
+        </ol>
+      </div>
+    </div></section>
+
+    <!-- 3. NOTES -->
+    <section class="view" id="notes" hidden><div class="column">
+      <div>
+        <p class="eyebrow">Direction 3</p>
+        <h1 class="display">Wording changes</h1>
+        <p class="muted">You ask AI why a number moved. This app records what it found, what you checked, and how each finding ties back to a source. Every word on screen should serve that.</p>
+      </div>
+      <div>
+        <div class="section-head"><h2>Wording</h2></div>
+        <table>
+          <tr><th>Today</th><th>Mock-up</th><th>Why</th></tr>
+          <tr><td>Case, New case</td><td>Question, New question</td><td>Leaders asked what a case is and whether having one means trouble</td></tr>
+          <tr><td>Disputed</td><td>Conflicting evidence</td><td>"Disputed" reads as an argument with someone else. This is checking our own work</td></tr>
+          <tr><td>AI generated<br>Source verified<br>Human verified</td><td>Not checked<br>AI checked the source<br>You checked this</td><td>One verb, "check", for the one thing the app tracks</td></tr>
+          <tr><td>New / Investigating / Blocked / Resolved</td><td>Working on it / Waiting / Answered</td><td>These are questions, not tickets</td></tr>
+          <tr><td>INV-0002, C-001, E-005 on every row</td><td>Hidden until "Show record IDs"</td><td>The AI needs IDs. A reader does not</td></tr>
+          <tr><td>What we believe, What might explain it, Evidence, Still open</td><td>Why we believe it, Where the evidence conflicts, What we ruled out, Still open, How we got here</td><td>Sections follow the argument, not the record type</td></tr>
+          <tr><td>Evidence in its own list, linked by chips</td><td>Evidence sits under the statement it supports or contradicts</td><td>A finding and its source are read together</td></tr>
+          <tr><td>History in a menu</td><td>"How we got here" on the page</td><td>How the answer was reached is the main thing the app records</td></tr>
+          <tr><td>The name Casebook</td><td>Not changed here</td><td>Open decision. It raises the same "what is a case" question</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="section-head"><h2>Left out</h2></div>
+        <ul class="notes">
+          <li>No "asked by", "needed by" or "decision" fields. That is project tracking.</li>
+          <li>No dashboard. Home is one list: what to check, then the answers you already have.</li>
+          <li>No matrix view, no charts, no recurring questions.</li>
+          <li>No new data. Everything shown comes from records the app already stores.</li>
+        </ul>
+      </div>
+    </div></section>
+
+    <!-- 0. FIRST OPEN -->
+    <section class="view" id="start" hidden><div class="column">
+      <div>
+        <h1 class="display">Check what your AI tells you</h1>
+        <p>You ask your AI why a number moved, and it gives you an answer. This app keeps what it found, where each finding came from, and which ones you have checked yourself.</p>
+      </div>
+      <ol class="notes">
+        <li><b>Ask your AI a question.</b> It saves what it finds here.</li>
+        <li><b>Check each finding against its source.</b> Mark the ones you have checked.</li>
+        <li><b>Share the answer</b> with the findings and sources behind it.</li>
+      </ol>
+      <div><button class="btn primary">Connect your AI</button> <button class="btn" data-view="case">See an example</button></div>
+    </div></section>
+
+  </main>
+</div>
+
+<script>
+  // Mock-up only: switch between the three views and toggle record IDs.
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== b.dataset.view })
+    document.querySelectorAll('.mock-bar [data-view]').forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.view === b.dataset.view)))
+    document.querySelectorAll('.side-item').forEach((s) => s.setAttribute('aria-current', String(s.dataset.view === b.dataset.view)))
+    scrollTo(0, 0)
+  }))
+  document.getElementById('refs').addEventListener('change', (e) => document.body.classList.toggle('show-refs', e.target.checked))
+  if (location.hash) document.querySelector(`.mock-bar [data-view="${location.hash.slice(1)}"]`)?.click()
+</script>
+</body>
+</html>
