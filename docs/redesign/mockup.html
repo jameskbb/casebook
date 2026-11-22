@@ -133,7 +133,7 @@ th { color: var(--ink-muted); font-weight: 600; }
   <button data-view="start" aria-pressed="false">0. First open</button>
   <button data-view="home" aria-pressed="true">1. Home</button>
   <button data-view="case" aria-pressed="false">2. Question</button>
-  <button data-view="notes" aria-pressed="false">3. Wording and what was cut</button>
+  <button data-view="notes" aria-pressed="false">3. Words</button>
   <label><input type="checkbox" id="refs"> Show record IDs</label>
 </div>
 
@@ -141,16 +141,16 @@ th { color: var(--ink-muted); font-weight: 600; }
   <aside class="sidebar">
     <h1>Casebook</h1>
     <button class="side-btn">+ New question</button>
-    <button class="side-btn" style="text-align:left;padding:0 12px;color:var(--ink-muted)">Search answers and evidence</button>
+    <button class="side-btn" style="text-align:left;padding:0 12px;color:var(--ink-muted)">Search answers and sources</button>
     <button class="side-item" data-view="home" aria-current="true"><b>To check</b><span class="label muted">2 questions</span></button>
-    <div class="side-group">Working on it</div>
-    <button class="side-item" data-view="case"><b>Northeast margin down 6 points in Q3</b><span class="label muted">High confidence · 1 hour ago</span></button>
-    <div class="side-group">Waiting</div>
-    <button class="side-item"><b>Checkout outage on October 2</b><span class="label muted">No answer yet · yesterday</span></button>
+    <div class="side-group">No answer yet</div>
+    <button class="side-item"><b>What caused the checkout outage on October 2?</b><span class="label muted">Last worked on yesterday</span></button>
     <div class="side-group">Answered</div>
-    <button class="side-item"><b>31 former employees still have active SSO accounts</b><span class="label muted">High confidence · yesterday</span></button>
-    <button class="side-item"><b>TestCheckoutTotals flakes in CI</b><span class="label muted">High confidence · Oct 24</span></button>
+    <button class="side-item" data-view="case"><b>Why did Northeast margin fall 6 points in Q3?</b><span class="label muted">1 of 6 sources checked by you</span></button>
+    <button class="side-item"><b>Why do 31 former employees still have active SSO accounts?</b><span class="label muted">4 of 4 sources checked by you</span></button>
+    <button class="side-item"><b>Why does TestCheckoutTotals fail now and then in CI?</b><span class="label muted">0 of 3 sources checked by you</span></button>
   </aside>
+
 
   <main class="main">
 
@@ -158,28 +158,27 @@ th { color: var(--ink-muted); font-weight: 600; }
     <section class="view" id="home"><div class="column">
       <div>
         <p class="eyebrow">Sunday, November 1</p>
-        <h1 class="display">2 questions have findings to check</h1>
-        <p class="muted">Findings your AI saved that you have not checked yet.</p>
+        <h1 class="display">2 questions need you</h1>
       </div>
 
       <div>
         <div class="todo">
           <div>
-            <h3>Northeast margin down 6 points in Q3</h3>
+            <h3>Why did Northeast margin fall 6 points in Q3?</h3>
             <div class="needs">
-              <span><b>5</b> findings not checked</span>
-              <span class="tag disputed">1 claim with conflicting evidence</span>
-              <span>Changed by Claude Code 1 hour ago</span>
+              <span><b>1 of 6</b> sources checked by you</span>
+              <span class="tag disputed">1 finding where sources disagree</span>
+              <span>Claude Code added findings 1 hour ago</span>
             </div>
           </div>
           <button class="btn primary" data-view="case">Check</button>
         </div>
         <div class="todo">
           <div>
-            <h3>Checkout outage on October 2</h3>
+            <h3>What caused the checkout outage on October 2?</h3>
             <div class="needs">
-              <span><b>2</b> open questions waiting on you</span>
               <span>No answer yet</span>
+              <span><b>2</b> things your AI could not find out</span>
             </div>
           </div>
           <button class="btn">Open</button>
@@ -189,14 +188,14 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="section-head"><h2>Answered</h2></div>
         <div class="answered">
-          <h3>31 former employees still have active SSO accounts</h3>
+          <h3>Why do 31 former employees still have active SSO accounts?</h3>
           <p>The offboarding job skipped contractors created before the HR system migration.</p>
-          <span class="tag human">You checked this</span>
+          <span class="tag human">4 of 4 sources checked by you</span>
         </div>
         <div class="answered">
-          <h3>TestCheckoutTotals flakes in CI</h3>
+          <h3>Why does TestCheckoutTotals fail now and then in CI?</h3>
           <p>Two tests share one cart fixture and fail when they run in the same second.</p>
-          <span class="tag source">AI checked the source</span>
+          <span class="tag">0 of 3 sources checked by you</span>
         </div>
       </div>
     </div></section>
@@ -212,18 +211,18 @@ th { color: var(--ink-muted); font-weight: 600; }
         <p class="eyebrow">The answer so far</p>
         <p class="text">White-glove onboarding, given away free on every deal above $250k since July, drove most of the margin drop.</p>
         <div class="row">
-          <span><span class="meter"><i class="on"></i><i class="on"></i><i class="on"></i></span>High confidence</span>
+          <span><b>1 of 6</b> sources checked by you</span><span class="muted">1 checked by AI, 4 not checked</span>
           <span class="tag human">You reviewed this answer on November 1</span>
-          <span class="muted">Rests on 2 claims and 7 pieces of evidence</span>
+          
         </div>
-        <div class="row"><button class="btn primary">Share summary</button><button class="btn">Check findings (5)</button></div>
+        <div class="row"><button class="btn primary">Check the next source</button><button class="btn">Share the answer</button></div>
       </div>
 
       <div>
-        <div class="section-head"><h2>Why we believe it</h2></div>
+        <div class="section-head"><h2>What backs this up</h2></div>
         <div class="reason">
           <p class="statement"><span class="ref">C-003</span>The July 6 playbook update made white-glove onboarding free on every deal above $250k; seven Northeast deals got it and none was charged.</p>
-          <div class="line"><span class="tag human">You checked this</span><span class="muted">High confidence</span></div>
+          <div class="line"><span class="tag human">You checked this</span></div>
           <ul class="ev">
             <li><span class="sign">+</span><span><span class="ref">E-008</span>Playbook v7 adds "included at no charge on every deal above $250k"; v6 listed it as a $120k to $180k add-on.<span class="src">Sales playbook v7, section 4</span></span><span class="tag source">AI checked the source</span></li>
             <li><span class="sign">+</span><span><span class="ref">E-009</span>Seven Northeast deals above $250k since July 6, onboarding fee $0 on every one.<span class="src">Deal desk approvals export</span></span><span class="tag">Not checked</span></li>
@@ -232,7 +231,7 @@ th { color: var(--ink-muted); font-weight: 600; }
         </div>
         <div class="reason">
           <p class="statement"><span class="ref">C-002</span>Implementation services are $1.9M of the $2.3M cost rise; three accounts moved to white-glove onboarding in July carry $1.4M of it.</p>
-          <div class="line"><span class="tag">Not checked</span><span class="muted">High confidence</span></div>
+          <div class="line"><span class="tag">Not checked</span></div>
           <ul class="ev">
             <li><span class="sign">+</span><span><span class="ref">E-001</span>Q3 revenue $27.0M (+4%), cost of delivery $17.6M (+15%), gross margin 35% against 41%.<span class="src">Q3 regional P&amp;L</span></span><span class="tag">Not checked</span></li>
             <li><span class="sign">+</span><span><span class="ref">E-005</span>Implementation services rose from $2.4M to $4.3M; contractor rate flat, hours up 78%.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li>
@@ -242,10 +241,10 @@ th { color: var(--ink-muted); font-weight: 600; }
       </div>
 
       <div>
-        <div class="section-head"><h2>Where the evidence conflicts</h2><span class="label muted">Stays here until you decide</span></div>
+        <div class="section-head"><h2>Where sources disagree</h2><span class="label muted">Stays here until you decide</span></div>
         <div class="reason disputed">
           <p class="statement"><span class="ref">C-001</span>Deep discounts on the quarter's two biggest deals caused most of the margin drop.</p>
-          <div class="line"><span class="tag disputed">Conflicting evidence</span><span class="muted">Low confidence</span></div>
+          <div class="line"><span class="tag disputed">Sources disagree</span></div>
           <ul class="ev">
             <li><span class="sign">+</span><span><span class="ref">E-003</span>Sales VP: we cut prices hard to win the quarter's two biggest deals.<span class="src">Said in the Monday pipeline call</span></span><span class="tag">Not checked</span></li>
             <li class="against"><span class="sign">&minus;</span><span><span class="ref">E-006</span>Discounts are flat: 11.6% in Q3 against 11.8% in Q2; the two biggest deals got 12% and 14%.<span class="src">Deal desk discount query</span></span><span class="tag">Not checked</span></li>
@@ -254,7 +253,7 @@ th { color: var(--ink-muted); font-weight: 600; }
       </div>
 
       <div>
-        <div class="section-head"><h2>What we ruled out</h2></div>
+        <div class="section-head"><h2>Ruled out</h2></div>
         <div class="reason ruled-out">
           <p class="statement"><span class="ref">H-001</span>July contractor hires raised the cost of each onboarding.</p>
           <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-005</span>The blended contractor rate is $141 an hour against $140. Hours rose, not the rate.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li></ul>
@@ -266,22 +265,22 @@ th { color: var(--ink-muted); font-weight: 600; }
       </div>
 
       <div>
-        <div class="section-head"><h2>Still open</h2></div>
+        <div class="section-head"><h2>Not tested yet</h2></div>
         <div class="reason open">
           <p class="statement"><span class="ref">H-004</span>Travel for on-site white-glove sessions may be growing with the same accounts.</p>
-          <div class="line"><span class="tag">Not checked</span><span class="muted">Not tested</span></div>
+          
         </div>
       </div>
 
       <div>
         <div class="section-head"><h2>How we got here</h2><span class="label muted">Who did what, in order</span></div>
         <ol class="trail">
-          <li><span class="muted">Oct 30, 5:55 PM</span><span class="who">Claude Code</span><span>Pulled the regional P&amp;L and the cost ledger. Saved 3 pieces of evidence.</span></li>
-          <li><span class="muted">Oct 30, 6:55 PM</span><span class="who">Claude Code</span><span>Found three accounts carrying $1.4M. Added the claim about implementation services.</span></li>
-          <li><span class="muted">Oct 31, 10:10 AM</span><span class="who">Codex</span><span>Ruled out contractor rates and currency. Found discount data that conflicts with the discount claim.</span></li>
+          <li><span class="muted">Oct 30, 5:55 PM</span><span class="who">Claude Code</span><span>Pulled the regional P&amp;L and the cost ledger. Saved 3 sources.</span></li>
+          <li><span class="muted">Oct 30, 6:55 PM</span><span class="who">Claude Code</span><span>Found three accounts carrying $1.4M. Added the finding about implementation services.</span></li>
+          <li><span class="muted">Oct 31, 10:10 AM</span><span class="who">Codex</span><span>Ruled out contractor rates and currency. Found discount data that disagrees with the discount finding.</span></li>
           <li><span class="muted">Nov 1, 3:55 PM</span><span class="who">Claude Code</span><span>Compared playbook v6 and v7 against the source document.</span></li>
-          <li><span class="muted">Nov 1, 5:20 PM</span><span class="who you">You</span><span>Confirmed with the sales-ops lead. Checked the playbook claim.</span></li>
-          <li><span class="muted">Nov 1, 5:50 PM</span><span class="who you">You</span><span>Reviewed the answer and set it to high confidence.</span></li>
+          <li><span class="muted">Nov 1, 5:20 PM</span><span class="who you">You</span><span>Confirmed with the sales-ops lead. Checked the playbook finding.</span></li>
+          <li><span class="muted">Nov 1, 5:50 PM</span><span class="who you">You</span><span>Reviewed the answer.</span></li>
         </ol>
       </div>
     </div></section>
@@ -289,23 +288,44 @@ th { color: var(--ink-muted); font-weight: 600; }
     <!-- 3. NOTES -->
     <section class="view" id="notes" hidden><div class="column">
       <div>
-        <p class="eyebrow">Direction 3</p>
-        <h1 class="display">Wording changes</h1>
-        <p class="muted">You ask AI why a number moved. This app records what it found, what you checked, and how each finding ties back to a source. Every word on screen should serve that.</p>
+        <p class="eyebrow">Proposal</p>
+        <h1 class="display">Proposed vocabulary</h1>
+        <p class="muted">A question gets an answer. The answer rests on findings. Each finding has sources. You check them. Nothing on screen needs a word outside that sentence.</p>
       </div>
       <div>
-        <div class="section-head"><h2>Wording</h2></div>
+        <div class="section-head"><h2>The words</h2></div>
         <table>
           <tr><th>Today</th><th>Mock-up</th><th>Why</th></tr>
-          <tr><td>Case, New case</td><td>Question, New question</td><td>Leaders asked what a case is and whether having one means trouble</td></tr>
-          <tr><td>Disputed</td><td>Conflicting evidence</td><td>"Disputed" reads as an argument with someone else. This is checking our own work</td></tr>
-          <tr><td>AI generated<br>Source verified<br>Human verified</td><td>Not checked<br>AI checked the source<br>You checked this</td><td>One verb, "check", for the one thing the app tracks</td></tr>
-          <tr><td>New / Investigating / Blocked / Resolved</td><td>Working on it / Waiting / Answered</td><td>These are questions, not tickets</td></tr>
+          <tr><td>Case, investigation</td><td><b>Question</b>. The title is the question itself</td><td>It is what the person typed to their AI. Nobody has to learn a noun</td></tr>
+          <tr><td>Conclusion</td><td><b>Answer</b></td><td>A question has an answer</td></tr>
+          <tr><td>Claim, hypothesis</td><td><b>Finding</b></td><td>Two record types that read the same to a person. The page sorts them by what happened to them: backs the answer, sources disagree, ruled out, not tested</td></tr>
+          <tr><td>Evidence</td><td><b>Source</b></td><td>"Evidence" belongs to the courtroom idea. A source is where a finding came from, and it is what you go and check</td></tr>
+          <tr><td>Human verified<br>Source verified<br>AI generated</td><td>You checked this<br>AI checked the source<br>Not checked</td><td>One verb, <b>check</b>, for the one thing the app tracks</td></tr>
+          <tr><td>Disputed</td><td>Sources disagree</td><td>"Disputed" reads as an argument with someone else. This is checking our own work</td></tr>
+          <tr><td>Open question (inside a case)</td><td>Not tested yet</td><td>Frees "question" for the main thing</td></tr>
+          <tr><td>Share summary, leadership brief, report</td><td>Share the answer</td><td>One name for one action</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="section-head"><h2>Removed from the screen</h2></div>
+        <table>
+          <tr><th>Today</th><th>Mock-up</th><th>Why</th></tr>
+          <tr><td>High / Medium / Low confidence on every finding</td><td>"1 of 6 sources checked by you"</td><td>Confidence is the AI rating its own work. That is the thing we do not trust. A count of what was checked is a fact</td></tr>
+          <tr><td>Status picker: New, Investigating, Blocked, Resolved</td><td>No picker. "No answer yet" or "Answered", worked out from the record</td><td>One less thing to keep up to date, and it cannot be wrong</td></tr>
           <tr><td>INV-0002, C-001, E-005 on every row</td><td>Hidden until "Show record IDs"</td><td>The AI needs IDs. A reader does not</td></tr>
-          <tr><td>What we believe, What might explain it, Evidence, Still open</td><td>Why we believe it, Where the evidence conflicts, What we ruled out, Still open, How we got here</td><td>Sections follow the argument, not the record type</td></tr>
-          <tr><td>Evidence in its own list, linked by chips</td><td>Evidence sits under the statement it supports or contradicts</td><td>A finding and its source are read together</td></tr>
+          <tr><td>Sources in their own list, linked by chips</td><td>Each source sits under the finding it backs or contradicts</td><td>A finding and its source are read together</td></tr>
           <tr><td>History in a menu</td><td>"How we got here" on the page</td><td>How the answer was reached is the main thing the app records</td></tr>
-          <tr><td>The name Casebook</td><td>Not changed here</td><td>Open decision. It raises the same "what is a case" question</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="section-head"><h2>The name</h2></div>
+        <table>
+          <tr><th>Name</th><th>What it says</th><th>Risk</th></tr>
+          <tr><td><b>Footnote</b></td><td>Everyone knows a footnote says where a statement came from. Friendly, no hint of trouble</td><td>Common word; other products use it</td></tr>
+          <tr><td>Tieout</td><td>The finance term for tracing a number back to its source</td><td>Unknown outside finance and audit</td></tr>
+          <tr><td>Vouch</td><td>Only a person can vouch for a finding</td><td>Sounds like taking on liability</td></tr>
+          <tr><td>Show Your Work</td><td>Needs no explanation</td><td>Long, and reads as a slogan</td></tr>
+          <tr><td>Casebook</td><td>Today's name</td><td>"What is a case?" "Am I in trouble?"</td></tr>
         </table>
       </div>
       <div>
@@ -313,7 +333,7 @@ th { color: var(--ink-muted); font-weight: 600; }
         <ul class="notes">
           <li>No "asked by", "needed by" or "decision" fields. That is project tracking.</li>
           <li>No dashboard. Home is one list: what to check, then the answers you already have.</li>
-          <li>No matrix view, no charts, no recurring questions.</li>
+          <li>No matrix view, no charts, no questions that repeat on a schedule.</li>
           <li>No new data. Everything shown comes from records the app already stores.</li>
         </ul>
       </div>
