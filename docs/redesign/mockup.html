@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Static mock-up of the redesign (directions 1-3). Not wired to the app.
      Uses the app's design tokens, copied from desktop/frontend/src/styles/tokens.css,
-     and the built-in fictional Northeast margin case. -->
+     and the a made-up profit margin example. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -144,11 +144,11 @@ th { color: var(--ink-muted); font-weight: 600; }
     <button class="side-btn" style="text-align:left;padding:0 12px;color:var(--ink-muted)">Search answers and sources</button>
     <button class="side-item" data-view="home" aria-current="true"><b>To check</b><span class="label muted">2 questions</span></button>
     <div class="side-group">No answer yet</div>
-    <button class="side-item"><b>What caused the checkout outage on October 2?</b><span class="label muted">Last worked on yesterday</span></button>
+    <button class="side-item"><b>Why are support tickets up 20% this month?</b><span class="label muted">Last worked on yesterday</span></button>
     <div class="side-group">Answered</div>
-    <button class="side-item" data-view="case"><b>Why did Northeast margin fall 6 points in Q3?</b><span class="label muted">1 of 6 sources checked by you</span></button>
-    <button class="side-item"><b>Why do 31 former employees still have active SSO accounts?</b><span class="label muted">4 of 4 sources checked by you</span></button>
-    <button class="side-item"><b>Why does TestCheckoutTotals fail now and then in CI?</b><span class="label muted">0 of 3 sources checked by you</span></button>
+    <button class="side-item" data-view="case"><b>Why did our profit margin drop in Q3?</b><span class="label muted">1 of 3 sources checked by you</span></button>
+    <button class="side-item"><b>Why was March payroll $18k over budget?</b><span class="label muted">4 of 4 sources checked by you</span></button>
+    <button class="side-item"><b>Which customers stopped ordering after the price change?</b><span class="label muted">0 of 3 sources checked by you</span></button>
   </aside>
 
 
@@ -164,9 +164,9 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="todo">
           <div>
-            <h3>Why did Northeast margin fall 6 points in Q3?</h3>
+            <h3>Why did our profit margin drop in Q3?</h3>
             <div class="needs">
-              <span><b>1 of 6</b> sources checked by you</span>
+              <span><b>1 of 3</b> sources checked by you</span>
               <span class="tag disputed">1 finding where sources disagree</span>
               <span>Claude Code added findings 1 hour ago</span>
             </div>
@@ -175,7 +175,7 @@ th { color: var(--ink-muted); font-weight: 600; }
         </div>
         <div class="todo">
           <div>
-            <h3>What caused the checkout outage on October 2?</h3>
+            <h3>Why are support tickets up 20% this month?</h3>
             <div class="needs">
               <span>No answer yet</span>
               <span><b>2</b> things your AI could not find out</span>
@@ -188,13 +188,13 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="section-head"><h2>Answered</h2></div>
         <div class="answered">
-          <h3>Why do 31 former employees still have active SSO accounts?</h3>
-          <p>The offboarding job skipped contractors created before the HR system migration.</p>
+          <h3>Why was March payroll $18k over budget?</h3>
+          <p>Two new hires started a month earlier than the budget assumed.</p>
           <span class="tag human">4 of 4 sources checked by you</span>
         </div>
         <div class="answered">
-          <h3>Why does TestCheckoutTotals fail now and then in CI?</h3>
-          <p>Two tests share one cart fixture and fail when they run in the same second.</p>
+          <h3>Which customers stopped ordering after the price change?</h3>
+          <p>Eleven small accounts, together 2% of sales.</p>
           <span class="tag">0 of 3 sources checked by you</span>
         </div>
       </div>
@@ -204,16 +204,15 @@ th { color: var(--ink-muted); font-weight: 600; }
     <section class="view" id="case" hidden><div class="column">
       <div>
         <p class="eyebrow">The question</p>
-        <h1 class="display">Why did Northeast gross margin fall from 41% to 35% in Q3 while revenue grew 4%?</h1>
+        <h1 class="display">Why did our profit margin fall from 40% to 37% in Q3?</h1>
       </div>
 
       <div class="answer">
         <p class="eyebrow">The answer so far</p>
-        <p class="text">White-glove onboarding, given away free on every deal above $250k since July, drove most of the margin drop.</p>
+        <p class="text">Our carrier raised shipping rates 30% on July 1. Shipping is the only cost that grew faster than sales.</p>
         <div class="row">
-          <span><b>1 of 6</b> sources checked by you</span><span class="muted">1 checked by AI, 4 not checked</span>
+          <span><b>1 of 3</b> sources checked by you</span><span class="muted">1 checked by AI, 1 not checked</span>
           <span class="tag human">You reviewed this answer on November 1</span>
-          
         </div>
         <div class="row"><button class="btn primary">Check the next source</button><button class="btn">Share the answer</button></div>
       </div>
@@ -221,21 +220,18 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="section-head"><h2>What backs this up</h2></div>
         <div class="reason">
-          <p class="statement"><span class="ref">C-003</span>The July 6 playbook update made white-glove onboarding free on every deal above $250k; seven Northeast deals got it and none was charged.</p>
+          <p class="statement"><span class="ref">C-003</span>The carrier raised its rates 30% on July 1.</p>
           <div class="line"><span class="tag human">You checked this</span></div>
           <ul class="ev">
-            <li><span class="sign">+</span><span><span class="ref">E-008</span>Playbook v7 adds "included at no charge on every deal above $250k"; v6 listed it as a $120k to $180k add-on.<span class="src">Sales playbook v7, section 4</span></span><span class="tag source">AI checked the source</span></li>
-            <li><span class="sign">+</span><span><span class="ref">E-009</span>Seven Northeast deals above $250k since July 6, onboarding fee $0 on every one.<span class="src">Deal desk approvals export</span></span><span class="tag">Not checked</span></li>
-            <li><span class="sign">+</span><span><span class="ref">E-010</span>Regional sales-ops lead: free onboarding was never meant for every deal.<span class="src">Conversation with sales-ops lead</span></span><span class="tag human">You checked this</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-004</span>Notice dated June 12: all rates go up 30% on July 1.<span class="src">Email from the carrier</span></span><span class="tag human">You checked this</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-005</span>Average shipping cost per order was $9.00 in June and $11.70 in July.<span class="src">Carrier invoices</span></span><span class="tag">Not checked</span></li>
           </ul>
         </div>
         <div class="reason">
-          <p class="statement"><span class="ref">C-002</span>Implementation services are $1.9M of the $2.3M cost rise; three accounts moved to white-glove onboarding in July carry $1.4M of it.</p>
+          <p class="statement"><span class="ref">C-002</span>Shipping is the only cost that grew faster than sales.</p>
           <div class="line"><span class="tag">Not checked</span></div>
           <ul class="ev">
-            <li><span class="sign">+</span><span><span class="ref">E-001</span>Q3 revenue $27.0M (+4%), cost of delivery $17.6M (+15%), gross margin 35% against 41%.<span class="src">Q3 regional P&amp;L</span></span><span class="tag">Not checked</span></li>
-            <li><span class="sign">+</span><span><span class="ref">E-005</span>Implementation services rose from $2.4M to $4.3M; contractor rate flat, hours up 78%.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li>
-            <li><span class="sign">+</span><span><span class="ref">E-007</span>Pinecrest Logistics, Pellston Health and Ridgeway Mutual carry $1.4M of the $1.9M.<span class="src">Implementation hours query</span></span><span class="tag">Not checked</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-001</span>Sales $1.04M, up 4%. Shipping $135k, up 35%. All other costs up 4%.<span class="src">Q3 profit and loss report</span></span><span class="tag source">AI checked the source</span></li>
           </ul>
         </div>
       </div>
@@ -243,11 +239,11 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="section-head"><h2>Where sources disagree</h2><span class="label muted">Stays here until you decide</span></div>
         <div class="reason disputed">
-          <p class="statement"><span class="ref">C-001</span>Deep discounts on the quarter's two biggest deals caused most of the margin drop.</p>
+          <p class="statement"><span class="ref">C-001</span>Bigger discounts caused the drop.</p>
           <div class="line"><span class="tag disputed">Sources disagree</span></div>
           <ul class="ev">
-            <li><span class="sign">+</span><span><span class="ref">E-003</span>Sales VP: we cut prices hard to win the quarter's two biggest deals.<span class="src">Said in the Monday pipeline call</span></span><span class="tag">Not checked</span></li>
-            <li class="against"><span class="sign">&minus;</span><span><span class="ref">E-006</span>Discounts are flat: 11.6% in Q3 against 11.8% in Q2; the two biggest deals got 12% and 14%.<span class="src">Deal desk discount query</span></span><span class="tag">Not checked</span></li>
+            <li><span class="sign">+</span><span><span class="ref">E-002</span>Sales manager: we discounted more to hit the quarter.<span class="src">Said in the Monday sales meeting</span></span><span class="tag">Not checked</span></li>
+            <li class="against"><span class="sign">&minus;</span><span><span class="ref">E-003</span>The average discount was 10% in Q2 and 10% in Q3.<span class="src">Order export</span></span><span class="tag">Not checked</span></li>
           </ul>
         </div>
       </div>
@@ -255,37 +251,35 @@ th { color: var(--ink-muted); font-weight: 600; }
       <div>
         <div class="section-head"><h2>Ruled out</h2></div>
         <div class="reason ruled-out">
-          <p class="statement"><span class="ref">H-001</span>July contractor hires raised the cost of each onboarding.</p>
-          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-005</span>The blended contractor rate is $141 an hour against $140. Hours rose, not the rate.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li></ul>
+          <p class="statement"><span class="ref">H-001</span>Our suppliers raised prices.</p>
+          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-006</span>Unit prices are the same in Q2 and Q3.<span class="src">Supplier invoices</span></span><span class="tag">Not checked</span></li></ul>
         </div>
         <div class="reason ruled-out">
-          <p class="statement"><span class="ref">H-002</span>The weaker Canadian dollar inflated delivery cost on the Canadian accounts.</p>
-          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-005</span>Currency revaluation explains $40k of the $2.3M.<span class="src">Cost ledger query</span></span><span class="tag">Not checked</span></li></ul>
+          <p class="statement"><span class="ref">H-002</span>More orders were returned.</p>
+          <ul class="ev"><li class="against"><span class="sign">&minus;</span><span><span class="ref">E-007</span>Returns were 3% of orders in both quarters.<span class="src">Returns report</span></span><span class="tag">Not checked</span></li></ul>
         </div>
       </div>
 
       <div>
         <div class="section-head"><h2>Not tested yet</h2></div>
         <div class="reason open">
-          <p class="statement"><span class="ref">H-004</span>Travel for on-site white-glove sessions may be growing with the same accounts.</p>
-          
+          <p class="statement"><span class="ref">H-003</span>The same rate increase raised costs in our other regions.</p>
         </div>
       </div>
 
       <div>
         <div class="section-head"><h2>How we got here</h2><span class="label muted">Who did what, in order</span></div>
         <ol class="trail">
-          <li><span class="muted">Oct 30, 5:55 PM</span><span class="who">Claude Code</span><span>Pulled the regional P&amp;L and the cost ledger. Saved 3 sources.</span></li>
-          <li><span class="muted">Oct 30, 6:55 PM</span><span class="who">Claude Code</span><span>Found three accounts carrying $1.4M. Added the finding about implementation services.</span></li>
-          <li><span class="muted">Oct 31, 10:10 AM</span><span class="who">Codex</span><span>Ruled out contractor rates and currency. Found discount data that disagrees with the discount finding.</span></li>
-          <li><span class="muted">Nov 1, 3:55 PM</span><span class="who">Claude Code</span><span>Compared playbook v6 and v7 against the source document.</span></li>
-          <li><span class="muted">Nov 1, 5:20 PM</span><span class="who you">You</span><span>Confirmed with the sales-ops lead. Checked the playbook finding.</span></li>
+          <li><span class="muted">Oct 30, 5:55 PM</span><span class="who">Claude Code</span><span>Read the Q3 profit and loss report. Found that shipping grew 35% while sales grew 4%.</span></li>
+          <li><span class="muted">Oct 31, 10:10 AM</span><span class="who">Codex</span><span>Ruled out supplier prices and returns. Found order data that disagrees with the discount finding.</span></li>
+          <li><span class="muted">Nov 1, 3:55 PM</span><span class="who">Claude Code</span><span>Found the carrier's rate notice and the July invoices.</span></li>
+          <li><span class="muted">Nov 1, 5:20 PM</span><span class="who you">You</span><span>Read the carrier's email. Checked the rate finding.</span></li>
           <li><span class="muted">Nov 1, 5:50 PM</span><span class="who you">You</span><span>Reviewed the answer.</span></li>
         </ol>
       </div>
     </div></section>
 
-    <!-- 3. NOTES -->
+<!-- 3. NOTES -->
     <section class="view" id="notes" hidden><div class="column">
       <div>
         <p class="eyebrow">Proposal</p>
@@ -310,7 +304,7 @@ th { color: var(--ink-muted); font-weight: 600; }
         <div class="section-head"><h2>Removed from the screen</h2></div>
         <table>
           <tr><th>Today</th><th>Mock-up</th><th>Why</th></tr>
-          <tr><td>High / Medium / Low confidence on every finding</td><td>"1 of 6 sources checked by you"</td><td>Confidence is the AI rating its own work. That is the thing we do not trust. A count of what was checked is a fact</td></tr>
+          <tr><td>High / Medium / Low confidence on every finding</td><td>"1 of 3 sources checked by you"</td><td>Confidence is the AI rating its own work. That is the thing we do not trust. A count of what was checked is a fact</td></tr>
           <tr><td>Status picker: New, Investigating, Blocked, Resolved</td><td>No picker. "No answer yet" or "Answered", worked out from the record</td><td>One less thing to keep up to date, and it cannot be wrong</td></tr>
           <tr><td>INV-0002, C-001, E-005 on every row</td><td>Hidden until "Show record IDs"</td><td>The AI needs IDs. A reader does not</td></tr>
           <tr><td>Sources in their own list, linked by chips</td><td>Each source sits under the finding it backs or contradicts</td><td>A finding and its source are read together</td></tr>
