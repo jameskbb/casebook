@@ -208,7 +208,7 @@ func activeSetLine(ctx context.Context, a *app.App, invRef string) (string, erro
 			continue
 		}
 		who := strings.Join(strings.Fields(string(r.Actor.Kind)+" "+r.Actor.Client), " ")
-		return "Made the active investigation at " + r.CreatedAt + " by " + who + ".", nil
+		return "Made the current question at " + r.CreatedAt + " by " + who + ".", nil
 	}
 	return "", nil
 }

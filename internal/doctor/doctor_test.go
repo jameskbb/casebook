@@ -174,7 +174,7 @@ func TestRunHealthy(t *testing.T) {
 	if !r.OK || r.Failed() != 0 || r.Version != "v9.9.9-test" {
 		t.Fatalf("report ok=%v failed=%d version=%q", r.OK, r.Failed(), r.Version)
 	}
-	wantCheck(t, r, "database", StatusOK, "schema ", "1 investigations", "4 evidence", "active INV-0001")
+	wantCheck(t, r, "database", StatusOK, "schema ", "1 questions", "4 sources", "active INV-0001")
 	wantCheck(t, r, "integrity", StatusOK, "integrity_check and foreign_key_check are clean")
 	wantCheck(t, r, "write_access", StatusOK, "checked without opening it")
 	wantCheck(t, r, "mcp_startup", StatusOK, "casebook v9.9.9-test, 20 tools")
@@ -474,7 +474,7 @@ func TestRunSecrets(t *testing.T) {
 			t.Errorf("report contains %s:\n%s", s, out)
 		}
 	}
-	wantCheck(t, r, "database", StatusOK, "2 investigations")
+	wantCheck(t, r, "database", StatusOK, "2 questions")
 }
 
 // itoa formats n in decimal.

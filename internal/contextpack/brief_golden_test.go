@@ -58,14 +58,14 @@ func TestGoldenBriefDemo(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# INV-0002: Why did calls go up 30% in October when sales stayed the same?\n",
-		"2 of 9 sources checked by you. 1 checked by AI, 6 not checked.",
-		"Answer marked: You checked this",
-		"Findings behind the answer: C-002 (Not checked); C-003 (You checked this)",
+		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.",
+		"Answer marked: A person checked this",
+		"Findings behind the answer: C-002 (Not checked); C-003 (A person checked this)",
 		"Findings against the answer: C-001 (Sources disagree)",
 		"- **C-001** Callers waited too long and hung up before buying. (Sources disagree)",
 		"(Ruled out; Not checked)",
 		"(AI checked the source)",
-		"Labels: You checked this means the person who shared this checked it against its source.",
+		"Labels: AI checked the source means an AI compared it with its source and no person has.",
 		"Replaced means a newer finding took its place.",
 		"Not included: Q-001 and Q-002. The history is not included. Ask the person who shared this for the full version.",
 		"## Still being tested\n\n- **H-003** ",

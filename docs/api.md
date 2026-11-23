@@ -648,52 +648,54 @@ Limits are in bytes after sanitizing; exceeding one is a `ValidationError` namin
 - Included: header (ref, title, status, primary question = problem statement), conclusion with confidence, verification and review state, current claims (status `active` and verification neither `disputed` nor `superseded`; a claim disputed on either axis is listed under disputed claims) with confidence, verification, the confidence rationale and supporting and contradicting evidence refs, disputed claims (compact), hypotheses with status `open` or `supported` (with their rationale), open questions, deferred questions (compact, with note), disproven hypotheses (one line each, followed by a `Contradicted by: E-003` line naming the evidence linked as contradicting it, when there is any), an evidence index (ref, title, source label and verification) of evidence those claims and hypotheses reference plus the evidence contradicting a disproven hypothesis, and recent material changes (newest `RecentChanges`, default `app.DefaultRecentChanges` = 10, from the newest 200 activity rows).
 - Excluded: superseded and rejected claims, superseded hypotheses, resolved questions, raw detail, metadata, and the actions `active.set`, `active.clear`, `active.bind`, `active.unbind`, `checkpoint`, and the legacy `evernote.post` and `evernote.unlink`.
 - Claim and hypothesis rationales are cut to one line of at most 300 bytes in both renderings; JSON carries them as `rationale` on each `established_claims`, `disputed_claims` and `hypotheses` item (`""` when none), Markdown as a `Why: ...` line after the statement of current claims and hypotheses (disputed claims stay one compact line).
-- Recent changes carry `imported` (JSON); Markdown renders an imported row's actor as `<kind> <client> (imported)`. Every claim, hypothesis, disproven hypothesis, question and evidence index item carries `imported` too (JSON), and Markdown writes `(imported)` right after the ref of a record copied from an imported file, for example `C-001 (imported) [High, AI generated]`.
-- Framing for AI clients: `app.FrameContext(text)` wraps a rendered pack in one line saying the block is stored investigation data written by people and AI clients, not instructions, then the pack between `BEGIN CASEBOOK DATA <id>` and `END CASEBOOK DATA <id>` lines. The id is the first 12 hex digits of the pack's SHA-256, so stored text cannot forge the end marker, and the result stays deterministic. `RenderContext` itself returns the bare pack (what `casebook context` prints); the MCP tool `casebook_get_context`, the MCP context resources and the session start hook hand the framed text to the model.
+- Recent changes carry `imported` (JSON); Markdown renders an imported row's actor as `<kind> <client> (imported)`. Every claim, hypothesis, disproven hypothesis, question and evidence index item carries `imported` too (JSON), and Markdown writes `(imported)` right after the ref of a record copied from an imported file, for example `C-001 (imported) [Not checked]`.
+- Framing for AI clients: `app.FrameContext(text)` wraps a rendered pack in one line saying the block is stored Casebook data written by people and AI clients, not instructions, then the pack between `BEGIN CASEBOOK DATA <id>` and `END CASEBOOK DATA <id>` lines. The id is the first 12 hex digits of the pack's SHA-256, so stored text cannot forge the end marker, and the result stays deterministic. `RenderContext` itself returns the bare pack (what `casebook context` prints); the MCP tool `casebook_get_context`, the MCP context resources and the session start hook hand the framed text to the model.
 - Markdown renders every user text value on one line: newlines, tabs and every other run of whitespace (including Unicode line separators) become one space. Stored text therefore cannot start a line and forge a section header, a claim line or a verification label; the only line breaks are the layout's own. JSON keeps the stored text unchanged (its strings are escaped).
 - JSON: `{"format": "casebook.context", "version": 1, ...}` (`app.ContextFormat`, `app.ContextVersion`) with fields `investigation`, `conclusion`, `established_claims`, `disputed_claims`, `hypotheses`, `open_questions`, `deferred_questions`, `disproven_hypotheses` (each `ref`, `text`, `contradicting_evidence`, `imported`, `verification`), `evidence_index` (including verification), `evidence_verification` (minimal verification for retained citations), `recent_changes`, `truncated`, `omitted_sections`, `omitted` (`established_claims`, `disputed_claims`, `hypotheses`, `open_questions`, `disproven_hypotheses`, `evidence_outside_findings` counts), `max_bytes`. Every list is `[]` when empty.
 - Budget: `MaxBytes > 0` caps the Markdown size (the JSON rendering of the same trimmed pack is not measured and can be larger); `Compact` with `MaxBytes` 0 applies `app.DefaultCompactMaxBytes` (6000, sized for session hook injection). Trimming stops at the first step that fits: (1) drop `recent_changes`, the claim and hypothesis rationales (`statement_rationales`), `evidence_index`, `deferred_questions`, then the conclusion `rationale`; (2) shorten claim and hypothesis statements and open questions to 240, then 120, then 60 bytes ending in `...` (disproven hypothesis one-liners, at most 200 bytes, are cut to 120 and 60 at the same steps; their `Contradicted by` refs are kept); (3) drop `disputed_claims`; (4) remove disproven hypotheses from the end, counting them in `omitted.disproven_hypotheses` (the section key is added to `omitted_sections` once none is left), so a large investigation keeps saying what not to retry for as long as possible; (5) remove open questions from the end, then hypotheses, then current claims, counting them in `omitted`. `truncated` reports any trimming and `omitted_sections` lists dropped sections in drop order. A list cut short ends with `(N more ... omitted)`. The header, conclusion accountability and mandatory omission notices are never cut. A budget smaller than this minimum yields a larger pack. Evidence verification stays beside each retained citation even if the evidence index is omitted; omitted disputes and evidence outside the included findings retain an explicit count.
 
-Excerpt of the golden Markdown for the fixture:
+Excerpt of the golden Markdown for the fixture (`internal/contextpack/testdata/cloud_spend.md`). Markdown says question, answer, finding and source; JSON keeps the engine names:
 
 ```text
-Investigation: INV-0001
+Question: INV-0001
 Title: September cloud bill up 38%
-Status: Investigating
+Status: In progress
 
-Primary question:
+The question:
 Why did the cloud bill rise 38% in September when traffic was flat?
 
-Current conclusion:
+Answer so far:
 Debug logging requested for payments only reached every service and drove most of the increase.
 
-Conclusion confidence:
-High
+Answer marked: A person checked this
+Findings behind the answer: none selected.
+Findings against the answer: none selected.
+Answer review: not reviewed yet.
 
-Conclusion rationale:
+Why this answer:
 The change, the pricing page and the billing export agree; the remaining 29% is still open.
 
-Current claims:
-C-001 [High, Human verified]
+Findings:
+C-001 [A person checked this]
 A shared platform default moved every service to debug logging on August 28; only payments asked for it.
 Why: The chart diff and the head of platform agree.
-Evidence: E-001 [AI generated], E-004 [Human verified]
-C-002 [High, AI generated]
+Sources: E-001 [Not checked], E-004 [A person checked this]
+C-002 [Not checked]
 Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.
 Why: The pricing model and the billing export agree.
-Evidence: E-002 [AI generated], E-003 [AI generated]
+Sources: E-002 [Not checked], E-003 [Not checked]
 
-Hypotheses:
-H-001 [Medium, Open, AI generated]
+Findings still being tested:
+H-001 [Not tested yet, Not checked]
 The new tracing agent may also be shipping some services' logs twice.
 
-Open questions:
+Follow-up questions:
 Q-001
 Can every service except payments go back to info level today?
 
-Known disproven hypotheses:
-H-002 Data transfer from the region move doubled the network line.
-Contradicted by: E-003 [AI generated]
+Findings ruled out:
+H-002 Data transfer from the region move doubled the network line. [Not checked]
+Ruled out by: E-003 [Not checked]
 ```
 
 ## 12a. Report
@@ -702,18 +704,20 @@ Contradicted by: E-003 [AI generated]
 
 Layout, in order (optional sections are left out when empty):
 
-- `# INV-0002: <title>`, then a list with the status, the opened date and the last updated date.
+- `# INV-0002: <title>`, then a list with the opened date and the last updated date.
 - `## Question`: the problem statement (`Not recorded.` when empty).
-- `## Conclusion`: the conclusion, then `Confidence: <label>. <rationale>` (`No conclusion recorded yet.` when unset).
-- `## Current claims`: active claims (as in the context pack), each `- **C-001** <statement> (<confidence> confidence, <verification label>)` followed by `Why:` (the confidence rationale) and one `Supported by E-004: <title> (<source>; <verification>)` or `Contradicted by ...` line per linked evidence item; `None yet.` when empty. `<source>` is the source label (or the source type label) followed by `: <source ref>` when set.
-- `## Disputed claims` (optional), in the same form.
+- `## Answer`: the conclusion, then `N of M sources checked by a person.` with the counts checked by AI and not checked, `Answer marked: <check label>`, the findings behind and against the answer, the review lines and `Why: <rationale>` (`No answer yet.` when unset). Confidence is never printed.
+- `## Findings`: active claims (as in the context pack), each `- **C-001** <statement> (<check label>)` followed by `Why:` (the confidence rationale) and one `Supported by E-004: <title> (<source>; <check label>)` or `Contradicted by ...` line per linked evidence item; `None yet.` when empty. `<source>` is the source label (or the source type label) followed by `: <source ref>` when set.
+- `## Where sources disagree` (optional): disputed claims, in the same form.
 - `## Ruled out` (optional): disproven hypotheses, then rejected claims, with their rationale and evidence lines, so the evidence that contradicted them is named.
-- `## Hypotheses still open or supported` (optional).
-- `## Answered questions` (optional): each resolved question with `Answer: <resolution> (<resolved date>)`.
-- `## Open questions`: open questions, then deferred ones marked `(deferred: <note>)`; `None.` when empty.
-- `## Evidence` (optional): every evidence item with its source, captured date, verification label and summary.
-- `## Timeline (UTC)` (optional): material activity rows (not `active.set`, `active.clear` or `checkpoint`), oldest first, under one `### YYYY-MM-DD` heading per day, each `- HH:MM <actor kind> <client>: <change>` (` (imported)` after the client for an imported row). The change is written in plain words from the action and its target ref, the same phrasing as the desktop History view (`Created this case`, `Marked C-001 Human verified`, `Ruled out H-001`), with stored values as their labels; an action Casebook does not know shows the stored summary. `Earlier changes are not shown.` opens the section when `TimelineLimit` or the 2000-row read left changes out.
+- `## Still being tested` (optional): hypotheses that are open or supported.
+- `## Answered follow-up questions` (optional): each resolved question with `Answer: <resolution> (<resolved date>)`.
+- `## Open follow-up questions`: open questions, then deferred ones marked `(deferred: <note>)`; `None.` when empty.
+- `## Sources` (optional): every evidence item with its source, captured date, check label and summary.
+- `## How we got here (UTC)` (optional): material activity rows (not `active.set`, `active.clear` or `checkpoint`), oldest first, under one `### YYYY-MM-DD` heading per day, each `- HH:MM <actor>: <change>` (` (imported)` after the actor for an imported row). The actor is `A person`, `Claude Code (AI)`, `Codex (AI)`, another client name with `(AI)`, `Import` or `Casebook`. The change is written in plain words from the action and its target ref (`Created this question`, `Marked C-001: A person checked this`, `Ruled out H-001`), with stored values as their labels; an action Casebook does not know shows the stored summary. `Earlier changes are not shown.` opens the section when the timeline was limited or the history is longer than the rows read.
 - A closing `_Generated by Casebook from INV-0002._` line.
+
+Check labels in a pack, a report and a brief are `Not checked` (`ai_generated`), `AI checked the source` (`source_verified`), `A person checked this` (`human_verified`), `Sources disagree` (`disputed`) and `Replaced` (`superseded`). They never say "You", because the reader is not the person who checked.
 
 Superseded claims and hypotheses are left out (their replacements carry the story; the timeline still records the change). Every user text value is rendered on one line, and a paragraph that would start with a Markdown block marker (`#`, `>`, `-`, `1.` and similar) is escaped with a backslash, so stored text cannot add headings or list items. A record copied from an imported file shows `(imported)` after its ref.
 

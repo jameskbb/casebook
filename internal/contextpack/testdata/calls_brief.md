@@ -7,11 +7,11 @@ Calls to the call center went from 2,400 in September to 3,120 in October. Sales
 
 The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
-2 of 9 sources checked by you. 1 checked by AI, 6 not checked.
+2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.
 
-Answer marked: You checked this
+Answer marked: A person checked this
 
-Findings behind the answer: C-002 (Not checked); C-003 (You checked this)
+Findings behind the answer: C-002 (Not checked); C-003 (A person checked this)
 
 Findings against the answer: C-001 (Sources disagree)
 
@@ -39,17 +39,17 @@ Why: The billing team's notice (E-007), the call log (E-006) and the billing tea
 
   - Supported by E-006: Calls about a bill: 400 in September, 1,070 in October (Not checked)
 
-- **C-003** A billing mistake on October 3 charged some customers twice. (You checked this)
+- **C-003** A billing mistake on October 3 charged some customers twice. (A person checked this)
 
   - Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
 
   - Supported by E-006: Calls about a bill: 400 in September, 1,070 in October (Not checked)
 
-  - Supported by E-007: Notice dated October 4: 1,900 customers were charged twice on October 3 (You checked this)
+  - Supported by E-007: Notice dated October 4: 1,900 customers were charged twice on October 3 (A person checked this)
 
   - Supported by E-008: Call notes: 9 in 10 October calls about a bill mention being charged twice (Not checked)
 
-  - Supported by E-009: Billing team lead: the mistake was fixed on October 5 (You checked this)
+  - Supported by E-009: Billing team lead: the mistake was fixed on October 5 (A person checked this)
 
 ## Still being tested
 
@@ -103,7 +103,7 @@ Why: The billing team's notice (E-007), the call log (E-006) and the billing tea
 
   - The call log gives a reason for every call. Calls about a bill went from 400 in September to 1,070 in October. Calls to buy went from 2,000 to 2,050. The extra bill calls start on October 3.
 
-- **E-007** Notice dated October 4: 1,900 customers were charged twice on October 3 (Email from the billing team: Email to all staff, October 4, subject: Customers charged twice on October 3; You checked this)
+- **E-007** Notice dated October 4: 1,900 customers were charged twice on October 3 (Email from the billing team: Email to all staff, October 4, subject: Customers charged twice on October 3; A person checked this)
 
   - The billing team emailed all staff on October 4. A mistake in the October 3 billing run charged 1,900 customers twice. The team said refunds would go out within a week.
 
@@ -111,13 +111,13 @@ Why: The billing team's notice (E-007), the call log (E-006) and the billing tea
 
   - Of the 1,070 calls about a bill in October, 960 have a note that says the customer was charged twice. In September none did.
 
-- **E-009** Billing team lead: the mistake was fixed on October 5 (Billing team lead, in person; You checked this)
+- **E-009** Billing team lead: the mistake was fixed on October 5 (Billing team lead, in person; A person checked this)
 
   - The billing team lead said in person that the October 3 billing run charged 1,900 customers twice, and that the mistake was fixed on October 5.
 
 ## What is included
 
-Labels: You checked this means the person who shared this checked it against its source. AI checked the source means an AI compared it with its source and no person has. Not checked means nobody has checked it. Sources disagree means a source contradicts it; it stays here until someone decides. Replaced means a newer finding took its place.
+Labels: AI checked the source means an AI compared it with its source and no person has. Not checked means nobody has checked it. Sources disagree means a source contradicts it; it stays here until someone decides. Replaced means a newer finding took its place.
 
 Not included: Q-001 and Q-002. The history is not included. Ask the person who shared this for the full version.
 

@@ -64,7 +64,7 @@ func formatError(err error) string {
 	if ve, ok := app.IsValidation(err); ok {
 		msg = "invalid " + ve.Field + ": " + ve.Message
 	} else if errors.Is(err, app.ErrNoActiveInvestigation) {
-		msg = err.Error() + `; run "casebook inv activate INV-0001" or pass a ref`
+		msg = err.Error() + ` (casebook inv activate INV-0001)`
 	} else {
 		msg = strings.TrimPrefix(err.Error(), "casebook: ")
 	}

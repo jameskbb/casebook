@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jameskbb/casebook/internal/demo"
 )
 
-// TestReadmeExample: the scenario builds through internal/app and the
-// compact pack keeps the lines the README quotes.
+// TestReadmeExample: the demo story builds through internal/app and the
+// compact pack of the featured question keeps the lines the README quotes.
 func TestReadmeExample(t *testing.T) {
 	var a, b bytes.Buffer
 	if err := run(filepath.Join(t.TempDir(), "a.db"), "compact", 0, &a); err != nil {
@@ -21,16 +23,20 @@ func TestReadmeExample(t *testing.T) {
 		t.Fatal("two runs produced different packs; the example must be deterministic")
 	}
 	for _, want := range []string{
-		"Investigation: INV-0002",
-		"C-003 [High, Human verified]",
-		"C-002 [High, AI generated]",
-		"Disputed claims:\nC-001 [Low, Disputed]",
-		"H-003 [High, Supported, AI generated]",
-		"Known disproven hypotheses:\nH-001 July contractor hires",
-		"Contradicted by: E-005",
-		"Deferred questions:\nQ-004",
-		"ai claude-code: Resolved question Q-002",
-		"human casebook-ui: Set verification of C-003 to human_verified",
+		"Question: " + demo.FeaturedRef + "\nTitle: " + demo.FeaturedTitle + "\n",
+		"Answer so far:\n" + demo.Conclusion + "\n",
+		"Answer marked: A person checked this",
+		"C-003 [A person checked this]",
+		"C-002 [Not checked]",
+		"Findings where sources disagree:\nC-001 [Sources disagree]",
+		"H-003 [Supported, Not checked]",
+		"H-004 [Not tested yet, Not checked]",
+		"Findings ruled out:\nH-001 A new ad brought in more callers.",
+		"Ruled out by: E-004",
+		"Deferred follow-up questions:\nQ-004",
+		"E-001 Calls to buy: 2,000 in September, 2,050 in October.",
+		"[AI checked the source]",
+		"human casebook-ui: Marked C-003: A person checked this",
 	} {
 		if !strings.Contains(a.String(), want) {
 			t.Errorf("pack lacks %q:\n%s", want, a.String())

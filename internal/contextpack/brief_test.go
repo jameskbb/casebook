@@ -35,7 +35,7 @@ func TestConclusionBasisStylesAndReviewTime(t *testing.T) {
 	}, ContradictingClaims: []PackConclusionClaim{{Ref: "C-001", Status: domain.ClaimStatusDisputed, Verification: domain.VerificationDisputed}}}
 	parens := strings.Join(conclusionAccountabilityLines(c, basisParens), "\n")
 	brackets := strings.Join(conclusionAccountabilityLines(c, basisBrackets), "\n")
-	for _, want := range []string{"Answer marked: You checked this", "Findings behind the answer: C-002 (Not checked); C-004 (Replaced; You checked this); C-005 (Replaced); C-009 (missing finding)", "Findings against the answer: C-001 (Sources disagree)", "Answer reviewed: 2026-10-27 03:29 UTC"} {
+	for _, want := range []string{"Answer marked: A person checked this", "Findings behind the answer: C-002 (Not checked); C-004 (Replaced; A person checked this); C-005 (Replaced); C-009 (missing finding)", "Findings against the answer: C-001 (Sources disagree)", "Answer reviewed: 2026-10-27 03:29 UTC"} {
 		if !strings.Contains(parens, want) {
 			t.Errorf("parens style missing %q:\n%s", want, parens)
 		}
@@ -76,7 +76,7 @@ func TestBriefCountsEverySource(t *testing.T) {
 	}
 	s := Snapshot{Investigation: domain.Investigation{Ref: "INV-0001", Conclusion: "Because.", ConclusionConfidence: domain.ConfidenceHigh, ConclusionRationale: "The sources agree."}, Evidence: all[:1]}
 	got := RenderBrief(s, BriefOmitted{}, all)
-	if !strings.Contains(got, "\nBecause.\n\n1 of 3 sources checked by you. 1 checked by AI, 1 not checked.\n") || !strings.Contains(got, "\nWhy: The sources agree.\n") {
+	if !strings.Contains(got, "\nBecause.\n\n1 of 3 sources checked by a person. 1 checked by AI, 1 not checked.\n") || !strings.Contains(got, "\nWhy: The sources agree.\n") {
 		t.Errorf("answer section:\n%s", got)
 	}
 	for _, banned := range []string{"onfidence", "High"} {
@@ -90,8 +90,8 @@ func TestBriefCountsEverySource(t *testing.T) {
 	}{
 		{nil, ""},
 		{all[3:], ""},
-		{all[:1], "1 of 1 source checked by you."},
-		{all[2:3], "0 of 1 source checked by you. 1 not checked."},
+		{all[:1], "1 of 1 source checked by a person."},
+		{all[2:3], "0 of 1 source checked by a person. 1 not checked."},
 	} {
 		if got := sourcesCheckedLine(tc.ev); got != tc.want {
 			t.Errorf("sourcesCheckedLine = %q, want %q", got, tc.want)
@@ -140,7 +140,7 @@ func TestBriefStateLabel(t *testing.T) {
 		{BriefStateLabel(domain.ClaimStatusActive.PlainLabel(), domain.VerificationAIGenerated), "Not checked"},
 		{BriefStateLabel(domain.ClaimStatusDisputed.PlainLabel(), domain.VerificationDisputed), "Sources disagree"},
 		{BriefStateLabel(domain.HypothesisStatusDisproven.PlainLabel(), domain.VerificationAIGenerated), "Ruled out; Not checked"},
-		{BriefStateLabel(domain.ClaimStatusRejected.PlainLabel(), domain.VerificationHumanVerified), "Ruled out; You checked this"},
+		{BriefStateLabel(domain.ClaimStatusRejected.PlainLabel(), domain.VerificationHumanVerified), "Ruled out; A person checked this"},
 		{BriefStateLabel(domain.HypothesisStatusSupported.PlainLabel(), domain.VerificationSourceVerified), "Supported; AI checked the source"},
 		{BriefStateLabel(domain.HypothesisStatusOpen.PlainLabel(), domain.VerificationAIGenerated), "Not tested yet; Not checked"},
 	} {

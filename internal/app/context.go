@@ -113,3 +113,7 @@ func FrameContext(text string) string { return contextpack.Frame(text) }
 // FrameContextOverhead is the number of bytes FrameContext adds around its
 // text (a trailing newline of the text is dropped inside the frame).
 func FrameContextOverhead() int { return contextpack.FrameOverhead() }
+
+// ActivityPhrase writes one activity row in the plain words a person reads
+// on their own screen, the same phrasing as the shared answer's history.
+func ActivityPhrase(a Activity) string { return contextpack.TimelinePhrase(a) }

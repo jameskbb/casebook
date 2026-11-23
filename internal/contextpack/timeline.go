@@ -47,13 +47,14 @@ var timelineVerbs = map[string]string{
 
 // timelinePhrase renders one activity row for the report's "How we got
 // here" list in plain words, from its action key and target ref: "Created
-// this question", "Marked C-001: You checked this", "Ruled out H-001". When
+// this question", "Marked C-001: A person checked this", "Ruled out H-001". When
 // the stored summary has a shape internal/app writes for that action (today's
 // or an older version's), the detail it carries (the new status, the
 // question text, the linked source) is kept, with stored enum values written
 // as the labels a person reads. Confidence is never shown. An action the
 // table does not know falls back to the stored summary. label writes a check
-// label: verificationLabel for a person, packLabel for an AI client.
+// label: verificationLabel for anything shared, PlainLabel on the screen of
+// the person who did the checking.
 func timelinePhrase(a domain.Activity, label func(domain.Verification) string) string {
 	sum := oneLine(a.Summary)
 	ref := oneLine(a.TargetRef)
@@ -205,7 +206,7 @@ func addFindingPhrase(rec, ref, sum string) string {
 
 // updateRecordPhrase renders a claim, hypothesis or evidence update. These
 // summaries keep the engine's field list: "Set verification of C-001 to
-// human_verified" becomes "Marked C-001: You checked this"; "Updated
+// human_verified" becomes "Marked C-001: A person checked this"; "Updated
 // hypothesis H-001: rationale, status disproven" becomes "Ruled out H-001;
 // edited the why".
 func updateRecordPhrase(rec, ref, sum string, check func(domain.Verification) string) string {
@@ -367,4 +368,10 @@ func relationGerund(rel string) string {
 		return "contradicting"
 	}
 	return ""
+}
+
+// TimelinePhrase is timelinePhrase for the screen of the person who did the
+// checking (the terminal): "Marked C-001: You checked this".
+func TimelinePhrase(a domain.Activity) string {
+	return timelinePhrase(a, domain.Verification.PlainLabel)
 }

@@ -80,7 +80,7 @@ func TestReportBriefCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := p.Markdown
-	if !strings.Contains(want, "Leadership brief.") || !strings.Contains(want, "## Scope and omissions") {
+	if !strings.Contains(want, "## Answer") || !strings.Contains(want, app.BriefScopeHeading) {
 		t.Fatalf("fixture brief looks wrong:\n%s", want)
 	}
 

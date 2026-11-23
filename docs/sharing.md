@@ -6,21 +6,26 @@ There are two ways to share a question. **Share the answer** writes the answer u
 
 Open the question and choose **Share the answer**. Pick **Leadership brief** for the answer and the findings behind it, or **Complete report** for everything in the question, including its history. The same complete report comes from `casebook report` and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the leadership brief with Casebook's default selection. Choosing the findings yourself is done in the desktop app.
 
-For a brief, open **Choose findings and questions** to pick what goes in from four groups: Findings, Explanations still open or supported, Questions and Ruled out. Casebook starts with up to three current findings, two open or supported explanations, two unanswered questions and two ruled-out findings, and you can change the selection. Findings whose sources disagree, sources that go against a finding, and the findings behind the answer are always included and cannot be unticked. After changing the selection, choose **Update preview**.
+For a brief, open **Choose what to include** to pick what goes in from four groups: Findings, Findings not tested yet or supported, Follow-up questions and Ruled out. Casebook starts with up to three current findings, two findings still being tested, two unanswered follow-up questions and two ruled-out findings, and you can change the selection. Findings whose sources disagree, sources that go against a finding, and the findings behind the answer are always included and cannot be unticked. After changing the selection, choose **Update preview**.
 
-The brief has these parts:
+The reader of a shared answer is not you, so it never says "You". A record you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.`
 
-- **Question** and **Answer**: the question, the current answer and who checked it, the findings for and against it with their labels, when you checked it and what you checked, and why the answer holds.
-- **Selected findings and what is still in doubt**: the chosen findings, each with its status and the label saying who checked it, and the sources for and against it by title and label.
-- **Explanations still open or supported**: the explanations still being tested, so the reader sees what the answer does not yet settle.
-- **Ruled out**: the chosen findings that were ruled out, with the sources that ruled them out.
-- **Selected questions**: open and deferred questions, with the reason a question was deferred.
-- **Sources and source caveats**: each cited source once, with where it came from and the saved summary.
-- **Scope and omissions**: a short paragraph saying what You checked this, AI checked the source, Not checked, Sources disagree and Replaced mean, then a list of what was left out by ref (`Not included: Q-001, Q-002 and E-002.`), a note that activity history is not included, and a line telling the reader to ask you for the complete report.
+The brief has these sections, in this order:
+
+- `## Question`: the question as you wrote it.
+- `## Answer`: the answer, the count of sources a person checked, the label saying who checked the answer, the findings behind it and against it with their labels, when it was reviewed and what was checked, and why the answer holds. `No answer yet.` when there is none.
+- `## Findings`: the chosen findings, each with the label saying who checked it, why it holds, and the sources for and against it by title and label.
+- `## Still being tested`: the chosen findings that are not tested yet or only supported so far, so the reader sees what the answer does not yet settle.
+- `## Ruled out`: the chosen findings that were ruled out, with the sources that ruled them out.
+- `## Follow-up questions`: the chosen follow-up questions, with the answer to an answered one and the reason a question was deferred.
+- `## Sources`: each cited source once, with where it came from, its label and the saved summary.
+- `## What is included`: a short paragraph saying what AI checked the source, Not checked, Sources disagree and Replaced mean, then a list of what was left out by ref (`Not included: Q-001 and Q-002.`), a note that the history is not included, and a line telling the reader to ask the person who shared it for the full version.
 
 It ends with `_Prepared by Casebook from the saved records of INV-0002. Casebook did not rewrite them or add to them._` Casebook builds the brief from your saved records without asking a model to write anything, so the same records and selection give the same text.
 
-The preview does not change while the dialog is open, even if your AI changes the question. **Copy** and **Save as file...** use exactly the preview you reviewed; choose **Refresh preview** to bring in newer changes first.
+The complete report has everything in the question: `## Question`, `## Answer`, `## Findings`, `## Where sources disagree`, `## Ruled out`, `## Still being tested`, `## Answered follow-up questions`, `## Open follow-up questions`, `## Sources` and `## How we got here (UTC)`, the dated history of changes. Sections with nothing in them are left out, except Findings and Open follow-up questions. Findings that were replaced are left out; the history still records the change.
+
+The preview does not change while the dialog is open, even if your AI changes the question. **Copy** and **Save as file...** use exactly the preview you reviewed; choose **Refresh preview** to bring in newer changes first. **Save as file...** suggests the name `INV-0002-answer.md` for the brief and `INV-0002-full-answer.md` for the complete report.
 
 ## Move a question or hand over a copy
 
@@ -70,7 +75,7 @@ What import does:
 
 - It checks the whole file before writing anything and adds the question in one step. It keeps the record refs; the question keeps its ref (`INV-0002`; every question ref starts with INV) when that ref is free on that machine and otherwise gets the next free one (the output says `Imported INV-0002 as INV-0005`).
 - Everything it adds is marked as imported, and context packs show `(imported)` next to those refs.
-- Checks are not trusted across machines: records marked `human_verified` or `source_verified` in the file come in as `ai_generated`. When the answer was checked, and what was checked, are also cleared on import. Only a person can mark a record You checked this in the receiving database.
+- Checks are not trusted across machines: records marked `human_verified` or `source_verified` in the file come in as `ai_generated`. When the answer was checked, and what was checked, are also cleared on import. Only a person can check a record in the receiving database.
 - It does not change the active question. To work on the question in this repository, run `casebook inv activate INV-0002 --here` (with the ref the import printed), so Claude Code and Codex sessions started in the repository pick it up.
 
 ## When the file changes
@@ -97,7 +102,7 @@ Each copy is its own question from then on:
 
 ## Using a question summary in other apps
 
-A question summary is ordinary text that reads correctly anywhere: every finding keeps the label saying who checked it (You checked this, AI checked the source, Not checked, Sources disagree), its source references and the caveats about what was left out. Casebook writes the summary. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
+A question summary is ordinary text that reads correctly anywhere: every finding keeps the label saying who checked it (A person checked this, AI checked the source, Not checked, Sources disagree), its source references and the caveats about what was left out. Casebook writes the summary. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
 
 ### Copy or save it yourself
 
@@ -108,7 +113,7 @@ From the command line:
 ```sh
 casebook report INV-0002                                       # the complete report
 casebook report INV-0002 --brief                               # the leadership brief
-casebook report INV-0002 --brief -o october-calls-brief.md  # the brief, saved as a file
+casebook report INV-0002 --brief -o INV-0002-answer.md      # the brief, saved as a file
 ```
 
 `--brief` chooses findings the way the dialog does before you change its selection.
@@ -117,7 +122,7 @@ casebook report INV-0002 --brief -o october-calls-brief.md  # the brief, saved a
 
 If your AI client (Claude Code, Codex, Claude Desktop, Cursor or another client) is connected to both Casebook and a notes or document app, you can ask it to do the saving. **Share the answer** shows an example request for the open question, and **Copy example request** copies it so you can paste it into your AI client. For the featured question it reads:
 
-> Save the leadership brief for question INV-0002 in my connected notes app as a new note titled "Why calls went up in October". Keep its labels, source references and caveats.
+> Save the leadership brief for INV-0002 in my connected notes app as a new note titled "Why did calls go up 30% in October when sales stayed the same?". Keep its labels, its sources and its notes on what is not checked.
 
 Change the app, the title, or "leadership brief" to "complete report", as you need.
 

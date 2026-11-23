@@ -130,9 +130,9 @@ func TestGoldenReport(t *testing.T) {
 	for _, want := range []string{
 		"# INV-0002: TestCheckoutTotals flakes in CI\n",
 		"## Question\n\nWhy does TestCheckoutTotals fail about once in 20 CI runs and never locally?\n",
-		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by you. 6 not checked.\n",
+		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by a person. 6 not checked.\n",
 		"Why: The race detector reproduces it (E-006)",
-		"- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (You checked this)\n",
+		"- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (A person checked this)\n",
 		"  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; Not checked)\n",
 		"## Ruled out\n\n- **H-001** The failure is a midnight boundary",
 		"  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; Not checked)\n",
@@ -140,7 +140,7 @@ func TestGoldenReport(t *testing.T) {
 		"## Open follow-up questions\n\n- **Q-002** Do other packages keep test state in package-level maps?\n",
 		"- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported; Not checked)",
 		"Codex (AI): Ruled out H-001; edited the why\n",
-		"A person: Marked C-001: You checked this\n",
+		"A person: Marked C-001: A person checked this\n",
 		"Claude Code (AI): Created this question\n",
 		"### 2026-10-05\n",
 	} {

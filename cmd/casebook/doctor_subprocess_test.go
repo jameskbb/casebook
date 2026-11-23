@@ -233,7 +233,7 @@ func TestDoctorSecrets(t *testing.T) {
 				t.Errorf("%v output contains %s", args, s)
 			}
 		}
-		for _, want := range []string{"hooks: SessionStart, Stop, PreCompact", "hand-written", "21 tools", "2 investigations"} {
+		for _, want := range []string{"hooks: SessionStart, Stop, PreCompact", "hand-written", "21 tools", "2 questions"} {
 			if !strings.Contains(r.Stdout, want) {
 				t.Errorf("%v output lacks %q:\n%s", args, want, r.Stdout)
 			}

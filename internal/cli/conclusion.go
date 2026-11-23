@@ -39,7 +39,7 @@ func newInvestigationConclusionCommand(env *Env) *cobra.Command {
 		if env.JSON {
 			return writeJSON(env.Stdout, got)
 		}
-		_, err = fmt.Fprintf(env.Stdout, "Answer to %s: %s; needs checking again: %t\n", got.Ref, checkLabel(got.ConclusionVerification), got.ConclusionNeedsReview)
+		_, err = fmt.Fprintf(env.Stdout, "Answer to %s: %s; needs checking again: %t\n", got.Ref, got.ConclusionVerification.PlainLabel(), got.ConclusionNeedsReview)
 		return err
 	}}
 	cmd.Flags().StringVar(&in.Conclusion, "text", "", "The answer, in plain words; an empty string clears it")

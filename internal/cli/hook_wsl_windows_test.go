@@ -44,7 +44,7 @@ func TestHookScopeWSLPaths(t *testing.T) {
 
 	r := start(wslPath(inside))
 	wantCode(t, r, 0)
-	if r.Stderr != "" || !strings.Contains(r.Stdout, "Investigation: "+f.InvestigationRef) {
+	if r.Stderr != "" || !strings.Contains(r.Stdout, "Question: "+f.InvestigationRef) {
 		t.Errorf("WSL /mnt cwd inside the project: stdout %q, stderr %q; want the pack", r.Stdout, r.Stderr)
 	}
 	wantHookQuiet(t, start(wslPath(unrelated)))

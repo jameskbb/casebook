@@ -77,14 +77,18 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 				return err
 			}
 			tw := newTabWriter(env.Stdout)
-			fmt.Fprintln(tw, "REF\tSTATUS\tUPDATED\tACTIVE\tQUESTION")
+			fmt.Fprintln(tw, "REF\tUPDATED\tACTIVE\tANSWER\tSOURCES CHECKED\tQUESTION")
 			for _, s := range sums {
 				active := ""
 				if s.IsActive {
 					active = "*"
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", s.Ref, s.Status.Label(),
-					s.UpdatedAt, active, app.TruncateLine(s.Title, listTitleBytes))
+				answer := "No answer yet"
+				if s.Conclusion != "" {
+					answer = "Answered"
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d of %d\t%s%s\n", s.Ref, s.UpdatedAt, active, answer,
+					s.SourcesCheckedByYou, s.SourcesTotal, app.TruncateLine(s.Title, listTitleBytes), archivedNote(s.Status))
 			}
 			return tw.Flush()
 		},
@@ -129,14 +133,16 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 	line := func(s string) string { return app.TruncateLine(s, showTextBytes) }
 	inv := d.Investigation
 	tw := newTabWriter(w)
-	fmt.Fprintf(tw, "%s  %s\n", inv.Ref, line(inv.Title))
-	fmt.Fprintf(tw, "Status:\t%s\n", inv.Status.Label())
+	fmt.Fprintf(tw, "%s%s\n", inv.Ref, archivedNote(inv.Status))
+	fmt.Fprintf(tw, "Question:\t%s\n", line(inv.Title))
+	if inv.ProblemStatement != "" {
+		fmt.Fprintf(tw, "Background:\t%s\n", line(inv.ProblemStatement))
+	}
 	fmt.Fprintf(tw, "Active:\t%s\n", yesNo(inv.IsActive))
-	fmt.Fprintf(tw, "Question:\t%s\n", orNone(line(inv.ProblemStatement)))
 	if inv.Conclusion == "" {
 		fmt.Fprintf(tw, "Answer:\t%s\n", "No answer yet")
 	} else {
-		fmt.Fprintf(tw, "Answer:\t%s (%s)\n", line(inv.Conclusion), checkLabel(inv.ConclusionVerification))
+		fmt.Fprintf(tw, "Answer:\t%s (%s)\n", line(inv.Conclusion), inv.ConclusionVerification.PlainLabel())
 	}
 	fmt.Fprintf(tw, "Sources:\t%s\n", sourcesChecked(d.Evidence))
 	if inv.Conclusion != "" {
@@ -156,16 +162,16 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 		if e.SourceLabel != "" {
 			src = "from: " + line(e.SourceLabel)
 		}
-		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.Label(), checkLabel(e.Verification)+importedNote(e.Imported), line(e.Title), cell(src))
+		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.Label(), e.Verification.PlainLabel()+importedNote(e.Imported), line(e.Title), cell(src))
 	}
 	fmt.Fprintf(tw, "\nFindings (%d)\n", len(d.Claims))
 	for _, c := range d.Claims {
-		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", c.Ref, statementState(claimLabel(c.Status), checkLabel(c.Verification), c.Imported),
+		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", c.Ref, statementState(c.Status.PlainLabel(), c.Verification.PlainLabel(), c.Imported),
 			line(c.Statement), cell(linkText(c.Links, c.SupersededBy)))
 	}
 	fmt.Fprintf(tw, "\nFindings being tested (%d)\n", len(d.Hypotheses))
 	for _, h := range d.Hypotheses {
-		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", h.Ref, statementState(hypothesisLabel(h.Status), checkLabel(h.Verification), h.Imported),
+		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", h.Ref, statementState(h.Status.PlainLabel(), h.Verification.PlainLabel(), h.Imported),
 			line(h.Statement), cell(linkText(h.Links, h.SupersededBy)))
 	}
 	fmt.Fprintf(tw, "\nFollow-up questions (%d)\n", len(d.Questions))
@@ -181,10 +187,19 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 	}
 	fmt.Fprintf(tw, "\nRecent activity (%d)\n", len(d.RecentActivity))
 	for _, act := range d.RecentActivity {
-		fmt.Fprintf(tw, "  %s\t%s %s%s\t%s\t%s\t%s\n", act.CreatedAt, act.Actor.Kind, line(act.Actor.Client), importedNote(act.Imported),
-			act.Action, act.TargetRef, line(act.Summary))
+		fmt.Fprintf(tw, "  %s\t%s %s%s\t%s\n", act.CreatedAt, act.Actor.Kind, line(act.Actor.Client), importedNote(act.Imported),
+			line(app.ActivityPhrase(act)))
 	}
 	return tw.Flush()
+}
+
+// archivedNote is " (archived)" for an archived question, the one stored
+// status a person still needs to see.
+func archivedNote(s app.InvestigationStatus) string {
+	if s == app.InvestigationStatusArchived {
+		return " (archived)"
+	}
+	return ""
 }
 
 // importedNote is " (imported)" for a row copied from an imported file, so
@@ -272,7 +287,7 @@ func newInvestigationActiveCommand(env *Env) *cobra.Command {
 			if info.Scope == app.ActiveScopeDirectory {
 				scope = "  for " + info.Dir
 			}
-			_, err = fmt.Fprintf(env.Stdout, "%s  %s  (%s)%s\n", inv.Ref, app.TruncateLine(inv.Title, showTextBytes), inv.Status.Label(), scope)
+			_, err = fmt.Fprintf(env.Stdout, "%s  %s%s%s\n", inv.Ref, app.TruncateLine(inv.Title, showTextBytes), archivedNote(inv.Status), scope)
 			return err
 		},
 	}

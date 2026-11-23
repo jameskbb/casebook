@@ -101,7 +101,7 @@ if want D; then
   # The pack is framed for an AI reader: a line saying it is stored data,
   # then BEGIN CASEBOOK DATA, the pack, END CASEBOOK DATA.
   check required "D clipboard starts with the data framing line" test "${first#The block between the BEGIN and END CASEBOOK DATA }" != "$first"
-  check required "D clipboard holds the INV-0002 pack" grep -qx "Investigation: INV-0002" <<<"$clip"
+  check required "D clipboard holds the INV-0002 pack" grep -qx "Question: INV-0002" <<<"$clip"
 fi
 
 if want E; then

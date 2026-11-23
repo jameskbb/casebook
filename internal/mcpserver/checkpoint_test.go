@@ -192,7 +192,7 @@ func TestCheckpointMidBatchFailure(t *testing.T) {
 	})
 	// All or nothing: the error names the failing item and nothing
 	// before or after it was written.
-	wantToolError(t, res, "claims[1]: not found: evidence E-099 in INV-0001")
+	wantToolError(t, res, "claims[1]: not found: source E-099 in INV-0001")
 	if rows := checkpointRows(t, a); len(rows) != 0 {
 		t.Fatalf("checkpoint rows written: %+v", rows)
 	}

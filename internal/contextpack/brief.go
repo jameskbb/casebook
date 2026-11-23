@@ -27,7 +27,7 @@ type BriefOmitted struct {
 // recommendations. The app selects records and always keeps findings where
 // sources disagree, contradicting sources and the findings behind the
 // answer. allEvidence is every source of the question, selected or not: the
-// "N of M sources checked by you" line counts them all, so leaving a source
+// "N of M sources checked by a person" line counts them all, so leaving a source
 // out of the selection cannot improve the count.
 func RenderBrief(s Snapshot, omitted BriefOmitted, allEvidence []domain.Evidence) string {
 	var b strings.Builder
@@ -195,7 +195,7 @@ const BriefScopeHeading = "## What is included"
 
 // briefLabels is the fixed legend a recipient without Casebook reads to
 // understand every check label in the shared answer. It is constant text.
-const briefLabels = "Labels: You checked this means the person who shared this checked it against its source. AI checked the source means an AI compared it with its source and no person has. Not checked means nobody has checked it. Sources disagree means a source contradicts it; it stays here until someone decides. Replaced means a newer finding took its place."
+const briefLabels = "Labels: AI checked the source means an AI compared it with its source and no person has. Not checked means nobody has checked it. Sources disagree means a source contradicts it; it stays here until someone decides. Replaced means a newer finding took its place."
 
 // BriefStateLabel writes the state in a finding line of a shared answer, and
 // in the selection list, so the sender sees each record's state in the words

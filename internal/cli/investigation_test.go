@@ -10,8 +10,8 @@ import (
 )
 
 // noActiveStderr is the full stderr line for a missing active investigation.
-const noActiveStderr = `casebook: no active investigation is set; pass an investigation ref or set one active; ` +
-	`run "casebook inv activate INV-0001" or pass a ref` + "\n"
+const noActiveStderr = `casebook: no current question is set; pass an INV ref or make one current ` +
+	`(casebook inv activate INV-0001)` + "\n"
 
 // seededApp is seededDB that also returns the seeding App, so a test can
 // compute expected values or change data through internal/app.
@@ -166,8 +166,8 @@ func TestInvestigationList(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("want a header and one row:\n%s", r.Stdout)
 	}
-	wantContains(t, lines[0], "REF", "STATUS", "UPDATED", "ACTIVE", "QUESTION")
-	wantContains(t, lines[1], "INV-0001", "Investigating", "September cloud bill up 38%", "*")
+	wantContains(t, lines[0], "REF", "UPDATED", "ACTIVE", "ANSWER", "SOURCES CHECKED", "QUESTION")
+	wantContains(t, lines[1], "INV-0001", "Answered", "1 of 4", "September cloud bill up 38%", "*")
 
 	r = runCLI(t, "", "--db", db, "--json", "inv", "list")
 	wantCode(t, r, 0)
@@ -191,7 +191,7 @@ func TestInvestigationList(t *testing.T) {
 	}
 	r = runCLI(t, "", "--db", db, "investigation", "list", "--archived")
 	wantCode(t, r, 0)
-	wantContains(t, r.Stdout, "INV-0001", arch.Ref, "Archived", "Old refund spike")
+	wantContains(t, r.Stdout, "INV-0001", arch.Ref, "Old refund spike (archived)")
 	r = runCLI(t, "", "--db", db, "investigation", "list", "--status", "archived")
 	wantCode(t, r, 0)
 	wantContains(t, r.Stdout, arch.Ref)
@@ -233,14 +233,14 @@ func TestInvestigationShow(t *testing.T) {
 	wantCode(t, r, 0)
 	wantContains(t, r.Stdout,
 		"INV-0001", "September cloud bill up 38%",
-		"Status:", "Investigating", "Active:", "yes",
+		"Question:", "Background:", "Active:", "yes",
 		"Why did the cloud bill rise 38% in September when traffic was flat?",
 		"Debug logging requested for payments only reached every service and drove most of the increase.", "(You checked this)", "1 of 4 sources checked by you",
 		"Sources (4)", "E-001", "E-002", "E-003", "E-004",
 		"Findings (3)", "C-001", "C-002", "C-003", "supports: E-001, E-004", "replaced by C-002",
 		"Findings being tested (2)", "H-001", "H-002", "contradicts: E-003",
 		"Follow-up questions (1)", "Q-001", "Can every service except payments go back to info level today?",
-		"Recent activity (")
+		"Recent activity (", "Updated the answer")
 	if strings.Contains(r.Stdout, "level: info") {
 		t.Errorf("show printed E-001's raw detail:\n%s", r.Stdout)
 	}
@@ -267,7 +267,7 @@ func TestInvestigationActive(t *testing.T) {
 	_, db, _ := seededApp(t)
 	r := runCLI(t, "", "--db", db, "investigation", "active")
 	wantCode(t, r, 0)
-	if r.Stdout != "INV-0001  September cloud bill up 38%  (Investigating)\n" {
+	if r.Stdout != "INV-0001  September cloud bill up 38%\n" {
 		t.Errorf("stdout = %q", r.Stdout)
 	}
 	r = runCLI(t, "", "--db", db, "--json", "investigation", "active")

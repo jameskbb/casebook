@@ -41,7 +41,7 @@ func TestGetReport(t *testing.T) {
 	out = decode[reportOutput](t, res)
 	if resultText(res) != app.FrameContext(brief.Markdown) || out.Report != app.FrameContext(brief.Markdown) ||
 		out.Mode != "brief" || out.TimelineLimit != 0 || out.Truncated || out.Bytes != len(out.Report) ||
-		!strings.Contains(out.Report, "Leadership brief.") || !strings.Contains(out.Report, "## Scope and omissions") {
+		!strings.Contains(out.Report, "## Answer") || !strings.Contains(out.Report, app.BriefScopeHeading) {
 		t.Errorf("mode brief: out = %+v", out)
 	}
 	wantToolError(t, callTool(t, cs, "casebook_get_report", map[string]any{"mode": "brief", "timeline_limit": 5}), "invalid timeline_limit")
@@ -94,7 +94,7 @@ func TestGetReportShrinksTimeline(t *testing.T) {
 }
 
 // TestCutBriefKeepsOmissionNotice proves a brief cut to fit the response
-// keeps its whole "Scope and omissions" section after the cut body, with a
+// keeps its whole "What is included" section after the cut body, with a
 // note worded for the brief.
 func TestCutBriefKeepsOmissionNotice(t *testing.T) {
 	a, f := seeded(t)
@@ -116,7 +116,7 @@ func TestCutBriefKeepsOmissionNotice(t *testing.T) {
 	if !out.Truncated || out.Mode != "brief" || out.Report != text || resultBytes(text, out) > budget {
 		t.Fatalf("out = %+v", out)
 	}
-	if !strings.Contains(text, "(Brief cut to fit the response; the Scope and omissions section below describes the full brief. Run casebook report --brief in a terminal for the full text.)") ||
+	if !strings.Contains(text, "(Brief cut to fit the response; the What is included section below describes the full brief. Run casebook report --brief in a terminal for the full text.)") ||
 		strings.Contains(text, "Report cut") {
 		t.Errorf("cut note missing or worded for a report:\n%s", text)
 	}

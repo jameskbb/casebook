@@ -116,11 +116,11 @@ func TestHookUsesDirectoryBinding(t *testing.T) {
 	r := runHook(t, hookPayloadCwd("s1", "SessionStart", sub), "--db", db, "hook", "session-start")
 	wantCode(t, r, 0)
 	ctx := additionalContext(t, r.Stdout)
-	if !strings.Contains(ctx, "Investigation: INV-0002") || !strings.Contains(ctx, "Made the active investigation at ") {
+	if !strings.Contains(ctx, "Question: INV-0002") || !strings.Contains(ctx, "Made the current question at ") {
 		t.Fatalf("session-start in the bound repo:\n%s", ctx)
 	}
 	r = runHook(t, hookPayloadCwd("s2", "SessionStart", t.TempDir()), "--db", db, "hook", "session-start")
-	if !strings.Contains(additionalContext(t, r.Stdout), "Investigation: INV-0001") {
+	if !strings.Contains(additionalContext(t, r.Stdout), "Question: INV-0001") {
 		t.Fatalf("session-start elsewhere:\n%s", r.Stdout)
 	}
 }

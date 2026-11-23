@@ -207,7 +207,7 @@ Only the CLI: `scripts/build-cli.sh --os linux --arch amd64` (or `arm64`). There
 
 ## The README example
 
-The compact pack in the README is real engine output. `scripts/readme-example` builds the Northeast margin case through `internal/app` (Claude Code, Codex and a person in the desktop app, on a fixed clock) in a temporary database and prints its pack:
+The compact pack in the README is real engine output. `scripts/readme-example` builds the demo questions (`internal/demo`) through `internal/app` (Claude Code, Codex and a person in the desktop app, on a fixed clock) in a temporary database and prints the pack of the call center question:
 
 ```sh
 go run ./scripts/readme-example                 # as casebook context --format compact

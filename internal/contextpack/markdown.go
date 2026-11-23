@@ -42,7 +42,7 @@ func RenderMarkdown(p Pack) string {
 
 	lines := []string{"Findings:"}
 	for _, c := range p.EstablishedClaims {
-		lines = append(lines, fmt.Sprintf("%s [%s]", refTag(c.Ref, c.Imported), packLabel(c.Verification)), oneLine(c.Statement))
+		lines = append(lines, fmt.Sprintf("%s [%s]", refTag(c.Ref, c.Imported), verificationLabel(c.Verification)), oneLine(c.Statement))
 		lines = append(lines, whyLine(c.Rationale)...)
 		lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 	}
@@ -51,7 +51,7 @@ func RenderMarkdown(p Pack) string {
 	if len(p.DisputedClaims) > 0 || p.Omitted.DisputedClaims > 0 {
 		lines := []string{"Findings where sources disagree:"}
 		for _, c := range p.DisputedClaims {
-			lines = append(lines, fmt.Sprintf("%s [%s] %s", refTag(c.Ref, c.Imported), packLabel(c.Verification), oneLine(c.Statement)))
+			lines = append(lines, fmt.Sprintf("%s [%s] %s", refTag(c.Ref, c.Imported), verificationLabel(c.Verification), oneLine(c.Statement)))
 			lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 		}
 		add(listTail(lines, len(p.DisputedClaims), p.Omitted.DisputedClaims,
@@ -60,7 +60,7 @@ func RenderMarkdown(p Pack) string {
 
 	lines = []string{"Findings still being tested:"}
 	for _, h := range p.Hypotheses {
-		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(h.Ref, h.Imported), h.Status.PlainLabel(), packLabel(h.Verification)),
+		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(h.Ref, h.Imported), h.Status.PlainLabel(), verificationLabel(h.Verification)),
 			oneLine(h.Statement))
 		lines = append(lines, whyLine(h.Rationale)...)
 		lines = append(lines, p.evidenceLines(h.SupportingEvidence, h.ContradictingEvidence)...)
@@ -89,7 +89,7 @@ func RenderMarkdown(p Pack) string {
 	if len(p.DisprovenHypotheses) > 0 || p.Omitted.DisprovenHypotheses > 0 {
 		lines := []string{"Findings ruled out:"}
 		for _, h := range p.DisprovenHypotheses {
-			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text)+" ["+packLabel(h.Verification)+"]")
+			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text)+" ["+verificationLabel(h.Verification)+"]")
 			if len(h.ContradictingEvidence) > 0 {
 				lines = append(lines, "Ruled out by: "+p.evidenceRefs(h.ContradictingEvidence))
 			}
@@ -105,7 +105,7 @@ func RenderMarkdown(p Pack) string {
 			if source == "" {
 				source = e.SourceType.Label()
 			}
-			lines = append(lines, fmt.Sprintf("%s %s (%s) [%s]", refTag(e.Ref, e.Imported), oneLine(e.Title), source, packLabel(e.Verification)))
+			lines = append(lines, fmt.Sprintf("%s %s (%s) [%s]", refTag(e.Ref, e.Imported), oneLine(e.Title), source, verificationLabel(e.Verification)))
 		}
 		add(lines...)
 	}
@@ -118,7 +118,7 @@ func RenderMarkdown(p Pack) string {
 				who += " (imported)"
 			}
 			lines = append(lines, fmt.Sprintf("- %s %s: %s", c.At, who,
-				timelinePhrase(domain.Activity{Action: c.Action, TargetRef: c.TargetRef, Summary: c.Summary}, packLabel)))
+				timelinePhrase(domain.Activity{Action: c.Action, TargetRef: c.TargetRef, Summary: c.Summary}, verificationLabel)))
 		}
 		add(lines...)
 	}
@@ -213,12 +213,12 @@ func (p Pack) evidenceRefs(refs []string) string {
 func (p Pack) evidenceVerificationLabel(ref string) string {
 	for _, e := range p.EvidenceVerification {
 		if e.Ref == ref {
-			return packLabel(e.Verification)
+			return verificationLabel(e.Verification)
 		}
 	}
 	for _, e := range p.EvidenceIndex {
 		if e.Ref == ref {
-			return packLabel(e.Verification)
+			return verificationLabel(e.Verification)
 		}
 	}
 	return checkUnknown
@@ -227,21 +227,17 @@ func (p Pack) evidenceVerificationLabel(ref string) string {
 // checkUnknown stands in for a check label that is not available.
 const checkUnknown = "Check not known"
 
-// verificationLabel is the check label a person reads in a shared answer.
+// verificationLabel is the check label in everything that leaves the app: a
+// shared answer and a pack an AI client reads. Its reader is not the person
+// who did the checking, so it never says "You".
 func verificationLabel(v domain.Verification) string {
-	if v == "" {
+	switch v {
+	case "":
 		return checkUnknown
-	}
-	return v.PlainLabel()
-}
-
-// packLabel is verificationLabel for a pack, which an AI client reads: "You
-// checked this" would tell the AI that it did the checking.
-func packLabel(v domain.Verification) string {
-	if v == domain.VerificationHumanVerified {
+	case domain.VerificationHumanVerified:
 		return "A person checked this"
 	}
-	return verificationLabel(v)
+	return v.PlainLabel()
 }
 
 // basisStyle picks how conclusionAccountabilityLines writes a finding
@@ -266,7 +262,7 @@ func claimBasisLabel(claim PackConclusionClaim, style basisStyle) string {
 	verification := verificationLabel(claim.Verification)
 	sep := "; "
 	if style == basisBrackets {
-		verification, sep = packLabel(claim.Verification), ", "
+		sep = ", "
 	}
 	status := claim.Status.PlainLabel()
 	if claim.Status == domain.ClaimStatusActive || claim.Status == "" || status == verification {
@@ -293,11 +289,11 @@ func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string 
 	if verification == "" {
 		verification = domain.VerificationAIGenerated
 	}
-	open, closing, sep, label := " [", "]", ", ", packLabel
+	open, closing, sep := " [", "]", ", "
 	if style == basisParens {
-		open, closing, sep, label = " (", ")", "; ", verificationLabel
+		open, closing, sep = " (", ")", "; "
 	}
-	lines := []string{"Answer marked: " + label(verification)}
+	lines := []string{"Answer marked: " + verificationLabel(verification)}
 	for _, group := range []struct {
 		label  string
 		claims []PackConclusionClaim
@@ -329,16 +325,16 @@ func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string 
 }
 
 // sourcesCheckedLine counts the sources that are not replaced: "1 of 3
-// sources checked by you. 1 checked by AI, 1 not checked." It is "" when
+// sources checked by a person. 1 checked by AI, 1 not checked." It is "" when
 // there are none. The count stands where a confidence rating used to.
 func sourcesCheckedLine(evidence []domain.Evidence) string {
-	total, byYou, byAI, notChecked := 0, 0, 0, 0
+	total, byPerson, byAI, notChecked := 0, 0, 0, 0
 	for _, e := range evidence {
 		switch e.Verification {
 		case domain.VerificationSuperseded:
 			continue
 		case domain.VerificationHumanVerified:
-			byYou++
+			byPerson++
 		case domain.VerificationSourceVerified:
 			byAI++
 		case domain.VerificationAIGenerated:
@@ -353,7 +349,7 @@ func sourcesCheckedLine(evidence []domain.Evidence) string {
 	if total == 1 {
 		noun = "source"
 	}
-	line := fmt.Sprintf("%d of %d %s checked by you.", byYou, total, noun)
+	line := fmt.Sprintf("%d of %d %s checked by a person.", byPerson, total, noun)
 	var rest []string
 	if byAI > 0 {
 		rest = append(rest, fmt.Sprintf("%d checked by AI", byAI))

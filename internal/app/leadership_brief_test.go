@@ -129,7 +129,7 @@ func TestLeadershipBriefKeepsConclusionBasisAndMixedVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, "You checked this", "Supported by " + ev.Ref + ": AI captured ledger (Not checked)", "**" + ev.Ref + "** AI captured ledger (File: ledger.csv; Not checked)", "Expenses explain the drop.", "0 of 1 source checked by you. 1 not checked.", "Answer marked: You checked this", "Answer review: not reviewed yet."} {
+	for _, want := range []string{c.Statement, "A person checked this", "Supported by " + ev.Ref + ": AI captured ledger (Not checked)", "**" + ev.Ref + "** AI captured ledger (File: ledger.csv; Not checked)", "Expenses explain the drop.", "0 of 1 source checked by a person. 1 not checked.", "Answer marked: A person checked this", "Answer review: not reviewed yet."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}

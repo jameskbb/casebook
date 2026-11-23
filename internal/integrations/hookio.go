@@ -49,11 +49,11 @@ const MaxAdditionalContextBytes = 8000
 
 // Texts the hooks emit.
 const (
-	sessionPreamble = "Casebook active investigation (shared memory across AI sessions).\n" +
-		"If this session continues it, build on the pack below instead of starting over (do not re-test disproven hypotheses), " +
+	sessionPreamble = "Casebook: the question this AI is working on (kept across AI sessions).\n" +
+		"If this session continues it, build on what is saved below instead of starting over (do not test again what was ruled out), " +
 		"record new findings with the casebook_* MCP tools and call casebook_checkpoint before your final reply; if the task is unrelated, ignore it."
-	noActiveHint = "Casebook: no active investigation. If this session turns into working out why something happened " +
-		"(a number that moved, a failure being root-caused, work likely to continue later), offer to keep the question in Casebook; " +
+	noActiveHint = "Casebook: no current question. If this session turns into working out why something happened " +
+		"(a number that moved, something that broke, work likely to continue later), offer to keep the question in Casebook; " +
 		"to continue an earlier one, find it with casebook_search_investigations or casebook_list_investigations."
 	truncatedSuffix = "\n(Casebook context truncated)"
 )
@@ -251,9 +251,9 @@ func NoActiveHint() string { return noActiveHint }
 
 // CheckpointReminder is the Stop reminder for investigation invRef.
 func CheckpointReminder(invRef string) string {
-	return "Casebook: if this session produced material findings for " + invRef +
-		" (new evidence, claims, contradicted claims, hypothesis changes, resolved or new questions, conclusion changes), " +
-		"persist them now with one casebook_checkpoint call. Skip if nothing material changed."
+	return "Casebook: if this session found anything new for " + invRef +
+		" (new sources or findings, a finding that was contradicted or ruled out, new or answered follow-up questions, a changed answer), " +
+		"save it now with one casebook_checkpoint call. Skip if nothing changed."
 }
 
 // PreCompactMessage is the PreCompact warning for investigation invRef. It

@@ -11,7 +11,7 @@ import (
 )
 
 func TestReportHTMLEscapesStoredText(t *testing.T) {
-	md := "# INV-0001: A <b>bold</b> & \"quoted\" title\n\n## Question\n\nIs 1 < 2 & 3 > 2?\n\n## Findings\n\n- **C-001** Text with <script>alert(1)</script> inside. (You checked this)\n  - Why: because & so.\n"
+	md := "# INV-0001: A <b>bold</b> & \"quoted\" title\n\n## Question\n\nIs 1 < 2 & 3 > 2?\n\n## Findings\n\n- **C-001** Text with <script>alert(1)</script> inside. (A person checked this)\n  - Why: because & so.\n"
 	html := contextpack.ReportHTML(md)
 	for _, bad := range []string{"<b>", "<script>", "&\"", "& so"} {
 		if strings.Contains(html, bad) {
@@ -22,7 +22,7 @@ func TestReportHTMLEscapesStoredText(t *testing.T) {
 		"<h1>INV-0001: A &lt;b&gt;bold&lt;/b&gt; &amp; &#34;quoted&#34; title</h1>",
 		"<h2>Question</h2>",
 		"<p>Is 1 &lt; 2 &amp; 3 &gt; 2?</p>",
-		"<li><strong>C-001</strong> Text with &lt;script&gt;alert(1)&lt;/script&gt; inside. (You checked this)<ul><li>Why: because &amp; so.</li></ul></li>",
+		"<li><strong>C-001</strong> Text with &lt;script&gt;alert(1)&lt;/script&gt; inside. (A person checked this)<ul><li>Why: because &amp; so.</li></ul></li>",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("missing %q in %s", want, html)

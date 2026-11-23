@@ -117,11 +117,11 @@ func (h *handlers) getReport(ctx context.Context, _ call, in getReportInput) (re
 
 // briefScopeHeading opens the brief's last section, its omission notice
 // (contextpack.RenderBrief).
-const briefScopeHeading = "\n## Scope and omissions\n"
+const briefScopeHeading = "\n" + app.BriefScopeHeading + "\n"
 
 // cutReport cuts report at a line break until the result fits budget, adds
 // a line saying it was cut and marks it truncated. A brief keeps its
-// "Scope and omissions" section intact after the cut body, so the refs it
+// "What is included" section intact after the cut body, so the refs it
 // leaves out are never lost; the cut note says that section describes the
 // full brief, since the cut body may have dropped records it mentions. ok is
 // false when no cut fits.
@@ -129,7 +129,7 @@ func cutReport(ref string, mode reportMode, limit int, report string, budget int
 	body, tail := report, ""
 	note := "\n(Report cut to fit the response; run casebook report in a terminal for the full text.)\n"
 	if mode == reportModeBrief {
-		note = "\n(Brief cut to fit the response; the Scope and omissions section below describes the full brief. Run casebook report --brief in a terminal for the full text.)\n"
+		note = "\n(Brief cut to fit the response; the What is included section below describes the full brief. Run casebook report --brief in a terminal for the full text.)\n"
 		if i := strings.LastIndex(report, briefScopeHeading); i >= 0 {
 			body, tail = report[:i+1], report[i:]
 		}

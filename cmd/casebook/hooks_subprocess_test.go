@@ -169,7 +169,7 @@ func TestHookSessionStartInstalled(t *testing.T) {
 	}
 	text, _ := hso["additionalContext"].(string)
 	for _, w := range []string{
-		"Casebook active investigation (shared memory across AI sessions).",
+		"Casebook: the question this AI is working on (kept across AI sessions).",
 		"INV-0001",
 		"September cloud bill up 38%",
 	} {

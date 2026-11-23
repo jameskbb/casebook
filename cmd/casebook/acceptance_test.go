@@ -140,7 +140,7 @@ func TestAcceptanceScenario(t *testing.T) {
 	// 20. A compact context pack, through MCP and the engine, names both.
 	res = callTool(t, cs, "casebook_get_context", map[string]any{"compact": true})
 	pack := resultText(res)
-	for _, want := range []string{"Investigation: " + inv.Ref, "C-001", "C-002", "E-002", "Q-001", "H-001", "Debug logging requested for payments only reached every service and drove most of the increase."} {
+	for _, want := range []string{"Question: " + inv.Ref, "C-001", "C-002", "E-002", "Q-001", "H-001", "Debug logging requested for payments only reached every service and drove most of the increase."} {
 		if !strings.Contains(pack, want) {
 			t.Fatalf("step 20: compact pack lacks %q:\n%s", want, pack)
 		}

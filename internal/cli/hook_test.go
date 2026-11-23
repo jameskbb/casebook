@@ -109,8 +109,8 @@ func TestHookSessionStart(t *testing.T) {
 		want := integrations.SessionStartOutput(integrations.SessionStartContext(body, app.FrameContext, app.FrameContextOverhead()))
 		wantHookOutput(t, r, want)
 		got := additionalContext(t, r.Stdout)
-		wantPrefix := "Casebook active investigation (shared memory across AI sessions).\n" +
-			"If this session continues it, build on the pack below instead of starting over (do not re-test disproven hypotheses), " +
+		wantPrefix := "Casebook: the question this AI is working on (kept across AI sessions).\n" +
+			"If this session continues it, build on what is saved below instead of starting over (do not test again what was ruled out), " +
 			"record new findings with the casebook_* MCP tools and call casebook_checkpoint before your final reply; if the task is unrelated, ignore it.\n\n"
 		if got != wantPrefix+app.FrameContext(body) {
 			t.Errorf("additionalContext is not preamble, blank line, framed set-by line and compact pack byte for byte")
@@ -125,7 +125,7 @@ func TestHookSessionStart(t *testing.T) {
 			!strings.Contains(lines[0], strings.TrimPrefix(lines[1], "BEGIN ")) {
 			t.Errorf("framing lines: %q ... %q", lines[:2], lines[len(lines)-1])
 		}
-		if lines[2] != setBy || !strings.HasPrefix(setBy, "Made the active investigation at ") ||
+		if lines[2] != setBy || !strings.HasPrefix(setBy, "Made the current question at ") ||
 			!strings.HasSuffix(setBy, " by "+string(apptest.Human.Kind)+" "+apptest.Human.Client+".") {
 			t.Errorf("set-by line = %q", lines[2])
 		}
@@ -145,7 +145,7 @@ func TestHookSessionStart(t *testing.T) {
 		}
 		got := additionalContext(t, runHook(t, hookPayload("s1", "SessionStart", false), "--db", db, "hook", "session-start").Stdout)
 		want := " by " + string(apptest.AI.Kind) + " " + apptest.AI.Client + ".\n"
-		if !strings.Contains(got, "\nMade the active investigation at ") || !strings.Contains(got, want) {
+		if !strings.Contains(got, "\nMade the current question at ") || !strings.Contains(got, want) {
 			t.Errorf("session context does not name the AI client that switched the investigation:\n%.600s", got)
 		}
 	})
@@ -230,7 +230,7 @@ func TestHookScope(t *testing.T) {
 		if r.Stderr != "" {
 			t.Errorf("stderr = %q", r.Stderr)
 		}
-		return strings.Contains(r.Stdout, "Investigation: "+f.InvestigationRef)
+		return strings.Contains(r.Stdout, "Question: "+f.InvestigationRef)
 	}
 
 	for _, tc := range []struct {

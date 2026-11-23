@@ -31,7 +31,7 @@ func TestTimelinePhrase(t *testing.T) {
 		{"finding add", "claim.add", "C-001", "Added finding C-001 with 3 sources", "Added finding C-001 (3 sources)"},
 		{"finding add one", "hypothesis.add", "H-002", "Added finding H-002 with 1 source", "Added finding H-002 (1 source)"},
 		{"finding add bare", "hypothesis.add", "H-003", "Added finding H-003", "Added finding H-003"},
-		{"check finding", "claim.update", "C-001", "Set verification of C-001 to human_verified", "Marked C-001: You checked this"},
+		{"check finding", "claim.update", "C-001", "Set verification of C-001 to human_verified", "Marked C-001: A person checked this"},
 		{"check source", "evidence.update", "E-002", "Set verification of E-002 to source_verified", "Marked E-002: AI checked the source"},
 		{"sources disagree", "claim.update", "C-001", "Set verification of C-001 to disputed; status disputed", "Marked C-001: Sources disagree"},
 		{"settled", "claim.update", "C-001", "Set verification of C-001 to ai_generated; status active", "Marked C-001: Not checked"},

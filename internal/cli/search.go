@@ -50,7 +50,7 @@ Put words that start with "-" after "--" so they are not read as flags.`,
 			tw := newTabWriter(env.Stdout)
 			fmt.Fprintln(tw, "QUESTION\tTYPE\tREF\tMATCH")
 			for _, h := range hits {
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", h.InvestigationRef, recordLabel(h.RecordType), h.RecordRef,
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", h.InvestigationRef, h.RecordType.PlainWord(), h.RecordRef,
 					app.TruncateLine(h.Snippet, searchSnippetBytes))
 			}
 			return tw.Flush()
