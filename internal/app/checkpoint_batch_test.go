@@ -94,7 +94,7 @@ func TestCheckpointBatchAtomic(t *testing.T) {
 		Questions:       []app.QuestionInput{{Question: "q?"}},
 		QuestionUpdates: []app.QuestionUpdate{{Ref: "Q-099", Reopen: true}},
 	})
-	if !errors.Is(err, app.ErrNotFound) || !strings.HasPrefix(err.Error(), "question_updates[0]: not found: follow-up question Q-099") {
+	if !errors.Is(err, app.ErrNotFound) || !strings.HasPrefix(err.Error(), "question_updates[0]: not found: thing to find out Q-099") {
 		t.Fatalf("err = %v", err)
 	}
 	after, _ := a.ChangeToken(ctx)

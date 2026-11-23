@@ -40,10 +40,14 @@ func ListInvestigationSummaries(ctx context.Context, q Querier, f SummaryQuery) 
     (SELECT count(*) FROM questions qq WHERE qq.investigation_id = i.id AND qq.status = 'open'),
     (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id AND e.verification != 'superseded'),
     (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id AND e.verification = 'human_verified'),
-    (SELECT count(*) FROM claims c WHERE c.investigation_id = i.id AND c.verification = 'disputed'
-        AND c.status NOT IN ('superseded', 'rejected'))
-     + (SELECT count(*) FROM hypotheses h WHERE h.investigation_id = i.id AND h.verification = 'disputed'
-        AND h.status NOT IN ('superseded', 'disproven'))
+    (SELECT count(*) FROM claims c WHERE c.investigation_id = i.id AND c.status NOT IN ('superseded', 'rejected')
+        AND (c.verification = 'disputed' OR (c.verification != 'human_verified' AND EXISTS (
+            SELECT 1 FROM claim_evidence l JOIN evidence e ON e.id = l.evidence_id
+            WHERE l.claim_id = c.id AND l.relation = 'contradicts' AND e.verification != 'superseded'))))
+     + (SELECT count(*) FROM hypotheses h WHERE h.investigation_id = i.id AND h.status NOT IN ('superseded', 'disproven')
+        AND (h.verification = 'disputed' OR (h.verification != 'human_verified' AND EXISTS (
+            SELECT 1 FROM hypothesis_evidence l JOIN evidence e ON e.id = l.evidence_id
+            WHERE l.hypothesis_id = h.id AND l.relation = 'contradicts' AND e.verification != 'superseded'))))
 FROM investigations i`
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")

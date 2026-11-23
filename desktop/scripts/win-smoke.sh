@@ -9,7 +9,8 @@
 #   A  fresh launch with no configuration creates the database and shows
 #      "Check what your AI tells you"
 #   B  the seeded demo opens on Home; the featured question opens from
-#      there and drills down a finding, then its source, with Back
+#      there and drills down a finding, then its source, with Back; best
+#      effort: Check the next source opens the one-source-at-a-time stepper
 #   C  a separate process (aiwrite.exe as ai claude-code) writes while the
 #      app is open; the app shows it within 5 seconds
 #   D  Copy to paste into your AI puts the pack on the real clipboard
@@ -87,6 +88,10 @@ if want B; then
   check required "B open source E-007 from the finding drawer" ui invoke -Text "Open source E-007: Notice dated October 4: 1,900 customers were charged twice on October 3" -Last
   check required "B source drawer shows Back to C-003" find_text "Back to C-003"
   check required "B Esc closes the drawers" ui keys -Text "{ESC}"
+  # One checking flow: a source at a time with I checked this and Skip.
+  check best "B open Check the next source" ui invoke -Text "Check the next source"
+  check best "B the stepper offers Skip" find_text "Skip" 5
+  check best "B Esc closes the stepper" ui keys -Text "{ESC}"
 fi
 
 if want C; then

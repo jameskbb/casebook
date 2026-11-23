@@ -46,13 +46,15 @@ func (d *Desktop) reviewedShare(id string) (app.SharePreview, error) {
 	return app.SharePreview{}, uiErr(kindConflict, "snapshot_id", "This is no longer the latest answer. Close this window and choose Share the answer again.")
 }
 
-// CopySharePreview copies the pinned Markdown, without rereading the question.
+// CopySharePreview copies the pinned answer as plain text with no marks,
+// without rereading the question. The page copies rich text itself and uses
+// this when it cannot.
 func (d *Desktop) CopySharePreview(snapshotID string) error {
 	p, err := d.reviewedShare(snapshotID)
 	if err != nil {
 		return err
 	}
-	return nativeErr("clipboard", d.native.SetClipboard(p.Markdown))
+	return nativeErr("clipboard", d.native.SetClipboard(p.Text))
 }
 
 // SaveSharePreview saves the pinned answer through the native dialog. Even a

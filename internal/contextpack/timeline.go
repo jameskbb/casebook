@@ -29,16 +29,16 @@ var timelineVerbs = map[string]string{
 	"link.add":                "added a source to the finding {T}",
 	"link.update":             "changed whether a source backs the finding {T}",
 	"link.remove":             "removed a source from the finding {T}",
-	"question.add":            "asked the follow-up question {T}",
-	"question.update":         "reworded the follow-up question {T}",
-	"question.resolve":        "answered the follow-up question {T}",
-	"question.defer":          "left the follow-up question {T} for later",
-	"question.reopen":         "reopened the follow-up question {T}",
+	"question.add":            "added something to find out: {T}",
+	"question.update":         "reworded {T}",
+	"question.resolve":        "answered {T}",
+	"question.defer":          "left {T} for later",
+	"question.reopen":         "opened {T} again",
 	"investigation.delete":    "deleted a question {T}",
 	"evidence.delete":         "deleted a source {T}",
 	"claim.delete":            "deleted a finding {T}",
 	"hypothesis.delete":       "deleted a finding {T}",
-	"question.delete":         "deleted a follow-up question {T}",
+	"question.delete":         "deleted something to find out {T}",
 	"active.set":              "made this your AI's current question",
 	"active.clear":            "cleared your AI's current question",
 	"checkpoint":              "saved its progress",
@@ -48,26 +48,52 @@ var timelineVerbs = map[string]string{
 
 // refNamer writes a record ref the way the reader meets the record: the ref
 // itself in a terminal or a pack an AI reads, the record's own text in a
-// shared answer ("" when the record is gone).
+// shared answer (gone when the record has been deleted, "" for no ref).
 type refNamer func(ref string) string
 
 func refItself(ref string) string { return ref }
 
-// with joins a noun and a name: "the source E-005", or "the source" when
-// the name is empty.
+// gone is the name of a deleted record. It is never printed: with and fill
+// write "a finding that is no longer here" for it, so a line has no hole.
+const gone = "\x00"
+
+// with joins a noun and a name: "the source E-005", "the source" when the
+// name is empty, "a source that is no longer here" when the record is gone.
 func with(noun, name string) string {
-	if name == "" {
+	switch name {
+	case "":
 		return noun
+	case gone:
+		return "a " + strings.TrimPrefix(noun, "the ") + " that is no longer here"
 	}
 	return noun + " " + name
 }
 
-// fill puts the target's name into a table phrase.
+// fill puts the target's name into a table phrase. Without a name the
+// phrase still reads whole: "added the finding", "deleted a source", "added
+// a finding that is no longer here" for a deleted one, and "answered
+// something to find out" where the name was the only noun.
 func fill(phrase, name string) string {
-	if name == "" {
-		return strings.Replace(phrase, " {T}", "", 1)
+	if name != "" && name != gone {
+		return strings.Replace(phrase, "{T}", name, 1)
 	}
-	return strings.Replace(phrase, "{T}", name, 1)
+	before, after, ok := strings.Cut(phrase, "{T}")
+	if !ok {
+		return phrase
+	}
+	before = strings.TrimRight(before, " ")
+	if head, ok := strings.CutSuffix(before, ":"); ok {
+		return head + after
+	}
+	for _, noun := range []string{"finding", "source", "question", "find out"} {
+		if head, ok := strings.CutSuffix(before, "the "+noun); ok && name == gone {
+			return head + with("the "+noun, gone) + after
+		}
+		if strings.HasSuffix(before, noun) {
+			return before + after
+		}
+	}
+	return before + " something to find out" + after
 }
 
 // timelinePhrase renders one activity row in plain words, from its action
@@ -129,7 +155,7 @@ func detailPhrase(action, ref, sum string, name refNamer) string {
 	case "claim.supersede", "hypothesis.supersede":
 		head, _, _ := strings.Cut(sum, "; ")
 		for _, mid := range []string{" was replaced by ", " superseded by "} {
-			if by, ok := strings.CutPrefix(head, ref+mid); ok && ref != "" && name(by) != "" {
+			if by, ok := strings.CutPrefix(head, ref+mid); ok && ref != "" && name(by) != "" && name(by) != gone {
 				return "replaced " + with("the finding", name(ref)) + " with " + name(by)
 			}
 		}
@@ -182,8 +208,8 @@ func recName(action string) string {
 	return rec
 }
 
-// questionPhrase turns "Added question Q-001: text" into "asked the
-// follow-up question Q-001: text". For a new or reworded question the text
+// questionPhrase turns "Added question Q-001: text" into "added something
+// to find out: Q-001 "text"". For a new or reworded question the text
 // is the question itself, so it is left out when the name already is that
 // text; for an answered question it is the answer (detail true) and is
 // always kept.
@@ -200,8 +226,12 @@ func questionPhrase(action, prefix, ref, sum string, name refNamer, detail bool)
 	if !ok || text == "" {
 		return ""
 	}
-	if !detail && name(ref) != ref && name(ref) != "" {
+	if n := name(ref); !detail && n != ref && n != "" && n != gone {
 		return phrase
+	}
+	if strings.Contains(phrase, ": ") {
+		// "added something to find out: Q-001" already has its colon.
+		return phrase + ` "` + text + `"`
 	}
 	return phrase + ": " + text
 }
@@ -234,13 +264,17 @@ func addFindingPhrase(rec, ref, sum string, name refNamer) string {
 	return out + " with " + n + " sources"
 }
 
-// checkPhrase says a record was given a check label: "checked the finding
-// C-001", "said sources disagree about the finding C-001", "marked the
-// source E-002: AI checked the source". The actor is written before it, so a
-// person's check needs neither "You" nor "A person".
-func checkPhrase(what string, v domain.Verification) string {
+// checkPhrase says a record was given a check label: "checked the source
+// E-002", "decided the finding C-001 holds" (a person settles a finding, they
+// do not check it), "said sources disagree about the finding C-001", "marked
+// the source E-002: AI checked the source". The actor is written before it,
+// so a person's check needs neither "You" nor "A person".
+func checkPhrase(rec, what string, v domain.Verification) string {
 	switch v {
 	case domain.VerificationHumanVerified:
+		if rec != "evidence" {
+			return "decided " + what + " holds"
+		}
 		return "checked " + what
 	case domain.VerificationDisputed:
 		return "said sources disagree about " + what
@@ -250,20 +284,23 @@ func checkPhrase(what string, v domain.Verification) string {
 
 // updateRecordPhrase renders a claim, hypothesis or evidence update. These
 // summaries keep the engine's field list: "Set verification of C-001 to
-// human_verified" becomes "checked the finding C-001"; "Updated hypothesis
-// H-001: rationale, status disproven" becomes "ruled out the finding H-001
-// (also changed: why)".
+// human_verified" becomes "decided the finding C-001 holds"; "Updated
+// hypothesis H-001: rationale, status disproven" becomes "ruled out the
+// finding H-001 (also changed: why)" in a terminal, where the reader works
+// with the fields, and "ruled out the finding ..." in a shared answer, where
+// a list of field names is noise.
 func updateRecordPhrase(rec, ref, sum string, name refNamer) string {
 	if ref == "" {
 		return ""
 	}
+	shared := name(ref) != ref
 	what := with("the "+domain.RecordType(rec).PlainWord(), name(ref))
 	if rest, ok := strings.CutPrefix(sum, "Set verification of "+ref+" to "); ok {
 		v, status, hasStatus := strings.Cut(rest, "; status ")
 		if v == "" {
 			return ""
 		}
-		out := checkPhrase(what, domain.Verification(v))
+		out := checkPhrase(rec, what, domain.Verification(v))
 		if s := statusLabel(rec, status); hasStatus && s != domain.Verification(v).PlainLabel() && s != "Current" {
 			out += "; now " + s
 		}
@@ -276,6 +313,7 @@ func updateRecordPhrase(rec, ref, sum string, name refNamer) string {
 	list, note, hasNote := strings.Cut(rest, "; ")
 	var primary string
 	var others []string
+	statusSet := false
 	for _, item := range strings.Split(list, ", ") {
 		field, value, hasValue := strings.Cut(item, " ")
 		switch {
@@ -284,18 +322,25 @@ func updateRecordPhrase(rec, ref, sum string, name refNamer) string {
 		case field == "confidence":
 			// stored, never shown
 		case field == "status" && hasValue:
+			statusSet = true
 			switch s := statusLabel(rec, value); s {
 			case "Ruled out":
 				primary = "ruled out " + what
-			case "Current":
+			case "Current", "Not tested yet":
 				primary = "brought back " + what
+			case "Looks right so far":
+				primary = "said " + what + " turned out right"
+			case "Sources disagree":
+				primary = checkPhrase(rec, what, domain.VerificationDisputed)
 			default:
 				primary = "marked " + what + ": " + s
 			}
 		case field == "verification" && !hasValue && hasNote:
 			// a reset: the note below names the new value
 		case field == "verification" && hasValue && primary == "":
-			primary = checkPhrase(what, domain.Verification(value))
+			primary = checkPhrase(rec, what, domain.Verification(value))
+		case field == "verification" && hasValue && domain.Verification(value) == domain.VerificationDisputed && statusSet:
+			// the status already said so
 		case field == "verification" && hasValue:
 			if domain.Verification(value) == domain.VerificationHumanVerified {
 				others = append(others, "checked")
@@ -305,6 +350,9 @@ func updateRecordPhrase(rec, ref, sum string, name refNamer) string {
 		default:
 			others = append(others, fieldName(field))
 		}
+	}
+	if shared {
+		others = nil
 	}
 	out := ""
 	switch {

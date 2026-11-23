@@ -104,7 +104,7 @@ func TestImport(t *testing.T) {
 
 	r := runCLI(t, "", "--db", db, "import", path)
 	wantCode(t, r, 0)
-	wantContains(t, r.Stdout, "Imported INV-0001 as INV-0002", "4 sources", "3 findings", "2 findings being tested", "1 follow-up questions")
+	wantContains(t, r.Stdout, "Imported INV-0001 as INV-0002", "4 sources", "3 findings", "2 findings being tested", "1 things to find out")
 
 	refs := func(ref string) []string {
 		t.Helper()

@@ -149,11 +149,11 @@ H-004 [Looks right so far, A person checked this]
 Late arriving rows explain part of it.
 Sources against: E-001 [Not checked]
 
-Follow-up questions:
+Still to find out:
 Q-001
 Which cutoff is correct?
 
-Follow-up questions for later:
+Still to find out, left for later:
 Q-002 Should returns be excluded? (note: Waiting on finance.)
 
 Findings ruled out:
@@ -325,7 +325,7 @@ Findings:
 Findings still being tested:
 (none)
 
-Follow-up questions:
+Still to find out:
 (none)
 `
 	if md != want {

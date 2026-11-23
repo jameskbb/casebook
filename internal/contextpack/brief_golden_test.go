@@ -63,15 +63,16 @@ func TestGoldenBriefDemo(t *testing.T) {
 	for _, want := range []string{
 		"# Why did calls go up 30% in October when sales stayed the same?\n\nAsked on October 29, 2026. Last changed on November 1, 2026.\n\n## Background\n",
 		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.\n\nA person checked this answer on November 1, 2026.\n",
-		"Findings that back the answer:\n- About the same number of people called to buy. (Not checked)\n- A billing mistake on October 3 charged some customers twice. (A person checked this)\n",
-		"Findings that go against the answer:\n- Callers waited too long and hung up before buying. (Sources disagree)\n",
+		"\nHow we know: The billing team's notice, the call log and the billing team lead agree.",
+		"- A billing mistake on October 3 charged some customers twice. (2 of 4 sources checked by a person)\n",
 		"## Where sources disagree\n\n- Callers waited too long and hung up before buying.\n",
 		"  - Goes against it: The average wait was 40 seconds in September and 40 seconds in October (Not checked)\n",
-		"- Something went wrong with billing in early October. (Looks right so far; Not checked)\n",
-		"## Not tested yet\n\n- Customers who were charged twice are less likely to buy again. (Not checked)\n\n## Ruled out\n\n- A new ad brought in more callers. (Not checked)\n",
-		"- Should we expect fewer sales in November from the customers who were charged twice? (Later)\n  - Why it can wait: ",
+		"- Something went wrong with billing in early October. (0 of 1 source checked by a person)\n",
+		"## Still to find out\n\n- Customers who were charged twice are less likely to buy again. (not tested yet)\n- Have all 1,900 customers been paid back? (not answered yet)\n",
+		"## Ruled out\n\n- A new ad brought in more callers.\n",
+		"- Should we expect fewer sales in November from the customers who were charged twice? (left for later)\n  - Why it can wait: ",
 		"(AI checked the source)",
-		"\nThis short version leaves out 2 follow-up questions and the history. Ask the person who shared this for the version with everything.\n\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
+		"\nThis short version leaves out 2 things still to find out and the history. Ask the person who shared this for the version with everything.\n\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
 	} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("the short version lacks %q", want)

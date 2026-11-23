@@ -28,7 +28,7 @@ It runs on your own computer. There is no account and nothing to host.
 2. Open it. Windows and macOS warn the first time, because the app is not signed yet. The install guide shows how to check your download and get past the warning.
 3. Choose **Connect your AI** on the first screen and pick the AI tool you use.
 
-Connecting means pasting one line into a terminal. If you have never done that, send the line to whoever set up your AI tool. To look around first, choose **Open the call center example**. The example is made up and nothing is added to your questions.
+For Claude Code, Codex or the Claude desktop app, choose **Connect it for me** and Casebook adds itself to the tool's settings. For another AI tool, send what the app shows to whoever set up your AI tool. To look around first, choose **Open the call center example**. The example is made up and nothing is added to your questions.
 
 There is no Linux app yet. On Linux, Casebook is a command line tool ([For people setting it up](#for-people-setting-it-up)).
 
@@ -65,21 +65,22 @@ Under the answer, Casebook shows **2 of 9 sources checked by you**. It does not 
 
 Open a question. The answer is at the top. Under it is each finding, with its sources listed below the finding.
 
-- Choose **Check the next source** to go to the next source you have not checked.
+- Choose **Check the next source**. It shows one source at a time, with the finding it backs or goes against.
 - Read the source. Open the report or the email it points to and compare.
-- Choose **I checked this** when it holds up. Choose **Sources disagree** when a source says something different.
-- When you are happy with the answer, choose **I checked this answer**.
+- Choose **I checked this** when it holds up, or **Skip**. Casebook moves to the next source by itself.
+- When every source is checked, Casebook shows the answer. Choose **I checked this answer** when you are happy with it.
 
 If something changes after you checked the answer, Casebook tells you to check it again.
 
 ## What the labels mean
 
-Every finding and every source carries one label.
+You check sources. A finding's label comes from its sources.
 
-- **Not checked**: nobody has checked this yet.
+- **Not checked**: nobody has checked this source yet.
 - **AI checked the source**: your AI compared this with its source. You have not checked it yourself.
-- **You checked this**: you checked this against its source. Only a person can set this label.
-- **Sources disagree**: a source says something different. It stays until you decide.
+- **You checked this**: you checked this source. Only a person can set this label.
+- **2 of 3 sources checked by you**: how many of a finding's sources you have checked.
+- **Sources disagree**: a source goes against the finding. It stays until you decide the finding still holds or rule it out.
 
 A finding can also be **Not tested yet**, **Looks right so far**, **Ruled out** or **Replaced**. Findings that were ruled out stay on record, so nobody tests the same idea twice.
 
@@ -131,7 +132,7 @@ Commands, tool names and file formats keep the names the engine stores. An inves
 
 ### Connect an AI tool
 
-**Settings**, **Connect your AI...** in the app shows the line to run for your tool and whether the tool is connected. The same lines, from a terminal:
+**Settings**, **Connect your AI...** in the app connects Claude Code, Codex or the Claude desktop app for you, shows whether each is connected, and keeps the line to run under **Technical details**. The same lines, from a terminal:
 
 ```sh
 casebook setup claude --hooks --skill   # Claude Code: MCP server, session hooks, the /casebook command
@@ -160,7 +161,7 @@ Answer so far:
 The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
 Answer marked: A person checked this
-Findings behind the answer: C-002 [Not checked], C-003 [A person checked this]
+Findings behind the answer: C-002 [Not checked], C-003 [Not checked]
 Findings against the answer: C-001 [Sources disagree]
 Answer checked by a person: 2026-11-05 14:55 UTC
 What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
@@ -173,7 +174,7 @@ C-002 [Not checked]
 About the same number of people called to buy.
 Why: The call log and the sales report agree.
 Sources: E-001 [AI checked the source], E-006 [Not checked]
-C-003 [A person checked this]
+C-003 [Not checked]
 A billing mistake on October 3 charged some customers twice.
 Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
 Sources: E-006 [Not checked], E-007 [A person checked this], E-008 [Not checked], E-009 [A person checked this]
@@ -184,7 +185,7 @@ Sources: E-002 [Not checked]
 Sources against: E-003 [Not checked]
 ```
 
-The briefing goes on to list the findings still being tested, the follow-up questions, the findings that were ruled out, every source and the recent changes. `go run ./scripts/readme-example` prints all of it from the built-in example, and the block above is copied from that output.
+The briefing goes on to list the findings still being tested, what is still to find out, the findings that were ruled out, every source and the recent changes. `go run ./scripts/readme-example` prints all of it from the built-in example, and the block above is copied from that output.
 
 ### Command line
 

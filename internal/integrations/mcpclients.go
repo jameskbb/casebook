@@ -214,8 +214,8 @@ func (l locator) claudeDesktop() string {
 		if l.o.WSL {
 			return "Claude Desktop does not run inside WSL; run casebook setup mcp --client claude-desktop without --wsl"
 		}
-		if appData := l.getenv("APPDATA"); appData != "" {
-			return filepath.Join(appData, "Claude", "claude_desktop_config.json")
+		if p := ClaudeDesktopConfig(l.o.GOOS, l.getenv, l.o.Home); p != "" {
+			return p
 		}
 		return `%APPDATA%\Claude\claude_desktop_config.json`
 	case "darwin":

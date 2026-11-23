@@ -206,8 +206,8 @@ func TestGoldenCloudSpend(t *testing.T) {
 	if disproven != "Findings ruled out:\nH-002 Data transfer from the region move doubled the network line. [Not checked]\nRuled out by: E-003 [Not checked]" {
 		t.Fatalf("disproven section:\n%s", disproven)
 	}
-	if !strings.Contains(section(md, "Follow-up questions:"), "Q-001\nCan every service except payments") {
-		t.Fatalf("open questions section:\n%s", section(md, "Follow-up questions:"))
+	if !strings.Contains(section(md, "Still to find out:"), "Q-001\nCan every service except payments") {
+		t.Fatalf("open questions section:\n%s", section(md, "Still to find out:"))
 	}
 
 	js := render("json", app.ContextOptions{})

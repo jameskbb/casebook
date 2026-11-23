@@ -1,6 +1,7 @@
 package contextpack
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -99,9 +100,11 @@ func (d *answerDoc) section(heading string, lines []string) {
 // desktop uses and with no record codes: the question as the title, when it
 // was asked, the background, the answer with the count of sources checked
 // and who checked it, then the findings by state (each with why and the
-// sources that back it up or go against it), the follow-up questions and the
-// sources. A section with nothing in it is left out. Confidence is never
-// printed. allEvidence is every source of the question, for the count.
+// sources that back it up or go against it), what is still to find out and
+// the sources. A section with nothing in it is left out. Confidence is never
+// printed, and neither is the stored check label of a finding: a finding's
+// label is worked out from its sources (findingLabel). allEvidence is every
+// source of the question, for the counts.
 func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	inv := s.Investigation
 	d.para("# " + oneLine(inv.Title))
@@ -117,7 +120,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		d.para(background)
 	}
 	d.para("## Answer")
-	for _, block := range answerBlocks(s, allEvidence) {
+	for _, block := range answerBlocks(inv, allEvidence) {
 		d.para(block...)
 	}
 
@@ -143,80 +146,85 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		}
 		return out
 	}
-	// hide is the state the section heading already says.
-	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, hide string, states ...string) []string {
-		lines := []string{"- " + oneLine(statement) + stateWords(hide, imported, states...)}
+	// label is "" when the section heading already says the state.
+	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string) []string {
+		lines := []string{"- " + oneLine(statement) + stateWords(imported, label)}
 		if w := oneLine(why); w != "" {
 			lines = append(lines, "  - Why: "+w)
 		}
 		return append(lines, sources(links)...)
 	}
+	verification := map[string]domain.Verification{}
+	for _, e := range allEvidence {
+		verification[e.Ref] = e.Verification
+	}
 
 	// The same groups as the question page: a finding sits under what
 	// happened to it, claims before hypotheses, each in ref order.
-	var found, disagree, untested, ruledOut, replaced []string
+	var found, disagree, toFindOut, ruledOut, replaced []string
 	claims := slices.Clone(s.Claims)
 	sortByRef(claims, domain.RecordClaim, func(c domain.Claim) string { return c.Ref })
 	for _, c := range claims {
-		item := func(hide string) []string {
-			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, hide, c.Status.PlainLabel(), verificationLabel(c.Verification))
+		item := func(label string) []string {
+			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, label)
 		}
 		switch {
 		case c.Status == domain.ClaimStatusSuperseded || c.Verification == domain.VerificationSuperseded:
-			replaced = append(replaced, item("Replaced")...)
+			replaced = append(replaced, item("")...)
 		case c.Status == domain.ClaimStatusRejected:
-			ruledOut = append(ruledOut, item("Ruled out")...)
-		case c.Status == domain.ClaimStatusDisputed || c.Verification == domain.VerificationDisputed:
-			disagree = append(disagree, item("Sources disagree")...)
+			ruledOut = append(ruledOut, item("")...)
+		case sourcesDisagree(c.Verification, c.Links, verification):
+			disagree = append(disagree, item("")...)
 		default:
-			found = append(found, item("")...)
+			found = append(found, item(findingLabel(c.Verification, c.Links, verification))...)
 		}
 	}
 	hyps := slices.Clone(s.Hypotheses)
 	sortByRef(hyps, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
 	for _, h := range hyps {
-		item := func(hide string) []string {
-			return finding(h.Statement, h.Rationale, h.Imported, h.Links, hide, h.Status.PlainLabel(), verificationLabel(h.Verification))
+		item := func(label string) []string {
+			return finding(h.Statement, h.Rationale, h.Imported, h.Links, label)
 		}
 		switch {
 		case h.Status == domain.HypothesisStatusSuperseded || h.Verification == domain.VerificationSuperseded:
-			replaced = append(replaced, item("Replaced")...)
+			replaced = append(replaced, item("")...)
 		case h.Status == domain.HypothesisStatusDisproven:
-			ruledOut = append(ruledOut, item("Ruled out")...)
-		case h.Verification == domain.VerificationDisputed:
-			disagree = append(disagree, item("Sources disagree")...)
+			ruledOut = append(ruledOut, item("")...)
+		case sourcesDisagree(h.Verification, h.Links, verification):
+			disagree = append(disagree, item("")...)
 		case h.Status == domain.HypothesisStatusOpen:
-			untested = append(untested, item("Not tested yet")...)
+			toFindOut = append(toFindOut, item("not tested yet")...)
 		default:
-			found = append(found, item("")...)
+			found = append(found, item(findingLabel(h.Verification, h.Links, verification))...)
+		}
+	}
+	questions := slices.Clone(s.Questions)
+	sortByRef(questions, domain.RecordQuestion, func(q domain.Question) string { return q.Ref })
+	for _, q := range questions {
+		toFindOut = append(toFindOut, "- "+oneLine(q.Question)+stateWords(q.Imported, toFindOutLabel(q.Status)))
+		if answer := oneLine(q.Resolution); answer != "" {
+			toFindOut = append(toFindOut, "  - Answer: "+answer)
+		}
+		if note := oneLine(q.DeferNote); note != "" {
+			toFindOut = append(toFindOut, "  - Why it can wait: "+note)
 		}
 	}
 	d.section("Findings", found)
 	d.section("Where sources disagree", disagree)
-	d.section("Not tested yet", untested)
+	d.section("Still to find out", toFindOut)
 	d.section("Ruled out", ruledOut)
 	d.section("Replaced", replaced)
 
-	questions := slices.Clone(s.Questions)
-	sortByRef(questions, domain.RecordQuestion, func(q domain.Question) string { return q.Ref })
-	var followUps []string
-	for _, q := range questions {
-		followUps = append(followUps, "- "+oneLine(q.Question)+stateWords("", q.Imported, q.Status.PlainLabel()))
-		if answer := oneLine(q.Resolution); answer != "" {
-			followUps = append(followUps, "  - Answer: "+answer)
-		}
-		if note := oneLine(q.DeferNote); note != "" {
-			followUps = append(followUps, "  - Why it can wait: "+note)
-		}
-	}
-	d.section("Follow-up questions", followUps)
-
 	var list []string
 	for _, e := range evidence {
-		list = append(list, "- "+oneLine(e.Title)+stateWords("", e.Imported, verificationLabel(e.Verification)))
+		list = append(list, "- "+oneLine(e.Title)+stateWords(e.Imported, verificationLabel(e.Verification)))
 		from := oneLine(e.SourceLabel)
 		if from == "" {
 			from = e.SourceType.PlainLabel()
+			if e.SourceType == domain.SourceTypeManualObservation {
+				// The reader is not the person who saw it.
+				from = "Seen by the person who shared this"
+			}
 		}
 		if on := longDate(e.CapturedAt); d.full && on != "" {
 			from += ", dated " + on
@@ -232,16 +240,62 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	d.section("Sources", list)
 }
 
-// stateWords writes a record's state after its text, " (Looks right so far;
-// Not checked)": each state once, without Current and without hide, then
+// againstIt reports whether a source that has not been replaced goes against
+// a finding with these links. verification holds every source of the
+// question by ref.
+func againstIt(links []domain.EvidenceLink, verification map[string]domain.Verification) bool {
+	for _, l := range links {
+		if l.Relation == domain.RelationContradicts && verification[l.EvidenceRef] != domain.VerificationSuperseded {
+			return true
+		}
+	}
+	return false
+}
+
+// sourcesDisagree is the rule for the "Where sources disagree" group, for a
+// finding that is not replaced and not ruled out: its stored check says so,
+// or a source goes against it and no person has decided it holds. The list
+// count (store.ListInvestigationSummaries) and the desktop page use the same
+// rule.
+func sourcesDisagree(v domain.Verification, links []domain.EvidenceLink, verification map[string]domain.Verification) bool {
+	return v == domain.VerificationDisputed || (v != domain.VerificationHumanVerified && againstIt(links, verification))
+}
+
+// findingLabel is the label of a finding outside the disagree group, worked
+// out from its sources: "2 of 3 sources checked by a person" over the sources
+// that have not been replaced, "No source yet" when it has none, and "A
+// person decided this holds" when a source goes against it and a person
+// settled it.
+func findingLabel(v domain.Verification, links []domain.EvidenceLink, verification map[string]domain.Verification) string {
+	if v == domain.VerificationHumanVerified && againstIt(links, verification) {
+		return "A person decided this holds"
+	}
+	checked, total := 0, 0
+	for _, l := range links {
+		switch verification[l.EvidenceRef] {
+		case domain.VerificationSuperseded:
+			continue
+		case domain.VerificationHumanVerified:
+			checked++
+		}
+		total++
+	}
+	switch total {
+	case 0:
+		return "No source yet"
+	case 1:
+		return fmt.Sprintf("%d of 1 source checked by a person", checked)
+	}
+	return fmt.Sprintf("%d of %d sources checked by a person", checked, total)
+}
+
+// stateWords writes a record's label after its text, " (Not checked)", then
 // "From a file" for a record copied from an imported file. It is "" when
 // nothing is left to say.
-func stateWords(hide string, imported bool, states ...string) string {
+func stateWords(imported bool, label string) string {
 	var words []string
-	for _, s := range states {
-		if s != "" && s != "Current" && s != hide && !slices.Contains(words, s) {
-			words = append(words, s)
-		}
+	if label != "" {
+		words = append(words, label)
 	}
 	if imported {
 		words = append(words, "From a file")
@@ -254,11 +308,10 @@ func stateWords(hide string, imported bool, states ...string) string {
 
 // answerBlocks renders the paragraphs of the Answer section: the answer,
 // the count of sources checked (in place of a confidence rating), who
-// checked the answer and what they checked, why, and the findings the
-// answer rests on, named by their own text. evidence is every source of the
-// question.
-func answerBlocks(s Snapshot, evidence []domain.Evidence) [][]string {
-	inv := s.Investigation
+// checked the answer and what they checked, and how we know. The findings
+// the answer rests on are not listed here: the sections below carry them
+// once. evidence is every source of the question.
+func answerBlocks(inv domain.Investigation, evidence []domain.Evidence) [][]string {
 	if inv.Conclusion == "" {
 		return [][]string{{"No answer yet."}}
 	}
@@ -271,27 +324,7 @@ func answerBlocks(s Snapshot, evidence []domain.Evidence) [][]string {
 		out = append(out, []string{"What was checked: " + basis})
 	}
 	if why := oneLine(inv.ConclusionRationale); why != "" {
-		out = append(out, []string{"Why: " + why})
-	}
-	for _, group := range []struct {
-		heading string
-		refs    []string
-	}{{"Findings that back the answer:", inv.ConclusionSupportingClaims}, {"Findings that go against the answer:", inv.ConclusionContradictingClaims}} {
-		if len(group.refs) == 0 {
-			continue
-		}
-		lines := []string{group.heading}
-		for _, ref := range group.refs {
-			line := "- A finding that is no longer here"
-			for _, c := range s.Claims {
-				if c.Ref == ref {
-					line = "- " + oneLine(c.Statement) + stateWords("", false, c.Status.PlainLabel(), verificationLabel(c.Verification))
-					break
-				}
-			}
-			lines = append(lines, line)
-		}
-		out = append(out, lines)
+		out = append(out, []string{"How we know: " + why})
 	}
 	return out
 }
@@ -332,7 +365,8 @@ func answerCheckLine(inv domain.Investigation) string {
 }
 
 // names returns the refNamer of a shared answer: a record is named by its
-// own text in quotes, cut to a readable length. The map is only looked up.
+// own text in quotes, cut to a readable length; a record that is not there
+// (deleted since) is gone. The map is only looked up.
 func (s Snapshot) names() refNamer {
 	text := map[string]string{}
 	for _, e := range s.Evidence {
@@ -350,6 +384,9 @@ func (s Snapshot) names() refNamer {
 	return func(ref string) string {
 		if t := domain.TruncateLine(text[ref], 90); t != "" {
 			return `"` + t + `"`
+		}
+		if ref != "" {
+			return gone
 		}
 		return ""
 	}
@@ -447,4 +484,16 @@ func mdText(s string) string {
 		return s[:i] + `\` + s[i:]
 	}
 	return s
+}
+
+// toFindOutLabel is the state of a thing to find out, as it follows the text
+// in the "Still to find out" list.
+func toFindOutLabel(s domain.QuestionStatus) string {
+	switch s {
+	case domain.QuestionStatusResolved:
+		return "answered"
+	case domain.QuestionStatusDeferred:
+		return "left for later"
+	}
+	return "not answered yet"
 }

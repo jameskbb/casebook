@@ -120,6 +120,20 @@ func (a *App) ListInvestigations(ctx context.Context, o ListOptions) ([]Investig
 		if err != nil {
 			return err
 		}
+		for i := range list {
+			if list[i].Conclusion == "" {
+				continue
+			}
+			// The comparison the detail makes, so the list and the page agree.
+			inv, err := store.GetInvestigationByID(ctx, tx, list[i].ID)
+			if err != nil {
+				return err
+			}
+			if err := a.markConclusionAttention(ctx, tx, &inv); err != nil {
+				return err
+			}
+			list[i].AnswerCheckedByYou = inv.ConclusionReviewedAt != "" && !inv.ConclusionNeedsReview
+		}
 		if len(a.workDirs) > 0 {
 			id, ok, _, err := a.activeID(ctx, tx)
 			if err != nil {

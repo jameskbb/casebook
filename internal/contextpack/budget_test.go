@@ -214,7 +214,7 @@ func TestBudgetTinyKeepsHeader(t *testing.T) {
 		"Findings where sources disagree:\n(1 more finding where sources disagree omitted)\n",
 		"Findings ruled out:\n(1 more finding ruled out omitted)\n",
 		"Findings still being tested:\n(2 more findings still being tested omitted)\n",
-		"Follow-up questions:\n(1 more follow-up question omitted)\n",
+		"Still to find out:\n(1 more thing to find out omitted)\n",
 		"(Trimmed to fit 10 bytes; omitted: recent_changes, statement_rationales, evidence_index, deferred_questions, rationale, disputed_claims, disproven_hypotheses)\n",
 	} {
 		if !strings.Contains(md, line) {

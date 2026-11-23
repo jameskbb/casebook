@@ -24,8 +24,12 @@ func TestInstructions(t *testing.T) {
 		// The words the app shows, so what the AI says matches the screen.
 		"question (investigation)", "answer (conclusion)", "finding (claim, hypothesis)", "source (evidence)",
 		`"Not checked"`, `"AI checked the source"`, `"You checked this"`, `"Sources disagree"`, `"Replaced"`,
-		`"Ruled out"`, `"Not tested yet"`, "Never tell the person a confidence level", "sources checked by you",
-		"the question the person asked"} {
+		`"Ruled out"`, "Never tell the person a confidence level", "sources checked by you",
+		"the question the person asked",
+		// The model the person sees: they check sources, a finding stands on
+		// its sources, and what goes against a finding is attached to it.
+		`"still to find out"`, `never "follow-up question"`, "checks sources and the answer, not findings",
+		"relation contradicts", "do not only mark it disputed"} {
 		if !strings.Contains(instructions, want) {
 			t.Errorf("instructions do not mention %q", want)
 		}

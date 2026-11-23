@@ -38,17 +38,20 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	for _, s := range list {
 		byRef[s.Ref] = s
 	}
-	if s := byRef["INV-0001"]; s.Title != "Why was March payroll $18k over budget?" || s.Status != app.InvestigationStatusResolved ||
-		s.Conclusion != "Two new hires started a month earlier than the budget assumed." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 {
+	if s := byRef["INV-0001"]; s.Title != "Why was March payroll $18,000 over budget?" || s.Status != app.InvestigationStatusResolved ||
+		s.Conclusion != "Two new hires started a month earlier than the budget assumed." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 || s.AnswerCheckedByYou {
 		t.Fatalf("INV-0001 = %+v", s)
 	}
 	// The list carries what the sidebar and Home show: the answer, the
-	// count of sources checked and the findings where sources disagree.
-	if s := byRef[demo.FeaturedRef]; s.Conclusion != demo.Conclusion || s.SourcesTotal != 9 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 1 {
+	// count of sources checked, the findings where sources disagree and
+	// whether the answer is checked. Between them the questions show each
+	// thing Home can ask for: INV-0001 an answer to check, the featured one
+	// sources to check and a finding to decide, INV-0003 an answer to write.
+	if s := byRef[demo.FeaturedRef]; s.Conclusion != demo.Conclusion || s.SourcesTotal != 9 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 1 || !s.AnswerCheckedByYou {
 		t.Fatalf("%s = %+v", demo.FeaturedRef, s)
 	}
 	if s := byRef["INV-0003"]; s.Title != "Why are help desk tickets taking longer to close this month?" || s.Status != app.InvestigationStatusBlocked ||
-		s.Conclusion != "" || s.SourcesTotal != 2 || s.SourcesCheckedByYou != 0 || s.Counts.OpenQuestions != 2 {
+		s.Conclusion != "" || s.SourcesTotal != 2 || s.SourcesCheckedByYou != 2 || s.Counts.OpenQuestions != 2 {
 		t.Fatalf("INV-0003 = %+v", s)
 	}
 	if s := byRef["INV-0004"]; s.Status != app.InvestigationStatusResolved || s.Archived || s.Conclusion == "" || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 0 {
@@ -139,7 +142,7 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 }
 
 // checkFeatured checks INV-0002 against the canonical scenario; full says
-// whether Thursday (Claude Code's checkpoint and the person's Verify) was
+// whether Thursday (Claude Code's checkpoint and the person's check) was
 // seeded.
 func checkFeatured(t *testing.T, a *app.App, full bool) {
 	t.Helper()
@@ -153,7 +156,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		t.Errorf("question = %q, %q", inv.Title, inv.ProblemStatement)
 	}
 	wantEvidence := map[string]string{
-		"E-001": "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October",
+		"E-001": "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October",
 		"E-002": "Sales manager: we were two people short in October",
 		"E-003": "The average wait was 40 seconds in September and 40 seconds in October",
 		"E-004": "No new ads ran in October",
@@ -238,7 +241,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		t.Fatalf("claims = %+v", det.Claims)
 	}
 	c3 := claims["C-003"]
-	if c3.Verification != app.VerificationHumanVerified || c3.Confidence != app.ConfidenceHigh ||
+	if c3.Verification != app.VerificationAIGenerated || c3.Confidence != app.ConfidenceHigh ||
 		len(c3.Links) != 4 || c3.CreatedBy != demo.ClaudeCode {
 		t.Errorf("C-003 = %+v", c3)
 	}

@@ -116,7 +116,7 @@ To delete all Casebook data:
 
 Uninstalling Casebook keeps your data on purpose, so a reinstall or an upgrade never loses it. The desktop app also has a WebView2 cache folder on Windows, `%AppData%\Casebook.exe` (a folder, despite its name), which holds no Casebook records. The uninstaller removes that folder only for the Windows account that runs it. If you approved the uninstall with a different administrator account, or other accounts on the computer used Casebook, delete `%AppData%\Casebook.exe` by hand while signed in as each of those users.
 
-To disconnect AI clients, run `casebook setup claude --remove` and `casebook setup codex --remove`. They remove only the entries Casebook added (the `casebook` MCP server entry and any Casebook hook handlers), back up each file they change first, and print one line per file with its backup, for example:
+To disconnect AI clients, choose **Disconnect** for the tool under **Settings**, **Connect your AI...** in the desktop app, or run `casebook setup claude --remove` and `casebook setup codex --remove`. The app runs the same code as those commands. They remove only the entries Casebook added (the `casebook` MCP server entry and any Casebook hook handlers), back up each file they change first, and print one line per file with its backup, for example:
 
 ```text
 /Users/you/.claude.json: removed mcpServers.casebook

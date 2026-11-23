@@ -219,7 +219,7 @@ func TestImportRoundTripFreshApp(t *testing.T) {
 	last := again.Activity[n-1]
 	if last.Action != "import" || last.Actor != (app.Actor{Kind: app.ActorImport, Client: "casebook-ui"}) ||
 		last.TargetRef != "INV-0001" ||
-		last.Summary != "Imported question INV-0001 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked" {
+		last.Summary != "Imported question INV-0001 (4 sources, 5 findings, 1 thing to find out); 3 records set back to Not checked" {
 		t.Fatalf("import row = %+v", last)
 	}
 	again.Activity = again.Activity[:n-1]
@@ -317,7 +317,7 @@ func TestImportRefCollision(t *testing.T) {
 	row := acts[0]
 	if row.Action != "import" || row.InvestigationRef != "INV-0002" || row.TargetRef != "INV-0002" ||
 		row.Actor != (app.Actor{Kind: app.ActorImport, Client: "claude-code"}) ||
-		row.Summary != "Imported question INV-0001 as INV-0002 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked" || row.Imported {
+		row.Summary != "Imported question INV-0001 as INV-0002 (4 sources, 5 findings, 1 thing to find out); 3 records set back to Not checked" || row.Imported {
 		t.Fatalf("import row = %+v", row)
 	}
 	active, err := a.GetActiveInvestigation(ctx)

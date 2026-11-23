@@ -19,7 +19,7 @@ func TestBriefStableOrderAndUntrustedText(t *testing.T) {
 	if strings.Contains(first, "\n## Fake") || strings.Contains(first, "\n## Added") || strings.Contains(first, "\n# Answer") {
 		t.Fatal("stored text injected Markdown blocks")
 	}
-	if !strings.Contains(first, "4 follow-up questions") || !strings.Contains(first, "Not checked") {
+	if !strings.Contains(first, "4 things still to find out") || !strings.Contains(first, "Not checked") {
 		t.Fatal("omissions or check label missing")
 	}
 	if strings.Contains(ReportHTML(first), "<script>") {
@@ -79,45 +79,35 @@ Because.
 
 A person checked this answer on November 1, 2026.
 
-Findings that back the answer:
-- kept (Not checked)
-
-Findings that go against the answer:
-- argued (Sources disagree)
-- A finding that is no longer here
-
 ## Findings
 
-- kept (Not checked)
+- holding (No source yet)
+
+## Where sources disagree
+
+- kept
   - Why: a reason
   - Backed by: Call log (A person checked this)
   - Backed by: a source that is not included here
   - Goes against it: Phone report (Not checked)
-- holding (Looks right so far; AI checked the source)
-
-## Where sources disagree
-
 - argued
 
-## Not tested yet
+## Still to find out
 
-- live (Not checked)
+- live (not tested yet)
+- done? (answered)
+  - Answer: yes
+- wait? (left for later)
+  - Why it can wait: next month
 
 ## Ruled out
 
-- rejected one (Not checked)
-- dead end (Not checked)
+- rejected one
+- dead end
 
 ## Replaced
 
 - old (From a file)
-
-## Follow-up questions
-
-- done? (Answered)
-  - Answer: yes
-- wait? (Later)
-  - Why it can wait: next month
 
 ## Sources
 
@@ -141,6 +131,44 @@ _Made with Casebook. These are the saved findings and sources, word for word._
 	empty := RenderBrief(Snapshot{Investigation: domain.Investigation{Ref: "INV-0001", Title: "T"}}, BriefOmitted{}, nil)
 	if empty != "# T\n\n## Answer\n\nNo answer yet.\n\n"+BriefLeftOut+"the history. Ask the person who shared this for the version with everything.\n\n"+answerFooter+"\n" {
 		t.Errorf("empty question:\n%s", empty)
+	}
+}
+
+// A finding's label comes from its sources, never from its own stored check.
+func TestFindingLabelAndDisagree(t *testing.T) {
+	sources := map[string]domain.Verification{"E-001": domain.VerificationHumanVerified, "E-002": domain.VerificationAIGenerated,
+		"E-003": domain.VerificationSuperseded, "E-004": domain.VerificationSourceVerified}
+	link := func(ref string, rel domain.Relation) domain.EvidenceLink {
+		return domain.EvidenceLink{EvidenceRef: ref, Relation: rel}
+	}
+	backs, against := domain.RelationSupports, domain.RelationContradicts
+	for _, tc := range []struct {
+		name     string
+		v        domain.Verification
+		links    []domain.EvidenceLink
+		disagree bool
+		label    string
+	}{
+		{"no source", domain.VerificationAIGenerated, nil, false, "No source yet"},
+		{"a person's own finding with no source", domain.VerificationHumanVerified, nil, false, "No source yet"},
+		{"one source", domain.VerificationAIGenerated, []domain.EvidenceLink{link("E-002", backs)}, false, "0 of 1 source checked by a person"},
+		{"an AI's check is not a person's", domain.VerificationSourceVerified, []domain.EvidenceLink{link("E-001", backs), link("E-004", backs)}, false, "1 of 2 sources checked by a person"},
+		{"a replaced source is not counted", domain.VerificationAIGenerated, []domain.EvidenceLink{link("E-001", backs), link("E-003", backs)}, false, "1 of 1 source checked by a person"},
+		{"only replaced sources", domain.VerificationAIGenerated, []domain.EvidenceLink{link("E-003", against)}, false, "No source yet"},
+		{"a source goes against it", domain.VerificationAIGenerated, []domain.EvidenceLink{link("E-001", backs), link("E-002", against)}, true, ""},
+		{"an AI checked it, a source still goes against it", domain.VerificationSourceVerified, []domain.EvidenceLink{link("E-002", against)}, true, ""},
+		{"stored as sources disagree", domain.VerificationDisputed, nil, true, ""},
+		{"a person decided it holds", domain.VerificationHumanVerified, []domain.EvidenceLink{link("E-001", backs), link("E-002", against)}, false, "A person decided this holds"},
+	} {
+		if got := sourcesDisagree(tc.v, tc.links, sources); got != tc.disagree {
+			t.Errorf("%s: sourcesDisagree = %v, want %v", tc.name, got, tc.disagree)
+		}
+		if tc.disagree {
+			continue
+		}
+		if got := findingLabel(tc.v, tc.links, sources); got != tc.label {
+			t.Errorf("%s: findingLabel = %q, want %q", tc.name, got, tc.label)
+		}
 	}
 }
 
@@ -176,7 +204,7 @@ func TestBriefCountsEverySource(t *testing.T) {
 	}
 	s := Snapshot{Investigation: domain.Investigation{Ref: "INV-0001", Conclusion: "Because.", ConclusionConfidence: domain.ConfidenceHigh, ConclusionRationale: "The sources agree."}, Evidence: all[:1]}
 	got := RenderBrief(s, BriefOmitted{}, all[:4])
-	if !strings.Contains(got, "\nBecause.\n\n1 of 3 sources checked by a person. 1 checked by AI, 1 not checked.\n") || !strings.Contains(got, "\nWhy: The sources agree.\n") {
+	if !strings.Contains(got, "\nBecause.\n\n1 of 3 sources checked by a person. 1 checked by AI, 1 not checked.\n") || !strings.Contains(got, "\nHow we know: The sources agree.\n") {
 		t.Errorf("answer section:\n%s", got)
 	}
 	for _, banned := range []string{"onfidence", "High"} {
@@ -210,9 +238,9 @@ func TestBriefOmissionNotice(t *testing.T) {
 	}{
 		{BriefOmitted{ClaimRefs: []string{}}, "the history"},
 		{BriefOmitted{Evidence: 1, EvidenceRefs: []string{"E-002"}}, "1 source and the history"},
-		{BriefOmitted{Claims: 1, Questions: 1}, "1 finding, 1 follow-up question and the history"},
-		{BriefOmitted{ClaimRefs: []string{"C-004"}, HypothesisRefs: []string{"H-003"}, QuestionRefs: []string{"Q-001", "Q-002"}}, "2 findings, 2 follow-up questions and the history"},
-		{BriefOmitted{Claims: 3, Hypotheses: 1, Questions: 2, Evidence: 4}, "4 findings, 2 follow-up questions, 4 sources and the history"},
+		{BriefOmitted{Claims: 1, Questions: 1}, "1 finding, 1 thing still to find out and the history"},
+		{BriefOmitted{ClaimRefs: []string{"C-004"}, HypothesisRefs: []string{"H-003"}, QuestionRefs: []string{"Q-001", "Q-002"}}, "2 findings, 2 things still to find out and the history"},
+		{BriefOmitted{Claims: 3, Hypotheses: 1, Questions: 2, Evidence: 4}, "4 findings, 2 things still to find out, 4 sources and the history"},
 	} {
 		if got := briefOmissionNotice(tc.o); got != BriefLeftOut+tc.want+tail {
 			t.Errorf("briefOmissionNotice(%+v) = %q, want %q", tc.o, got, tc.want)

@@ -228,7 +228,7 @@ func databaseCheck(ctx context.Context, dbPath, workDir string) (Check, *app.App
 		active += " (for " + st.ActiveDir + ")"
 	}
 	c := st.Counts
-	return check(idDatabase, StatusOK, "%s: schema %d; %d questions, %d sources, %d findings, %d findings being tested, %d follow-up questions; active %s",
+	return check(idDatabase, StatusOK, "%s: schema %d; %d questions, %d sources, %d findings, %d findings being tested, %d things to find out; active %s",
 		dbPath, st.SchemaVersion, c.Investigations, c.Evidence, c.Claims, c.Hypotheses, c.Questions, active), a, dbOpened
 }
 

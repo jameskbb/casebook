@@ -19,7 +19,7 @@ func newSearchCommand(env *Env) *cobra.Command {
 		Use:   "search <query...>",
 		Short: "Full-text search over questions, answers, findings and sources",
 		Long: `Full-text search over questions and answers, source titles and summaries
-(never the full source text), findings, follow-up questions and their
+(never the full source text), findings, things to find out and their
 answers. The words are matched as
 plain text (all must match; the last also matches as a prefix). Results are
 ranked best first. Archived questions are skipped unless --archived.

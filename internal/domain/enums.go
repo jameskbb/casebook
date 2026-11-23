@@ -572,11 +572,11 @@ func (s HypothesisStatus) PlainLabel() string {
 	return string(s)
 }
 
-// PlainLabel returns the label a person reads for a follow-up question.
+// PlainLabel returns the label a person reads for something still to find out.
 func (s QuestionStatus) PlainLabel() string {
 	switch s {
 	case QuestionStatusOpen:
-		return "Open"
+		return "Not answered yet"
 	case QuestionStatusResolved:
 		return "Answered"
 	case QuestionStatusDeferred:
@@ -613,7 +613,7 @@ func (t SourceType) PlainLabel() string {
 
 // PlainWord returns the noun a person reads for a record type: finding for
 // a claim or a hypothesis, source for evidence, question for an
-// investigation, follow-up question for a question.
+// investigation, thing to find out for a question.
 func (t RecordType) PlainWord() string {
 	switch t {
 	case RecordInvestigation:
@@ -623,7 +623,7 @@ func (t RecordType) PlainWord() string {
 	case RecordClaim, RecordHypothesis:
 		return "finding"
 	case RecordQuestion:
-		return "follow-up question"
+		return "thing to find out"
 	}
 	return string(t)
 }

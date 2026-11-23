@@ -212,7 +212,7 @@ archive and delete the older copy in the desktop app.`,
 				ref = res.OriginalRef + " as " + res.InvestigationRef
 			}
 			c := res.Counts
-			if _, err := fmt.Fprintf(env.Stdout, "Imported %s (%d sources, %d findings, %d findings being tested, %d follow-up questions).\n",
+			if _, err := fmt.Fprintf(env.Stdout, "Imported %s (%d sources, %d findings, %d findings being tested, %d things to find out).\n",
 				ref, c.Evidence, c.Claims, c.Hypotheses, c.Questions); err != nil {
 				return err
 			}

@@ -320,3 +320,112 @@ func TestListInvestigationsEmpty(t *testing.T) {
 	}
 	apptest.AssertNoJSONNulls(t, got)
 }
+
+// A finding with a source that goes against it is in the disagree group
+// until that source is replaced, a person decides the finding holds, or the
+// finding is ruled out. A finding still being tested follows the same rule.
+func TestListInvestigationsDisagreeFromSources(t *testing.T) {
+	ctx := context.Background()
+	a := apptest.Open(t)
+	inv := newInv(t, a, "Disagree")
+	disagree := func() int {
+		t.Helper()
+		got, err := a.ListInvestigations(ctx, app.ListOptions{})
+		if err != nil || len(got) != 1 {
+			t.Fatalf("list = %+v, %v", got, err)
+		}
+		return got[0].FindingsDisagree
+	}
+	for _, title := range []string{"Backs it", "Against the claim", "Against the tested finding"} {
+		mustAddEvidence(t, a, apptest.AI, inv.Ref, evInput(title))
+	}
+	c := mustAddClaim(t, a, apptest.AI, inv.Ref, app.ClaimInput{Statement: "A finding"})
+	if _, err := a.LinkEvidenceToClaim(ctx, apptest.AI, inv.Ref, c.Ref, "E-001", app.RelationSupports); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 0 {
+		t.Fatalf("only a source that backs it: %d, want 0", n)
+	}
+	if _, err := a.LinkEvidenceToClaim(ctx, apptest.AI, inv.Ref, c.Ref, "E-002", app.RelationContradicts); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.AddHypothesis(ctx, apptest.AI, inv.Ref, app.HypothesisInput{Statement: "Being tested"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.LinkEvidenceToHypothesis(ctx, apptest.AI, inv.Ref, "H-001", "E-003", app.RelationContradicts); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 2 {
+		t.Fatalf("a source goes against each: %d, want 2", n)
+	}
+	// A person decides the claim holds.
+	if _, err := a.SetClaimVerification(ctx, apptest.Human, inv.Ref, c.Ref, app.VerificationHumanVerified); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 1 {
+		t.Fatalf("after a person decided the claim holds: %d, want 1", n)
+	}
+	// The source against the tested finding is replaced.
+	if _, err := a.SetEvidenceVerification(ctx, apptest.Human, inv.Ref, "E-003", app.VerificationSuperseded); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 0 {
+		t.Fatalf("after the source was replaced: %d, want 0", n)
+	}
+	// An AI marks the claim disputed: in the group whatever its sources say.
+	if _, err := a.UpdateClaim(ctx, apptest.AI, inv.Ref, c.Ref, app.ClaimPatch{Verification: ptr(app.VerificationDisputed)}); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 1 {
+		t.Fatalf("after the claim was disputed: %d, want 1", n)
+	}
+	// Ruled out leaves the group.
+	if _, err := a.UpdateClaim(ctx, apptest.AI, inv.Ref, c.Ref, app.ClaimPatch{Status: ptr(app.ClaimStatusRejected)}); err != nil {
+		t.Fatal(err)
+	}
+	if n := disagree(); n != 0 {
+		t.Fatalf("after the claim was ruled out: %d, want 0", n)
+	}
+}
+
+// answer_checked_by_you is true only while a person's check of the answer
+// still covers what the answer rests on.
+func TestListInvestigationsAnswerChecked(t *testing.T) {
+	ctx := context.Background()
+	a := apptest.Open(t)
+	inv := newInv(t, a, "Answer")
+	checked := func() bool {
+		t.Helper()
+		got, err := a.ListInvestigations(ctx, app.ListOptions{})
+		if err != nil || len(got) != 1 {
+			t.Fatalf("list = %+v, %v", got, err)
+		}
+		return got[0].AnswerCheckedByYou
+	}
+	if checked() {
+		t.Fatal("no answer: want false")
+	}
+	c := mustAddClaim(t, a, apptest.AI, inv.Ref, app.ClaimInput{Statement: "What the answer rests on"})
+	got, err := a.UpdateConclusion(ctx, apptest.AI, inv.Ref, app.ConclusionInput{Conclusion: "The answer.", SupportingClaims: []string{c.Ref}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checked() {
+		t.Fatal("an answer nobody checked: want false")
+	}
+	if _, err := a.UpdateConclusion(ctx, apptest.Human, inv.Ref, app.ConclusionInput{Conclusion: got.Conclusion, Confidence: got.ConclusionConfidence,
+		Verification: app.VerificationHumanVerified, Review: true, ReviewBasis: "Read the finding.", ExpectedReviewToken: got.ConclusionReviewToken}); err != nil {
+		t.Fatal(err)
+	}
+	if !checked() {
+		t.Fatal("a person checked the answer: want true")
+	}
+	// What the answer rests on changes: the check no longer covers it.
+	statement := "What the answer rests on, reworded"
+	if _, err := a.UpdateClaim(ctx, apptest.AI, inv.Ref, c.Ref, app.ClaimPatch{Statement: &statement}); err != nil {
+		t.Fatal(err)
+	}
+	if checked() {
+		t.Fatal("the finding behind the answer changed: want false")
+	}
+}

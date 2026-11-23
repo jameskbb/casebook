@@ -124,7 +124,7 @@ Add the entry to the `mcpServers` object of `~/.gemini/settings.json` (every pro
 casebook setup mcp --client claude-desktop
 ```
 
-Add the entry to the `mcpServers` object of `claude_desktop_config.json`: `~/Library/Application Support/Claude/` on macOS, `%APPDATA%\Claude\` on Windows (Settings, Developer, Edit Config opens it). Restart Claude Desktop. Claude Desktop starts servers outside any project, so it always uses the global active question.
+The desktop app can do this for you: **Settings**, **Connect your AI...**, **Connect it for me** beside the Claude desktop app. It adds only the `casebook` entry under `mcpServers` (with `--db <path>` when Casebook uses a data file you chose), keeps a backup of the file first, refuses a file that is not plain JSON or that changes while it writes, and leaves the file alone when nothing would change. **Disconnect** takes that entry out again. By hand: add the entry to the `mcpServers` object of `claude_desktop_config.json`: `~/Library/Application Support/Claude/` on macOS, `%APPDATA%\Claude\` on Windows (Settings, Developer, Edit Config opens it). Restart Claude Desktop. Claude Desktop starts servers outside any project, so it always uses the global active question.
 
 ### Claude Code and Codex
 
@@ -178,10 +178,10 @@ The active question is the one the desktop app marks as your AI's current questi
 - `casebook_update_hypothesis`: change its wording, why, or its status (supported, ruled out or replaced).
 - `casebook_link_evidence_to_hypothesis`: link a source to a finding being tested as supporting or contradicting it, or remove that link.
 
-### Follow-up questions
+### Still to find out
 
-- `casebook_add_question`: add a follow-up question.
-- `casebook_resolve_question`: resolve a follow-up question with its answer, or defer it with a note.
+- `casebook_add_question`: add something still to find out (a question record).
+- `casebook_resolve_question`: answer it, or defer it with a note.
 
 ### Answer
 
@@ -191,7 +191,7 @@ The active question is the one the desktop app marks as your AI's current questi
 
 - `casebook_get_context`: get the context pack (a short, structured summary of the question) as Markdown or JSON.
 - `casebook_get_report`: get the answer to a question as Markdown to share with people, the same text `casebook report` prints. `mode` chooses `report` (everything, the default) or `brief` (the short version, the same text as `casebook report --brief`).
-- `casebook_checkpoint`: record a short checkpoint note, optionally with a batch of new and changed sources, findings, follow-up questions and the answer, and get back the refs it created and updated, what changed since the previous checkpoint, and open items that may need updating. The batch is all or nothing: if any item fails, nothing is written and the error names the item, so the AI can fix it and resend the whole batch.
+- `casebook_checkpoint`: record a short checkpoint note, optionally with a batch of new and changed sources, findings, things still to find out and the answer, and get back the refs it created and updated, what changed since the previous checkpoint, and open items that may need updating. The batch is all or nothing: if any item fails, nothing is written and the error names the item, so the AI can fix it and resend the whole batch.
 
 ### Saving the answer in another app
 
@@ -201,7 +201,7 @@ Casebook connects to no other app. When a person asks their AI client to save th
 
 - Active question by default. Tools that work on one question use the active question when no ref is given. When none is set, the tool returns an error telling the AI to pass a ref or ask you to pick one.
 - Per-project active question. `casebook inv activate <ref> --here` makes a question active for one repository only (its root is the nearest folder holding `.git`). The MCP server resolves the active question from the folder the client starts it in, so Claude Code or Codex sessions in different repositories each get their own question; `casebook_get_active_investigation` then reports `active_dir`. Clients that start servers outside your project (such as Claude Desktop) use the global active question.
-- Refs. Questions are `INV-0001`; records inside a question are sources `E-001`, findings `C-001`, findings being tested `H-001` and follow-up questions `Q-001`. Refs never change and are never reused.
+- Refs. Questions are `INV-0001`; records inside a question are sources `E-001`, findings `C-001`, findings being tested `H-001` and things still to find out `Q-001`. Refs never change and are never reused.
 - Compact results. Tools that change data return the refs and the fields that changed, not the whole question.
 - Helpful errors. Invalid input returns a tool error that names the field and what is wrong (for example a length limit). The server keeps running.
 - Bounded responses. Every response stays within a documented size budget, so a large question cannot flood the AI's context.
@@ -222,7 +222,7 @@ The server also offers two read-only resources with the compact Markdown context
 1. Start with `casebook_get_active_investigation` or `casebook_get_context` to load what is already known.
 2. As you find things, add each source with `casebook_add_evidence`, always saying where it came from.
 3. Add or update findings with `casebook_add_claim` and `casebook_update_claim`, linking the sources that support or contradict them.
-4. Record findings being tested and follow-up questions as they come up; mark findings being tested supported or ruled out and resolve follow-up questions as the sources settle them.
+4. Record findings being tested and what is still to find out as they come up; mark findings being tested supported or ruled out and answer what was still to find out as the sources settle it.
 5. Update the answer with `casebook_update_conclusion` only when the sources justify it.
 6. End with `casebook_checkpoint` and a one or two sentence note about what this session established.
 

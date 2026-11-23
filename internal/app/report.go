@@ -103,8 +103,10 @@ type ShareCandidate struct {
 // SharePreview contains both formats derived from the same read transaction.
 // SnapshotID identifies the exact case content and bytes reviewed by a person.
 type SharePreview struct {
-	Markdown         string                   `json:"markdown"`
-	HTML             string                   `json:"html"`
+	Markdown string `json:"markdown"`
+	HTML     string `json:"html"`
+	// Text is the same answer as plain text with no marks (contextpack.ReportText).
+	Text             string                   `json:"text"`
 	SnapshotID       string                   `json:"snapshot_id"`
 	InvestigationRef string                   `json:"investigation_ref"`
 	Mode             string                   `json:"mode"`
@@ -253,6 +255,7 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 		out.Markdown = contextpack.RenderBrief(selected, out.Omitted, s.Evidence)
 	}
 	out.HTML = contextpack.ReportHTML(out.Markdown)
+	out.Text = contextpack.ReportText(out.Markdown)
 	raw, _ := json.Marshal(s)
 	sum := sha256.Sum256(append(raw, []byte(out.Markdown)...))
 	out.SnapshotID = hex.EncodeToString(sum[:])

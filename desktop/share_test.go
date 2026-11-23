@@ -29,7 +29,7 @@ func TestReviewedSharePreservesBytesAfterAIWrite(t *testing.T) {
 	if err := d.CopySharePreview(p.SnapshotID); err != nil {
 		t.Fatal(err)
 	}
-	if native.clipboard != p.Markdown || strings.Contains(native.clipboard, "Added after preview") {
+	if native.clipboard != p.Text || strings.ContainsAny(p.Text, "#_") || strings.Contains(native.clipboard, "Added after preview") {
 		t.Fatal("copy reread changed case")
 	}
 	native.savePath = filepath.Join(t.TempDir(), "reviewed.html")
@@ -51,7 +51,7 @@ func TestReviewedSharePreservesBytesAfterAIWrite(t *testing.T) {
 	if err != nil || refreshed.SnapshotID == p.SnapshotID || !strings.Contains(refreshed.Markdown, "Added after preview") {
 		t.Fatal("refresh did not show new case state")
 	}
-	if err := d.CopySharePreview(p.SnapshotID); err != nil || native.clipboard != p.Markdown {
+	if err := d.CopySharePreview(p.SnapshotID); err != nil || native.clipboard != p.Text {
 		t.Fatal("refresh overwrote previously reviewed bytes")
 	}
 }

@@ -144,7 +144,7 @@ func init() {
 	registerTool("casebook_add_question", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_add_question",
-			Title:       "Add a follow-up question",
+			Title:       "Add something still to find out",
 			Description: addQuestionDescription,
 			Annotations: mutatingTool(false),
 		}, h.addQuestion)
@@ -152,7 +152,7 @@ func init() {
 	registerTool("casebook_resolve_question", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_resolve_question",
-			Title:       "Resolve, defer or reopen a follow-up question",
+			Title:       "Answer, leave for later or reopen something to find out",
 			Description: resolveQuestionDescription,
 			Annotations: mutatingTool(true),
 		}, h.resolveQuestion)

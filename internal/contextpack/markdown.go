@@ -11,16 +11,16 @@ import (
 // RenderMarkdown renders the pack in its fixed Markdown layout: LF line endings, one blank line between sections and a
 // trailing newline. It says question, answer, finding and source: a claim
 // (C ref) and a hypothesis (H ref) are both findings, evidence (E ref) is a
-// source, and an open question (Q ref) is a follow-up question. Refs and the
+// source, and an open question (Q ref) is something still to find out. Refs and the
 // JSON rendering keep the engine's names. Confidence is not printed. Empty
-// findings and follow-up questions print "(none)"; an unset question or
+// findings and things to find out print "(none)"; an unset question or
 // answer prints "(not yet set)"; the other optional sections are left out
 // when empty. A trimmed pack ends with a line naming the budget and the
 // omitted sections. A record copied from an imported file shows "(imported)"
 // after its ref, like an imported activity row.
 //
-// Every user text value (title, question, answer, why, statements, follow-up
-// questions, notes, source titles and labels, activity summaries, client
+// Every user text value (title, question, answer, why, statements, things to
+// find out, notes, source titles and labels, activity summaries, client
 // names) is rendered on one line with oneLine, so stored text can never
 // start a new line and forge a section header, a finding line or a check
 // label: the only line breaks in the output are the layout's own.
@@ -68,14 +68,14 @@ func RenderMarkdown(p Pack) string {
 	add(listTail(lines, len(p.Hypotheses), p.Omitted.Hypotheses,
 		"finding still being tested", "findings still being tested")...)
 
-	lines = []string{"Follow-up questions:"}
+	lines = []string{"Still to find out:"}
 	for _, q := range p.OpenQuestions {
 		lines = append(lines, refTag(q.Ref, q.Imported), oneLine(q.Question))
 	}
-	add(listTail(lines, len(p.OpenQuestions), p.Omitted.OpenQuestions, "follow-up question", "follow-up questions")...)
+	add(listTail(lines, len(p.OpenQuestions), p.Omitted.OpenQuestions, "thing to find out", "things to find out")...)
 
 	if len(p.DeferredQuestions) > 0 {
-		lines := []string{"Follow-up questions for later:"}
+		lines := []string{"Still to find out, left for later:"}
 		for _, q := range p.DeferredQuestions {
 			line := refTag(q.Ref, q.Imported) + " " + oneLine(q.Question)
 			if note := oneLine(q.Note); note != "" {

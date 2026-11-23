@@ -50,7 +50,7 @@ For a numerical finding, keep these details when the source provides them:
   when a concise excerpt will do.
 
 Do not invent missing context. If a dashboard hides its filters or a workbook has
-no metric definition, record that limitation and leave a follow-up question. Checking where
+no metric definition, record that limitation and leave a question for what is still to find out. Checking where
 a source came from is separate from how sure you are of the answer and from
 whether the source is marked as checked.
 

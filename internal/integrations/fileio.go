@@ -131,11 +131,20 @@ func (f configFile) commit(newData []byte, now time.Time) (backup string, change
 	return backup, true, nil
 }
 
-// changedUnderneath is the error for a file another program changed while
-// Casebook was updating it.
-func changedUnderneath(path string) error {
-	return fmt.Errorf("%s changed while Casebook was updating it; nothing was written; rerun the command", path)
+// ErrChangedUnderneath matches (errors.Is) the error for a file another
+// program changed while Casebook was updating it.
+var ErrChangedUnderneath = errors.New("the file changed while Casebook was updating it")
+
+// changedUnderneath is that error for path.
+func changedUnderneath(path string) error { return changedError(path) }
+
+type changedError string
+
+func (e changedError) Error() string {
+	return string(e) + " changed while Casebook was updating it; nothing was written; rerun the command"
 }
+
+func (changedError) Is(target error) bool { return target == ErrChangedUnderneath }
 
 // writeFileAtomic replaces path with data through a temp file in the same
 // directory (write, fsync, rename), without a backup or comparison. The

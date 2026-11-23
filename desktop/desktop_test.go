@@ -344,6 +344,8 @@ func TestNilAppMethodsReturnInternal(t *testing.T) {
 	// Methods that touch no data work on a failed startup too.
 	noData := map[string]bool{
 		"SetWindowTheme": true, "ClientConnections": true,
+		// Settings of AI tools, not Casebook data (connect_test.go, temp folders only).
+		"ConnectClient": true, "DisconnectClient": true,
 		// Startup recovery works exactly when the data did not open.
 		"OpenDataFolder": true, "CopyDataLocation": true, "PickBackupToRecover": true, "RecoverFromBackup": true,
 		// Checking for updates needs no data (TestCheckForUpdatesWithoutData).

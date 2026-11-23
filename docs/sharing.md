@@ -4,29 +4,28 @@ There are two ways to share a question. **Share the answer** writes the answer u
 
 ## Write the answer up with Share the answer
 
-Open the question and choose **Share the answer**. Under **How much to share**, pick **Short version** for the answer and the findings behind it, or **Everything** for all of the question, including its history. The same text comes from `casebook report` (everything) and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the short version with the findings Casebook picks. Choosing the findings yourself is done in the desktop app.
+Open a question that has an answer and choose **Share the answer**. Under **How much to share**, pick **Short version** for the answer and the findings behind it, or **Everything** for all of the question, including its history. The same text comes from `casebook report` (everything) and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the short version.
 
-For the short version, open **Choose what to share** to pick what goes in from four groups: Findings, Findings not tested yet, Follow-up questions and Ruled out. Casebook starts with up to three findings, two findings not tested yet, two unanswered follow-up questions and two ruled-out findings, and you can change that. Findings where sources disagree, sources that go against a finding, and the findings behind the answer are always shared and cannot be unticked.
+The short version always carries the findings where sources disagree, the sources that go against a finding and the findings behind the answer, and a few of the rest.
 
-The reader of a shared answer is not you, so it never says "You". A finding you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
+The reader of a shared answer is not you, so it never says "You". A finding is labelled from its sources: `2 of 2 sources checked by a person`, `No source yet`, or `A person decided this holds` when a source goes against it and you decided it still holds. A source you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
 
-A shared answer has no record codes: the title is the question, and findings and sources are named by their own text. Dates are written out (`October 30, 2026`). A section with nothing in it is left out. The sections, in this order:
+A shared answer has no record codes: the title is the question, and findings and sources are named by their own text. Dates are written out (`October 30, 2026`). A section with nothing in it is left out, and each finding appears once. The sections, in this order:
 
 - The question as the title, then when it was asked and last changed.
 - `## Background`: what you wrote under the question.
-- `## Answer`: the answer, the count of sources a person checked, who checked the answer and what they checked, why the answer holds, and the findings that back the answer and go against it. `No answer yet.` when there is none.
-- `## Findings`: each finding with the label saying who checked it, why it holds, and its sources by name: `Backed by: ...` and `Goes against it: ...`, each with its own label.
-- `## Where sources disagree`: findings a source goes against, until someone decides.
-- `## Not tested yet`: findings no source has backed or ruled out, so the reader sees what the answer does not yet settle.
+- `## Answer`: the answer, the count of sources a person checked, who checked the answer and what they checked, and `How we know:`. `No answer yet.` when there is none.
+- `## Findings`: each finding with its label, why it holds, and its sources by name: `Backed by: ...` and `Goes against it: ...`, each with its own label.
+- `## Where sources disagree`: findings a source goes against, until someone decides, and findings your AI marked that way.
+- `## Still to find out`: findings not tested yet, then each thing to find out marked `not answered yet`, `answered` or `left for later`, with the answer or why it can wait.
 - `## Ruled out`: findings that were ruled out, with the sources that go against them.
 - `## Replaced`: findings a newer finding took the place of.
-- `## Follow-up questions`: each marked Open, Answered or Later, with the answer or why it can wait.
-- `## Sources`: each source once, with its label, its name, where to find it and what it shows. Everything also gives the date of each source.
+- `## Sources`: each source once, with its label, its name, where to find it and what it shows. Something you saw yourself reads `Seen by the person who shared this`. Everything also gives the date of each source.
 - `## How we got here` (Everything only): the history of changes, oldest first, one heading per day.
 
-The short version ends by saying what it leaves out, for example `This short version leaves out 2 follow-up questions and the history. Ask the person who shared this for the version with everything.` Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question and choices give the same text.
+The short version ends by saying what it leaves out, for example `This short version leaves out 2 things still to find out and the history. Ask the person who shared this for the version with everything.` Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question gives the same text.
 
-**Copy** and **Save** use what you see in the window. **Copy** puts the text on the clipboard to paste into an email or a document. **Save** writes a web page (`.html`) that opens in any browser when the reader double-clicks it. The file is named after the question, for example `Why did calls go up 30 percent in October when sales stayed the same.html`, with ` (everything)` added for the full version.
+**Copy** and **Save** use what you see in the window. **Copy** puts the answer on the clipboard twice over: as formatted text, so an email or a document shows the headings and lists, and as plain text with no `#` or `_` marks, for a chat box or any plain field. **Save** writes a web page (`.html`) that opens in any browser when the reader double-clicks it. The file is named after the question, for example `Why did calls go up 30 percent in October when sales stayed the same.html`, with ` (everything)` added for the full version.
 
 ## Move a question or hand over a copy
 
@@ -84,7 +83,7 @@ What import does:
 Importing a file always adds a separate copy; it never updates, replaces or merges a question that is already there. When the same question is already in the database (the original on the author's machine, or an earlier import of the file), import says so:
 
 ```text
-Imported INV-0002 as INV-0006 (6 sources, 1 findings, 2 findings being tested, 1 follow-up questions).
+Imported INV-0002 as INV-0006 (6 sources, 1 findings, 2 findings being tested, 1 things to find out).
 The same question is already here as INV-0005; INV-0006 is a separate copy. To keep one, archive and delete the other in the desktop app (Casebook never merges copies).
 ```
 
@@ -103,7 +102,7 @@ Each copy is its own question from then on:
 
 ## Using a shared answer in other apps
 
-A shared answer is ordinary text that reads correctly anywhere: every finding keeps the label saying who checked it (A person checked this, AI checked the source, Not checked, Sources disagree), its sources and the note of what was left out. Casebook writes the text. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
+A shared answer is ordinary text that reads correctly anywhere: every finding keeps its label (how many of its sources a person checked, or Sources disagree), its sources with theirs and the note of what was left out. Casebook writes the text. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
 
 ### Copy or save it yourself
 
@@ -117,7 +116,7 @@ casebook report INV-0002 --brief                               # the short versi
 casebook report INV-0002 --brief -o answer.md               # the short version, saved as a Markdown file
 ```
 
-`--brief` picks findings the way the app does before you change anything.
+`--brief` gives the same short version as the app.
 
 ### Ask your AI client to save it
 
@@ -145,7 +144,7 @@ Who does what:
 
 **What "done" means.** Your AI client reports what the app's tool actually returned. A successful write and reading the note back afterwards are different checks; ask the client to read the note back if you want the second one. Casebook records nothing about notes in other apps: it does not know where the text went, and it never says a note was created or updated.
 
-**What your AI fetches.** The text your AI client fetches is taken when it asks, with the findings Casebook picks. It matches what you saw in **Share the answer** only if the question has not changed since and you kept those choices. To share exactly what you read, use Copy or Save in the app.
+**What your AI fetches.** The text your AI client fetches is taken when it asks. It matches what you saw in **Share the answer** only if the question has not changed since. To share exactly what you read, use Copy or Save in the app.
 
 ### If you used Evernote notes
 

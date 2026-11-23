@@ -26,7 +26,7 @@ func newContextCommand(env *Env) *cobra.Command {
 		Short: "Print the briefing an AI session reads for a question (default: the active one)",
 		Long: `Print the briefing an AI session reads for a question: the answer, the
 findings it rests on and where sources disagree, findings still being tested,
-what was ruled out, follow-up questions, a list of sources and recent changes.
+what was ruled out, what is still to find out, a list of sources and recent changes.
 It uses the stored record names (conclusion, claim, hypothesis, evidence),
 because an AI reads it. With no ref, use the active question.
 

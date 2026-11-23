@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -9,12 +10,13 @@ import (
 	"github.com/jameskbb/casebook/internal/integrations"
 )
 
-// The Connect AI clients panel. It is read-only: it shows the
-// bundled CLI, whether Claude Code and Codex already run Casebook, and the
-// exact configuration and command for each. The desktop app never writes a
-// client config itself; `casebook setup claude` and `casebook setup codex`
-// own the backups, the merge and the refusals, so the panel hands
-// the user that one command to run.
+// The Connect AI clients panel. ClientConnections is read-only: it shows the
+// bundled CLI, whether Claude Code, Codex and the Claude desktop app are on
+// this computer and already run Casebook, and the exact configuration and
+// command for each. ConnectClient and DisconnectClient (connect.go) write a
+// client config through internal/integrations, the code `casebook setup
+// claude` and `casebook setup codex` run, which owns the backups, the merge
+// and the refusals.
 
 // CLI sources reported to the page.
 const (
@@ -40,10 +42,16 @@ type ClientConnections struct {
 	Shell  string           `json:"shell"`
 	Claude ClientConnection `json:"claude"`
 	Codex  ClientConnection `json:"codex"`
+	// ClaudeDesktop is the Claude desktop app. No command writes its config,
+	// so its setup commands are always "".
+	ClaudeDesktop ClientConnection `json:"claude_desktop"`
 }
 
 // ClientConnection is one AI client's status and setup instructions.
 type ClientConnection struct {
+	// Found is true when the client looks installed on this computer: its
+	// settings folder exists, or (Claude Code, Codex) its program is on PATH.
+	Found bool `json:"found"`
 	// Configured is true when the client's config registers Casebook.
 	Configured bool `json:"configured"`
 	// MatchesCLI is true when that registration runs CLIPath.
@@ -79,37 +87,89 @@ type clientSeams struct {
 	getenv  func(string) string
 	home    func() (string, error)
 	cliPath func() (string, error)
-	goos    string
+	// lookPath finds a client's program on PATH; nil finds nothing.
+	lookPath func(string) (string, error)
+	goos     string
 }
 
 func defaultClientSeams() clientSeams {
-	return clientSeams{getenv: os.Getenv, home: os.UserHomeDir, cliPath: integrations.CLIPath, goos: runtime.GOOS}
+	return clientSeams{getenv: os.Getenv, home: os.UserHomeDir, cliPath: integrations.CLIPath, lookPath: exec.LookPath, goos: runtime.GOOS}
 }
 
-// ClientConnections reads (never writes) the Claude Code and Codex configs
-// and returns the panel's content. It needs no open database.
-func (d *Desktop) ClientConnections() (ClientConnections, error) {
+// clientEnv is where the AI clients keep their settings on this computer and
+// what Casebook would write there.
+type clientEnv struct {
+	seams clientSeams
+	paths integrations.Paths
+	// desktopConfig is the Claude desktop app's config file, "" when its
+	// folder cannot be named.
+	desktopConfig string
+	// cli is the casebook CLI the clients run, "" when missing.
+	cli string
+	// db is passed as --db, "" for the per-user default.
+	db string
+}
+
+func (d *Desktop) clientEnv() (clientEnv, error) {
 	s := defaultClientSeams()
 	if d.clients != nil {
 		s = *d.clients
 	}
 	home, err := s.home()
 	if err != nil {
-		return ClientConnections{}, uiErr(kindOther, "", "Casebook cannot find your home folder, so it cannot read AI client settings")
+		return clientEnv{}, uiErr(kindOther, "", "Casebook cannot find your home folder, so it cannot read AI client settings")
 	}
-	p := integrations.ResolvePaths(s.getenv, home)
+	e := clientEnv{seams: s, paths: integrations.ResolvePaths(s.getenv, home), desktopConfig: integrations.ClaudeDesktopConfig(s.goos, s.getenv, home)}
+	if cli, err := s.cliPath(); err == nil {
+		e.cli = cli
+	}
+	if d.explicitDB {
+		e.db = d.dbPath
+	}
+	return e, nil
+}
 
-	out := ClientConnections{CLISource: cliMissing}
-	if cli, err := s.cliPath(); err == nil && cli != "" {
-		out.CLIPath = cli
-		out.CLISource = cliSource(cli, s.goos)
+// found reports whether the client looks installed: one of its settings
+// folders or files exists, or its program is on PATH.
+func (e clientEnv) found(program string, settings ...string) bool {
+	for _, p := range settings {
+		if p == "" {
+			continue
+		}
+		if _, err := os.Stat(p); err == nil {
+			return true
+		}
+	}
+	if program == "" || e.seams.lookPath == nil {
+		return false
+	}
+	_, err := e.seams.lookPath(program)
+	return err == nil
+}
+
+// desktopFound reports whether the Claude desktop app's settings folder
+// exists.
+func (e clientEnv) desktopFound() bool {
+	return e.desktopConfig != "" && e.found("", filepath.Dir(e.desktopConfig))
+}
+
+// ClientConnections reads (never writes) the Claude Code, Codex and Claude
+// desktop app configs and returns the panel's content. It needs no open
+// database.
+func (d *Desktop) ClientConnections() (ClientConnections, error) {
+	e, err := d.clientEnv()
+	if err != nil {
+		return ClientConnections{}, err
+	}
+	s, p := e.seams, e.paths
+
+	out := ClientConnections{CLIPath: e.cli, CLISource: cliMissing, DBPath: e.db}
+	if e.cli != "" {
+		out.CLISource = cliSource(e.cli, s.goos)
 	}
 	out.CLIName = out.CLIPath
 	if out.CLIName == "" {
 		out.CLIName = "casebook"
-	}
-	if d.explicitDB {
-		out.DBPath = d.dbPath
 	}
 	out.Shell = "terminal"
 	if s.goos == "windows" {
@@ -118,6 +178,7 @@ func (d *Desktop) ClientConnections() (ClientConnections, error) {
 
 	cs := integrations.InspectClaude(p, out.CLIPath)
 	out.Claude = ClientConnection{
+		Found:           e.found("claude", p.ClaudeConfigDir, p.ClaudeJSON),
 		Configured:      cs.Registered,
 		MatchesCLI:      cs.MatchesCLI,
 		Command:         cs.Command,
@@ -132,6 +193,7 @@ func (d *Desktop) ClientConnections() (ClientConnections, error) {
 	}
 	xs := integrations.InspectCodex(p, out.CLIPath)
 	out.Codex = ClientConnection{
+		Found:           e.found("codex", p.CodexHome),
 		Configured:      xs.Registered,
 		MatchesCLI:      xs.MatchesCLI,
 		Command:         xs.Command,
@@ -143,6 +205,21 @@ func (d *Desktop) ClientConnections() (ClientConnections, error) {
 		SetupCommandCmd: cmdSetupCommand(s.goos, out.CLIName, out.DBPath, "codex"),
 		SetupCommandWSL: wslSetupCommand(s.goos, out.CLIPath, out.DBPath, "codex"),
 		Snippet:         integrations.CodexConfigPreview(out.CLIName, integrations.CodexOptions{Paths: p, DBPath: out.DBPath}),
+	}
+	ds := integrations.InspectClaudeDesktop(e.desktopConfig, out.CLIPath)
+	out.ClaudeDesktop = ClientConnection{
+		Found:         e.desktopFound(),
+		Configured:    ds.Registered,
+		MatchesCLI:    ds.MatchesCLI,
+		Command:       ds.Command,
+		CommandExists: ds.CommandExists,
+		ConfigPath:    ds.ConfigPath,
+		ConfigProblem: ds.ConfigExists && !ds.ConfigValid,
+		Hooks:         []string{},
+	}
+	// The text `casebook setup mcp --client claude-desktop` prints.
+	if snip, err := integrations.MCPSnippetFor(integrations.MCPSnippetOptions{Client: "claude-desktop", CLIPath: out.CLIName, DBPath: out.DBPath, GOOS: s.goos}); err == nil {
+		out.ClaudeDesktop.Snippet = snip.Snippet
 	}
 	return out, nil
 }

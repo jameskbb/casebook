@@ -252,7 +252,7 @@ func NoActiveHint() string { return noActiveHint }
 // CheckpointReminder is the Stop reminder for investigation invRef.
 func CheckpointReminder(invRef string) string {
 	return "Casebook: if this session found anything new for " + invRef +
-		" (new sources or findings, a finding that was contradicted or ruled out, new or answered follow-up questions, a changed answer), " +
+		" (new sources or findings, a finding that was contradicted or ruled out, new or answered things to find out, a changed answer), " +
 		"save it now with one casebook_checkpoint call. Skip if nothing changed."
 }
 

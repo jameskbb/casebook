@@ -69,10 +69,14 @@ type InvestigationSummary struct {
 	// SourcesCheckedByYou counts those with verification human_verified.
 	SourcesTotal        int `json:"sources_total"`
 	SourcesCheckedByYou int `json:"sources_checked_by_you"`
-	// FindingsDisagree counts claims and hypotheses with verification
-	// disputed that are not superseded and not ruled out (rejected or
-	// disproven).
+	// FindingsDisagree counts the claims and hypotheses in the disagree
+	// group: not replaced or ruled out, and disputed, or a source that is
+	// not replaced goes against it and no person decided it holds.
 	FindingsDisagree int `json:"findings_disagree"`
+	// AnswerCheckedByYou is true when there is an answer, a person checked
+	// it, and neither it nor what it rests on changed since: the detail's
+	// conclusion_reviewed_at is set and conclusion_needs_review is false.
+	AnswerCheckedByYou bool `json:"answer_checked_by_you"`
 }
 
 // SearchOptions scopes Search. An empty InvestigationRef searches every

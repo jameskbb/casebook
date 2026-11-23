@@ -13,6 +13,8 @@ On Windows, quote a path that contains spaces, and note that the quoting differs
 
 ## Quick setup
 
+The desktop app can run this for you: **Settings**, **Connect your AI...**, **Connect it for me** beside Codex does what `casebook setup codex --skill` does, with the same backups and refusals, and **Disconnect** does what `--remove` does. It offers the button when it finds Codex on this computer (its settings folder, or `codex` on PATH). The commands below are for every other option.
+
 ```sh
 casebook setup codex            # add Casebook to your Codex configuration
 casebook setup codex --skill    # recommended: also add the Casebook skill
@@ -56,7 +58,7 @@ Codex starts MCP servers when a session starts, so start a new Codex session aft
 
 Codex loads MCP tools on demand and, in our tests with Codex 0.156, does not show the model the Casebook server's instructions. With only the MCP entry, Codex never reached for Casebook on its own: in the agent eval (`scripts/agent-eval`) it debugged a flaky test across two sessions with zero Casebook calls, and the second session redid the first one's work from scratch. Codex needs one of these to know when Casebook applies:
 
-- **The skill** (`casebook setup codex --skill`). Setup writes `~/.codex/skills/casebook/SKILL.md` (`$CODEX_HOME/skills/casebook/SKILL.md` when that is set). Codex lists every skill's one-line description to the model, so it loads this one when you mention earlier work on a question or agree to keep one, and it then follows the routine: find the question, read what is saved, record sources, findings and follow-up questions as it goes, checkpoint before its final reply. The file carries a `casebook-managed` line: a rerun replaces it (with a backup), `--remove` deletes it, and a `SKILL.md` without that line is yours and is never touched.
+- **The skill** (`casebook setup codex --skill`). Setup writes `~/.codex/skills/casebook/SKILL.md` (`$CODEX_HOME/skills/casebook/SKILL.md` when that is set). Codex lists every skill's one-line description to the model, so it loads this one when you mention earlier work on a question or agree to keep one, and it then follows the routine: find the question, read what is saved, record sources, findings and what is still to find out as it goes, checkpoint before its final reply. The file carries a `casebook-managed` line: a rerun replaces it (with a backup), `--remove` deletes it, and a `SKILL.md` without that line is yours and is never touched.
 - **An AGENTS.md section.** `casebook setup instructions` prints a short section that tells Codex to offer to keep a question in Casebook when it needs more than one look (why a number moved, which explanation holds, a failure whose cause is not obvious) or will continue later, to read what is saved before resuming, and to record findings as it goes. Setup never edits `AGENTS.md`; append it yourself (`casebook setup instructions >> AGENTS.md`) or paste it into `~/.codex/AGENTS.md` for every project.
 
 To have Codex save the answer to a question in a notes or document app, connect Codex to that app as well, then ask it to save the brief or the report there; [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) explains what to ask for and what to check.

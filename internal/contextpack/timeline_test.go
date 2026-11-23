@@ -1,6 +1,7 @@
 package contextpack
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jameskbb/casebook/internal/domain"
@@ -31,14 +32,14 @@ func TestTimelinePhrase(t *testing.T) {
 		{"finding add", "claim.add", "C-001", "Added finding C-001 with 3 sources", "added the finding C-001 with 3 sources"},
 		{"finding add one", "hypothesis.add", "H-002", "Added finding H-002 with 1 source", "added the finding H-002 with 1 source"},
 		{"finding add bare", "hypothesis.add", "H-003", "Added finding H-003", "added the finding H-003"},
-		{"check finding", "claim.update", "C-001", "Set verification of C-001 to human_verified", "checked the finding C-001"},
+		{"check finding", "claim.update", "C-001", "Set verification of C-001 to human_verified", "decided the finding C-001 holds"},
 		{"check source", "evidence.update", "E-002", "Set verification of E-002 to source_verified", "marked the source E-002: AI checked the source"},
 		{"sources disagree", "claim.update", "C-001", "Set verification of C-001 to disputed; status disputed", "said sources disagree about the finding C-001"},
 		{"settled", "claim.update", "C-001", "Set verification of C-001 to ai_generated; status active", "marked the finding C-001: Not checked"},
 		{"ruled out", "hypothesis.update", "H-001", "Updated hypothesis H-001: rationale, status disproven",
 			"ruled out the finding H-001 (also changed: why)"},
 		{"looks right", "hypothesis.update", "H-002", "Updated hypothesis H-002: confidence high, status supported",
-			"marked the finding H-002: Looks right so far"},
+			"said the finding H-002 turned out right"},
 		{"confidence only", "claim.update", "C-002", "Updated claim C-002: confidence low", "updated the finding C-002"},
 		{"claim ruled out", "claim.update", "C-002", "Updated claim C-002: status rejected", "ruled out the finding C-002"},
 		{"claim brought back", "claim.update", "C-002", "Updated claim C-002: status active", "brought back the finding C-002"},
@@ -55,10 +56,10 @@ func TestTimelinePhrase(t *testing.T) {
 		{"relink", "link.update", "C-001", "Changed link E-002 to C-001 from supports to contradicts",
 			"changed the source E-002: it now goes against the finding C-001"},
 		{"unlink", "link.remove", "C-001", "Unlinked E-002 from C-001", "removed the source E-002 from the finding C-001"},
-		{"ask", "question.add", "Q-001", "Added question Q-001: Is it seasonal?", "asked the follow-up question Q-001: Is it seasonal?"},
-		{"answer follow-up", "question.resolve", "Q-001", "Resolved question Q-001: No.", "answered the follow-up question Q-001: No."},
-		{"later", "question.defer", "Q-002", "Deferred question Q-002", "left the follow-up question Q-002 for later"},
-		{"reopen", "question.reopen", "Q-002", "Reopened question Q-002", "reopened the follow-up question Q-002"},
+		{"ask", "question.add", "Q-001", "Added question Q-001: Is it seasonal?", `added something to find out: Q-001 "Is it seasonal?"`},
+		{"answer follow-up", "question.resolve", "Q-001", "Resolved question Q-001: No.", "answered Q-001: No."},
+		{"later", "question.defer", "Q-002", "Deferred question Q-002", "left Q-002 for later"},
+		{"reopen", "question.reopen", "Q-002", "Reopened question Q-002", "opened Q-002 again"},
 		{"import", "import", "INV-0003", "Imported question INV-0003 (2 sources, 1 finding, 0 follow-up questions)", "added this question from a file"},
 		// A checkpoint keeps the note the AI saved with it.
 		{"checkpoint", "checkpoint", "", "Read the call log.", "saved its progress: Read the call log."},
@@ -94,7 +95,7 @@ func TestTimelinePhrase(t *testing.T) {
 }
 
 // In a shared answer a record is named by its own text, never by its code;
-// a record that is gone has no name.
+// a record that is gone is said to be gone, so no line has a hole.
 func TestTimelinePhraseNamesRecordsByText(t *testing.T) {
 	name := Snapshot{
 		Evidence:   []domain.Evidence{{Ref: "E-003", Title: "Wait times"}},
@@ -106,15 +107,15 @@ func TestTimelinePhraseNamesRecordsByText(t *testing.T) {
 		action, target, summary, want string
 	}{
 		{"evidence.add", "E-003", `Added source E-003 "Wait times, first name"`, `added the source "Wait times"`},
-		{"evidence.add", "E-009", `Added source E-009 "Gone"`, "added the source"},
-		{"claim.update", "C-001", "Set verification of C-001 to human_verified", `checked the finding "Callers waited"`},
-		{"claim.update", "C-009", "Set verification of C-009 to human_verified", "checked the finding"},
+		{"evidence.add", "E-009", `Added source E-009 "Gone"`, "added a source that is no longer here"},
+		{"claim.update", "C-001", "Set verification of C-001 to human_verified", `decided the finding "Callers waited" holds`},
+		{"claim.update", "C-009", "Set verification of C-009 to human_verified", "decided a finding that is no longer here holds"},
 		{"claim.supersede", "C-001", "C-001 was replaced by C-004", `replaced the finding "Callers waited" with "Callers asked about a bill"`},
 		{"claim.supersede", "C-001", "C-001 was replaced by C-009", `replaced the finding "Callers waited"`},
 		{"link.add", "H-001", "Linked E-003 to H-001 (contradicts)", `added the source "Wait times" to the finding "A new ad", which it goes against`},
-		{"question.add", "Q-001", "Added question Q-001: Is it seasonal?", `asked the follow-up question "Is it seasonal?"`},
-		{"question.add", "Q-009", "Added question Q-009: Deleted since?", "asked the follow-up question: Deleted since?"},
-		{"question.resolve", "Q-001", "Resolved question Q-001: No.", `answered the follow-up question "Is it seasonal?": No.`},
+		{"question.add", "Q-001", "Added question Q-001: Is it seasonal?", `added something to find out: "Is it seasonal?"`},
+		{"question.add", "Q-009", "Added question Q-009: Deleted since?", "added something to find out: Deleted since?"},
+		{"question.resolve", "Q-001", "Resolved question Q-001: No.", `answered "Is it seasonal?": No.`},
 		{"evidence.delete", "E-009", `Deleted source E-009 "Gone"`, "deleted a source"},
 	} {
 		got := timelinePhrase(domain.Activity{Action: tc.action, TargetRef: tc.target, Summary: tc.summary}, name)
@@ -123,6 +124,39 @@ func TestTimelinePhraseNamesRecordsByText(t *testing.T) {
 		}
 		if codes := refCode.FindAllString(got, -1); codes != nil {
 			t.Errorf("%q prints codes %v", got, codes)
+		}
+	}
+}
+
+// The history lines the tester found broken: each reads whole in a shared
+// answer, with no hole where a deleted record was and no list of field names.
+func TestTimelinePhraseSharedHasNoHoles(t *testing.T) {
+	name := Snapshot{
+		Evidence: []domain.Evidence{{Ref: "E-002", Title: "Returns desk email"}},
+		Claims:   []domain.Claim{{Ref: "C-001", Statement: "Kettles"}},
+	}.names()
+	for _, tc := range []struct {
+		action, target, summary, want string
+	}{
+		{"evidence.update", "E-002", "Updated evidence E-002: title", `updated the source "Returns desk email"`},
+		{"claim.update", "C-001", "Updated claim C-001: status disputed, verification disputed", `said sources disagree about the finding "Kettles"`},
+		{"claim.update", "C-001", "Updated claim C-001: verification disputed, status disputed", `said sources disagree about the finding "Kettles"`},
+		{"claim.update", "C-001", "Updated claim C-001: status rejected, verification human_verified", `ruled out the finding "Kettles"`},
+		{"claim.update", "C-001", "Updated claim C-001: status active, verification ai_generated", `brought back the finding "Kettles"`},
+		{"claim.add", "C-003", "Added finding C-003", "added a finding that is no longer here"},
+		{"claim.delete", "C-003", "Deleted finding C-003", "deleted a finding"},
+		{"question.add", "Q-002", "Added question Q-002", "added something to find out"},
+		{"question.resolve", "Q-002", "Resolved question Q-002: Acme", "answered something to find out: Acme"},
+		{"question.defer", "Q-002", "Deferred question Q-002", "left something to find out for later"},
+		{"question.delete", "Q-002", "Deleted question Q-002", "deleted something to find out"},
+		{"link.add", "C-001", "Linked E-009 to C-001 (supports)", `added a source that is no longer here to the finding "Kettles", which it backs up`},
+	} {
+		got := timelinePhrase(domain.Activity{Action: tc.action, TargetRef: tc.target, Summary: tc.summary}, name)
+		if got != tc.want {
+			t.Errorf("timelinePhrase(%s, %q) = %q, want %q", tc.action, tc.summary, got, tc.want)
+		}
+		if strings.Contains(got, gone) || strings.Contains(got, "also changed") || strings.Contains(got, "follow-up") {
+			t.Errorf("%q is not a whole line", got)
 		}
 	}
 }

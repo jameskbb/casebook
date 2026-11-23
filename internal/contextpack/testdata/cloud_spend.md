@@ -30,7 +30,7 @@ Findings still being tested:
 H-001 [Not tested yet, Not checked]
 The new tracing agent may also be shipping some services' logs twice.
 
-Follow-up questions:
+Still to find out:
 Q-001
 Can every service except payments go back to info level today?
 
@@ -46,7 +46,7 @@ E-004 Head of platform: debug was requested for payments only (Head of platform,
 
 Recent changes:
 - 2026-01-15T09:00:00.000Z human casebook-ui: Updated the answer
-- 2026-01-15T09:00:00.000Z human casebook-ui: Asked the follow-up question Q-001: Can every service except payments go back to info level today?
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added something to find out: Q-001 "Can every service except payments go back to info level today?"
 - 2026-01-15T09:00:00.000Z ai claude-code: Ruled out the finding H-002
 - 2026-01-15T09:00:00.000Z ai claude-code: Added the finding H-002 with 1 source
 - 2026-01-15T09:00:00.000Z ai claude-code: Added the finding H-001

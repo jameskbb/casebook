@@ -136,7 +136,7 @@ func sameJSON(a, b json.RawMessage) bool {
 }
 
 // save encodes the document with servers set back in place and commits it.
-func (d claudeDoc) save(opts ClaudeOptions) (backup string, changed bool, err error) {
+func (d claudeDoc) save(now time.Time) (backup string, changed bool, err error) {
 	srv, err := d.servers.Encode()
 	if err != nil {
 		return "", false, err
@@ -146,7 +146,7 @@ func (d claudeDoc) save(opts ClaudeOptions) (backup string, changed bool, err er
 	if err != nil {
 		return "", false, err
 	}
-	return d.file.commit(data, opts.now())
+	return d.file.commit(data, now)
 }
 
 // SetupClaude registers the Casebook MCP server in Claude Code's user config
@@ -174,7 +174,7 @@ func SetupClaude(cliPath string, opts ClaudeOptions) ([]FileChange, error) {
 			return nil, err
 		}
 	}
-	change, err := setupMCP(d, cliPath, opts)
+	change, err := setupMCP(d, ClaudeMCPServer(cliPath, opts), claudeManagedKeys, opts.now())
 	if err != nil {
 		return nil, err
 	}
@@ -210,21 +210,21 @@ func secondWriteError(first FileChange, second string, err error) ([]FileChange,
 // is kept as it is.
 var claudeManagedKeys = []string{"type", "command", "args"}
 
-// mergeClaudeServer returns the mcpServers.casebook entry for an existing
-// entry old (an object): old with type, command and args set to Casebook's
+// mergeServer returns the mcpServers.casebook entry for an existing
+// entry old (an object): old with the managed members set to the desired
 // values in place and every other member kept, plus whether that changes
 // any managed member, and the user's extra keys (env counts only when it is
 // not empty).
-func mergeClaudeServer(old json.RawMessage, cliPath string, opts ClaudeOptions) (merged json.RawMessage, changed bool, extra []string, err error) {
+func mergeServer(old, want json.RawMessage, managed []string) (merged json.RawMessage, changed bool, extra []string, err error) {
 	entry, err := parseJSONObject(old)
 	if err != nil {
 		return nil, false, nil, err
 	}
-	desired, err := parseJSONObject(ClaudeMCPServer(cliPath, opts))
+	desired, err := parseJSONObject(want)
 	if err != nil {
 		return nil, false, nil, err
 	}
-	for _, k := range claudeManagedKeys {
+	for _, k := range managed {
 		want, _ := desired.Get(k)
 		if cur, ok := entry.Get(k); !ok || !sameJSON(cur, want) {
 			entry.Set(k, want)
@@ -233,7 +233,7 @@ func mergeClaudeServer(old json.RawMessage, cliPath string, opts ClaudeOptions) 
 	}
 	for _, m := range entry.Members {
 		switch {
-		case slices.Contains(claudeManagedKeys, m.Key):
+		case slices.Contains(managed, m.Key):
 		case m.Key == "env" && sameJSON(m.Value, json.RawMessage(`{}`)):
 		default:
 			extra = append(extra, m.Key)
@@ -246,18 +246,17 @@ func mergeClaudeServer(old json.RawMessage, cliPath string, opts ClaudeOptions) 
 	return json.RawMessage(bytes.TrimRight(enc, "\n")), changed, extra, nil
 }
 
-// setupMCP writes mcpServers.casebook into the parsed .claude.json. An
-// existing entry keeps every member but type, command and args, so
+// setupMCP writes entry as mcpServers.casebook into the parsed document. An
+// existing entry keeps every member but the managed ones, so
 // a user's env (such as CASEBOOK_DB) or timeout survives a rerun.
-func setupMCP(d claudeDoc, cliPath string, opts ClaudeOptions) (FileChange, error) {
+func setupMCP(d claudeDoc, entry json.RawMessage, managed []string, now time.Time) (FileChange, error) {
 	change := FileChange{File: d.file.Path, Entries: []string{claudeServerEntry}}
 	if d.servers == nil {
 		d.servers = &jsonObject{}
 	}
-	entry := ClaudeMCPServer(cliPath, opts)
 	old, existed := d.servers.Get(claudeServerName)
 	if existed {
-		merged, changed, extra, err := mergeClaudeServer(old, cliPath, opts)
+		merged, changed, extra, err := mergeServer(old, entry, managed)
 		if err != nil {
 			return FileChange{}, &RefusedError{File: d.file.Path, Reason: claudeServerEntry + ": " + err.Error()}
 		}
@@ -272,7 +271,7 @@ func setupMCP(d claudeDoc, cliPath string, opts ClaudeOptions) (FileChange, erro
 		entry = merged
 	}
 	d.servers.Set(claudeServerName, entry)
-	backup, changed, err := d.save(opts)
+	backup, changed, err := d.save(now)
 	if err != nil {
 		return FileChange{}, err
 	}
@@ -389,7 +388,7 @@ func RemoveClaude(opts ClaudeOptions) ([]FileChange, error) {
 
 	change := FileChange{File: d.file.Path, Action: ActionUnchanged, Entries: []string{claudeServerEntry}}
 	if d.servers != nil && d.servers.Delete(claudeServerName) {
-		backup, changed, err := d.save(opts)
+		backup, changed, err := d.save(opts.now())
 		if err != nil {
 			return nil, err
 		}

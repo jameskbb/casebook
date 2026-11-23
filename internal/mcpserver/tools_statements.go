@@ -498,7 +498,7 @@ type linkHypothesisInput struct {
 func linkDescription(noun string) string {
 	return `Tie one piece of evidence to a ` + noun + `: pass relation supports or contradicts to link, or unlink: true to remove the link (exactly one of the two). ` +
 		`One call per evidence and ` + noun + ` pair; linking again with the other relation updates it, and the same relation again changes nothing. ` +
-		`Both must be in the same investigation. ` +
+		`Both must be in the same investigation. Evidence that goes against the ` + noun + ` belongs here too (contradicts): the app shows Sources disagree from that link. ` +
 		`Returns action linked, relinked, unchanged or unlinked and a compact record listing the supporting and contradicting evidence refs.`
 }
 

@@ -201,7 +201,7 @@ func TestPlainLabels(t *testing.T) {
 		"hypothesis open": "Not tested yet", "hypothesis supported": "Looks right so far", "hypothesis disproven": "Ruled out",
 		"hypothesis superseded": "Replaced",
 		"record investigation":  "question", "record evidence": "source", "record claim": "finding", "record hypothesis": "finding",
-		"record question": "follow-up question",
+		"record question": "thing to find out",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("plain labels = %v, want %v", got, want)

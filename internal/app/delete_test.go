@@ -116,7 +116,7 @@ func TestDeleteInvestigation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r := rows[0]; r.Action != "investigation.delete" || r.InvestigationRef != "" || r.TargetRef != f.InvestigationRef ||
-		r.Summary != `Deleted question INV-0001 "September cloud bill up 38%" (4 sources, 5 findings, 1 follow-up question)` {
+		r.Summary != `Deleted question INV-0001 "September cloud bill up 38%" (4 sources, 5 findings, 1 thing to find out)` {
 		t.Fatalf("delete row = %+v", r)
 	}
 	if hits, err := a.Search(ctx, "debug", app.SearchOptions{IncludeArchived: true}); err != nil || len(hits) != 0 {

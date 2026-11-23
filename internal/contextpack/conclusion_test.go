@@ -39,13 +39,13 @@ func TestConclusionAccountabilitySurvivesAllRenderingsAndBudget(t *testing.T) {
 			t.Errorf("%s lost conclusion label or attention", name)
 		}
 	}
-	// The shared answer names the same findings by their text.
+	// The shared answer names the same findings by their text, once each.
 	shared := RenderReport(s, ReportOptions{})
 	for _, want := range []string{
 		"A person checked this answer on October 20, 2026. Something changed after that. It needs checking again.",
 		"What was checked: Checked the export against selected claims.",
-		"Findings that back the answer:\n- " + s.Claims[0].Statement + " (Sources disagree)\n",
-		"Findings that go against the answer:\n- " + s.Claims[1].Statement,
+		"## Where sources disagree\n\n- " + s.Claims[0].Statement + "\n",
+		"- " + s.Claims[1].Statement,
 	} {
 		if !strings.Contains(shared, want) {
 			t.Errorf("shared answer lost %q:\n%s", want, shared)

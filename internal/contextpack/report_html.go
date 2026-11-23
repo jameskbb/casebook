@@ -128,3 +128,31 @@ li { margin: 0.3em 0; }
 li li { color: #474d54; }
 em { color: #59636e; font-size: 0.9em; }
 `
+
+// ReportText turns the Markdown of a shared answer into plain text with no
+// marks, for pasting where Markdown is not read (an email, a chat box). It
+// knows the same shapes as ReportHTML: a heading becomes a line of its own,
+// a bullet keeps its hyphen, a nested bullet is indented without one, the
+// footer loses its underscores and a paragraph loses the backslash mdText
+// puts before a leading block marker. It is pure and deterministic.
+func ReportText(markdown string) string {
+	lines := strings.Split(markdown, "\n")
+	for i, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "### "):
+			lines[i] = line[4:]
+		case strings.HasPrefix(line, "## "):
+			lines[i] = line[3:]
+		case strings.HasPrefix(line, "# "):
+			lines[i] = line[2:]
+		case strings.HasPrefix(line, "  - "):
+			lines[i] = "    " + line[4:]
+		case strings.HasPrefix(line, "- "):
+		case len(line) > 2 && line[0] == '_' && line[len(line)-1] == '_':
+			lines[i] = line[1 : len(line)-1]
+		default:
+			lines[i] = unescapeBlockMarker(line)
+		}
+	}
+	return strings.Join(lines, "\n")
+}

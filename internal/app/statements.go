@@ -785,8 +785,16 @@ func (a *App) writeStatementChange(ctx context.Context, tx *sql.Tx, actor domain
 	return store.GetStatementByID(ctx, tx, k.target, id)
 }
 
-// recordCounts renders "4 sources, 5 findings, 1 follow-up question" for a
+// recordCounts renders "4 sources, 5 findings, 1 thing to find out" for a
 // delete or import summary.
 func recordCounts(sources, findings, questions int) string {
-	return plural(sources, "source") + ", " + plural(findings, "finding") + ", " + plural(questions, "follow-up question")
+	return plural(sources, "source") + ", " + plural(findings, "finding") + ", " + toFindOut(questions)
+}
+
+// toFindOut renders "1 thing to find out" or "3 things to find out".
+func toFindOut(n int) string {
+	if n == 1 {
+		return "1 thing to find out"
+	}
+	return fmt.Sprintf("%d things to find out", n)
 }

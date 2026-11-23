@@ -18,15 +18,20 @@ The tools keep the engine's names. The person sees the app's words, so say those
 | conclusion | answer |
 | claim, hypothesis | finding |
 | evidence | source |
-| question (Q-001) | follow-up question |
-| `ai_generated` | Not checked |
-| `source_verified` | AI checked the source |
-| `human_verified` | You checked this |
-| `disputed` | Sources disagree |
+| question (Q-001), open hypothesis | something still to find out |
+| `ai_generated` source | Not checked |
+| `source_verified` source | AI checked the source |
+| `human_verified` source | You checked this |
+| a finding with a source against it, or `disputed` | Sources disagree |
 | `superseded` | Replaced |
 | `rejected`, `disproven` | Ruled out |
-| open hypothesis | Not tested yet |
 
+What the person sees and does:
+
+- The person checks sources, and the answer once. They do not check findings.
+- A finding's standing comes from its sources: "2 of 3 sources checked by you", "No source yet", or "Sources disagree" when a source goes against it. So link every claim and hypothesis to its evidence.
+- When something goes against a finding, save it as evidence and link it with relation `contradicts`. Do not only mark the finding `disputed`: the person needs the source to read.
+- Say "still to find out", never "follow-up question" or "hypothesis".
 - Use plain words a business leader would say out loud. Short sentences. No jargon.
 - Never tell the person a confidence level (high, medium, low). Say how many sources they have checked: "2 of 5 sources checked by you".
 - Title an investigation as the question the person asked, in their own words: "Why did calls go up 30% in October when sales stayed the same?"

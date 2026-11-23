@@ -25,7 +25,7 @@ func writeStatus(w io.Writer, info app.StatusInfo, active *app.Investigation) er
 		fmt.Fprintf(tw, "Active:\t%s\n", `none (your AI has no current question; run "casebook inv activate <ref>")`)
 	}
 	c := info.Counts
-	fmt.Fprintf(tw, "Records:\t%d questions, %d sources, %d findings, %d findings being tested, %d follow-up questions\n",
+	fmt.Fprintf(tw, "Records:\t%d questions, %d sources, %d findings, %d findings being tested, %d things to find out\n",
 		c.Investigations, c.Evidence, c.Claims, c.Hypotheses, c.Questions)
 	return tw.Flush()
 }

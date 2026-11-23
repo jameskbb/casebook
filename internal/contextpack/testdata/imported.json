@@ -204,7 +204,7 @@
       },
       "action": "import",
       "target_ref": "INV-0001",
-      "summary": "Imported question INV-0001 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked",
+      "summary": "Imported question INV-0001 (4 sources, 5 findings, 1 thing to find out); 3 records set back to Not checked",
       "imported": false
     },
     {

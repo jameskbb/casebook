@@ -94,7 +94,7 @@ func TestStatus(t *testing.T) {
 		r := runCLI(t, "", "status", "--db", db)
 		wantCode(t, r, 0)
 		for _, want := range []string{"Database:", db, "Data dir:", filepath.Dir(db), "Schema:", "Active:",
-			"INV-0001 September cloud bill up 38% (your AI's current question)", "Records:", "1 questions, 4 sources, 3 findings, 2 findings being tested, 1 follow-up questions"} {
+			"INV-0001 September cloud bill up 38% (your AI's current question)", "Records:", "1 questions, 4 sources, 3 findings, 2 findings being tested, 1 things to find out"} {
 			if !strings.Contains(r.Stdout, want) {
 				t.Errorf("stdout does not contain %q:\n%s", want, r.Stdout)
 			}

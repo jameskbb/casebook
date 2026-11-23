@@ -53,7 +53,7 @@ func BriefStateLabel(status string, v domain.Verification) string {
 }
 
 // briefOmissionNotice says what the short version leaves out: how many
-// findings, follow-up questions and sources, and always the history.
+// findings, things still to find out and sources, and always the history.
 func briefOmissionNotice(o BriefOmitted) string {
 	var items []string
 	for _, n := range []struct {
@@ -61,7 +61,7 @@ func briefOmissionNotice(o BriefOmitted) string {
 		singular, plural string
 	}{
 		{max(o.Claims, len(o.ClaimRefs)) + max(o.Hypotheses, len(o.HypothesisRefs)), "finding", "findings"},
-		{max(o.Questions, len(o.QuestionRefs)), "follow-up question", "follow-up questions"},
+		{max(o.Questions, len(o.QuestionRefs)), "thing still to find out", "things still to find out"},
 		{max(o.Evidence, len(o.EvidenceRefs)), "source", "sources"},
 	} {
 		switch {

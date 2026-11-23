@@ -88,13 +88,13 @@ func TestEvidenceVerificationSurvivesEveryPackRendering(t *testing.T) {
 func TestReportLabelsInlineEvidenceAndRuledOutFindings(t *testing.T) {
 	md := RenderReport(fidelitySnapshot(), ReportOptions{})
 	for _, want := range []string{
-		"## Findings\n\n- Rebates explain the margin decline. (A person checked this)\n",
+		"- Rebates explain the margin decline.",
 		"  - Backed by: Contested rebate estimate (Sources disagree)\n",
 		"  - Backed by: Prior margin extract (Replaced)\n",
 		"  - Goes against it: Regional ledger (AI checked the source)\n",
 		"## Where sources disagree\n\n- The old extract is complete.\n",
-		"## Ruled out\n\n- Exchange rates explain the gap. (Not checked)\n",
-		"- Duplicate invoices caused the decline. (Not checked)\n",
+		"## Ruled out\n\n- Exchange rates explain the gap.\n",
+		"- Duplicate invoices caused the decline.\n",
 		"- Unlinked interview (Not checked)\n  - Something a person said\n",
 	} {
 		if !strings.Contains(md, want) {

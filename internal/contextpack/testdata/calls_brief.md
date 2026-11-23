@@ -16,28 +16,21 @@ A person checked this answer on November 1, 2026.
 
 What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
 
-Why: The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
-
-Findings that back the answer:
-- About the same number of people called to buy. (Not checked)
-- A billing mistake on October 3 charged some customers twice. (A person checked this)
-
-Findings that go against the answer:
-- Callers waited too long and hung up before buying. (Sources disagree)
+How we know: The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
 
 ## Findings
 
-- About the same number of people called to buy. (Not checked)
+- About the same number of people called to buy. (0 of 2 sources checked by a person)
   - Why: The call log and the sales report agree.
-  - Backed by: Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October (AI checked the source)
+  - Backed by: Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October (AI checked the source)
   - Backed by: Calls about a bill: 400 in September, 1,070 in October (Not checked)
-- A billing mistake on October 3 charged some customers twice. (A person checked this)
+- A billing mistake on October 3 charged some customers twice. (2 of 4 sources checked by a person)
   - Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
   - Backed by: Calls about a bill: 400 in September, 1,070 in October (Not checked)
   - Backed by: Notice dated October 4: 1,900 customers were charged twice on October 3 (A person checked this)
   - Backed by: Call notes: 9 in 10 October calls about a bill mention being charged twice (Not checked)
   - Backed by: Billing team lead: the mistake was fixed on October 5 (A person checked this)
-- Something went wrong with billing in early October. (Looks right so far; Not checked)
+- Something went wrong with billing in early October. (0 of 1 source checked by a person)
   - Backed by: Calls about a bill: 400 in September, 1,070 in October (Not checked)
 
 ## Where sources disagree
@@ -47,29 +40,26 @@ Findings that go against the answer:
   - Backed by: Sales manager: we were two people short in October (Not checked)
   - Goes against it: The average wait was 40 seconds in September and 40 seconds in October (Not checked)
 
-## Not tested yet
+## Still to find out
 
-- Customers who were charged twice are less likely to buy again. (Not checked)
+- Customers who were charged twice are less likely to buy again. (not tested yet)
+- Have all 1,900 customers been paid back? (not answered yet)
+- Should we expect fewer sales in November from the customers who were charged twice? (left for later)
+  - Why it can wait: Waiting for the November sales report on December 1.
 
 ## Ruled out
 
-- A new ad brought in more callers. (Not checked)
+- A new ad brought in more callers.
   - Goes against it: No new ads ran in October (Not checked)
-- We raised prices, so callers did not buy. (Not checked)
+- We raised prices, so callers did not buy.
   - Goes against it: Prices were the same in September and October (Not checked)
-
-## Follow-up questions
-
-- Have all 1,900 customers been paid back? (Open)
-- Should we expect fewer sales in November from the customers who were charged twice? (Later)
-  - Why it can wait: Waiting for the November sales report on December 1.
 
 ## Sources
 
-- Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October (AI checked the source)
+- Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October (AI checked the source)
   - Call log and October sales report
   - Where to find it: Call log, September and October; October sales report
-  - The call log counts 2,000 calls to buy in September and 2,050 in October. The October sales report shows $510k of sales in September and $512k in October.
+  - The call log counts 2,000 calls to buy in September and 2,050 in October. The October sales report shows $510,000 of sales in September and $512,000 in October.
 - Sales manager: we were two people short in October (Not checked)
   - Sales manager, in the Monday sales meeting
   - The sales manager said in the Monday sales meeting that the call center was two people short in October. She thinks callers waited too long and hung up before buying.
@@ -101,6 +91,6 @@ Findings that go against the answer:
   - Billing team lead, in person
   - The billing team lead said in person that the bills sent on October 3 charged 1,900 customers twice, and that the mistake was fixed on October 5.
 
-This short version leaves out 2 follow-up questions and the history. Ask the person who shared this for the version with everything.
+This short version leaves out 2 things still to find out and the history. Ask the person who shared this for the version with everything.
 
 _Made with Casebook. These are the saved findings and sources, word for word._

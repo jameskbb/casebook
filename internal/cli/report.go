@@ -26,7 +26,7 @@ func newReportCommand(env *Env) *cobra.Command {
 		Short: "Print the answer to a question, ready to share (default: the active one)",
 		Long: `Print the answer to a question as Markdown for people to read. It includes the
 answer and who checked it, the findings and their sources, what was ruled out,
-the follow-up questions and a dated history of changes. Records are named by
+what is still to find out and a dated history of changes. Records are named by
 their own text, without refs. With no ref, use the active question.
 
 --brief prints the short version instead: what the app's Share the answer

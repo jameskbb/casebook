@@ -4,8 +4,9 @@
 // calls go up 30% in October when sales stayed the same?": three sessions
 // over four days, Claude Code (Monday, Thursday) and Codex (Tuesday), and
 // one person who reads the billing team's notice, talks to the billing team
-// lead and checks C-003. INV-0001 is the March payroll question, answered
-// last week; INV-0003 is the help desk question, still without an answer;
+// lead and checks the answer. INV-0001 is the March payroll question, answered
+// last week (its answer is not checked yet); INV-0003 is the help desk
+// question, every source checked and still without an answer;
 // the others fill the list with an answered and an archived question.
 //
 // Everything is written through public internal/app methods with the
@@ -33,8 +34,8 @@ const FeaturedTitle = "Why did calls go up 30% in October when sales stayed the 
 type Stage string
 
 const (
-	// StageFull writes the whole story, ending with the person's check on
-	// C-003 and their review of the answer.
+	// StageFull writes the whole story, ending with the person's check of
+	// the answer.
 	StageFull Stage = "full"
 	// StageBeforeThursday stops before Thursday's Claude Code session, so
 	// ThursdayCheckpoint can be written live from another process (the
@@ -238,36 +239,35 @@ func (s *seeder) run(stage Stage) {
 }
 
 // payroll is INV-0001, a small question worked and answered last week:
-// H-001 (overtime) ruled out, C-001 (two early hires) checked by the
-// person, the answer reviewed.
+// H-001 (overtime) ruled out, every source checked by the person, the
+// answer rewritten by them and not checked yet.
 func (s *seeder) payroll() {
 	a, ctx := s.a, s.ctx
 	s.at(9 * day)
 	inv, err := a.CreateInvestigation(ctx, ClaudeCode, app.CreateInvestigationInput{
-		Title:            "Why was March payroll $18k over budget?",
-		ProblemStatement: "March payroll was $418k. The budget was $400k. Where did the extra $18k go?",
+		Title:            "Why was March payroll $18,000 over budget?",
+		ProblemStatement: "March payroll was $418,000. The budget was $400,000. Where did the extra $18,000 go?",
 		Status:           app.InvestigationStatusInvestigating,
 	})
 	if !s.check("INV-0001", err) {
 		return
 	}
 	_, err = a.CheckpointBatch(ctx, ClaudeCode, inv.Ref, app.CheckpointInput{
-		Note: "March payroll was $418k against a budget of $400k. " +
+		Note: "March payroll was $418,000 against a budget of $400,000. " +
 			"Overtime was the same in February and March, so extra overtime is ruled out.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "payroll", Evidence: app.EvidenceInput{
-				Title:       "March payroll: $418k paid, $400k in the budget",
-				Summary:     "The March payroll report shows $418k paid. The budget for March was $400k.",
+				Title:       "March payroll: $418,000 paid, $400,000 in the budget",
+				Summary:     "The March payroll report shows $418,000 paid. The budget for March was $400,000.",
 				SourceType:  app.SourceTypeFile,
 				SourceRef:   "Payroll report, March",
 				SourceLabel: "Payroll report",
-				RawDetail: "month,paid,budget\n" +
-					"February,$400k,$400k\n" +
-					"March,$418k,$400k",
+				RawDetail: "February: $400,000 paid, $400,000 in the budget\n" +
+					"March: $418,000 paid, $400,000 in the budget",
 			}},
 			{Key: "overtime", Evidence: app.EvidenceInput{
-				Title:       "Overtime pay: $6k in February, $6k in March",
-				Summary:     "The payroll report lists $6k of overtime pay in February and $6k in March.",
+				Title:       "Overtime pay: $6,000 in February, $6,000 in March",
+				Summary:     "The payroll report lists $6,000 of overtime pay in February and $6,000 in March.",
 				SourceType:  app.SourceTypeFile,
 				SourceRef:   "Payroll report, February and March",
 				SourceLabel: "Payroll report",
@@ -290,7 +290,7 @@ func (s *seeder) payroll() {
 	s.at(8*day + 20*hour)
 	hires, err := a.AddEvidence(ctx, ClaudeCode, inv.Ref, app.EvidenceInput{
 		Title:       "Two new hires started on March 1. The budget had them starting on April 1",
-		Summary:     "The list of start dates shows two new hires who started on March 1. The budget planned for both to start on April 1. Together they are paid $18k a month.",
+		Summary:     "The list of start dates shows two new hires who started on March 1. The budget planned for both to start on April 1. Together they are paid $18,000 a month.",
 		SourceType:  app.SourceTypeFile,
 		SourceRef:   "New hire start dates, this year",
 		SourceLabel: "List of start dates",
@@ -298,10 +298,10 @@ func (s *seeder) payroll() {
 	if !s.check("INV-0001 E-003", err) {
 		return
 	}
-	c, err := a.AddClaim(ctx, ClaudeCode, inv.Ref, app.ClaimInput{
+	_, err = a.AddClaim(ctx, ClaudeCode, inv.Ref, app.ClaimInput{
 		Statement:           "Two new hires started a month earlier than the budget assumed.",
 		Confidence:          app.ConfidenceHigh,
-		ConfidenceRationale: "Their pay for March is $18k, the same as the amount over budget.",
+		ConfidenceRationale: "Their pay for March is $18,000, the same as the amount over budget.",
 		Links:               []app.EvidenceLinkInput{supports(hires.Ref)},
 	})
 	if !s.check("INV-0001 C-001", err) {
@@ -317,10 +317,6 @@ func (s *seeder) payroll() {
 	}
 
 	s.at(8 * day)
-	_, err = a.SetClaimVerification(ctx, Person, inv.Ref, c.Ref, app.VerificationHumanVerified)
-	if !s.check("INV-0001 check C-001", err) {
-		return
-	}
 	for _, ref := range []string{"E-001", "E-002", "E-003"} {
 		_, err = a.SetEvidenceVerification(ctx, Person, inv.Ref, ref, app.VerificationHumanVerified)
 		if !s.check("INV-0001 check "+ref, err) {
@@ -330,7 +326,7 @@ func (s *seeder) payroll() {
 	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
 		Conclusion: answer,
 		Confidence: app.ConfidenceHigh,
-		Rationale:  "The two start dates explain the whole $18k.",
+		Rationale:  "The two start dates explain the whole $18,000.",
 	})
 	if !s.check("INV-0001 answer by the person", err) {
 		return
@@ -368,8 +364,8 @@ func (s *seeder) callsMonday() {
 			"Still to find out: what the extra calls were about.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "buying", Evidence: app.EvidenceInput{
-				Title:        "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October",
-				Summary:      "The call log counts 2,000 calls to buy in September and 2,050 in October. The October sales report shows $510k of sales in September and $512k in October.",
+				Title:        "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October",
+				Summary:      "The call log counts 2,000 calls to buy in September and 2,050 in October. The October sales report shows $510,000 of sales in September and $512,000 in October.",
 				SourceType:   app.SourceTypeFile,
 				SourceRef:    "Call log, September and October; October sales report",
 				SourceLabel:  "Call log and October sales report",
@@ -431,7 +427,7 @@ func (s *seeder) callsTuesday() {
 	if !s.check(FeaturedRef+" E-003 contradicts C-001", err) {
 		return
 	}
-	// An AI may raise doubt; the status follows the verification.
+	// The source alone puts C-001 where sources disagree; an AI may say so too.
 	_, err = a.SetClaimVerification(ctx, Codex, FeaturedRef, "C-001", app.VerificationDisputed)
 	if !s.check(FeaturedRef+" sources disagree on C-001", err) {
 		return
@@ -510,10 +506,10 @@ func (s *seeder) callsTuesday() {
 	s.check(FeaturedRef+" Tuesday checkpoint", err)
 }
 
-// person is the person's part on Thursday afternoon: two follow-up
-// questions (one deferred), a check of the billing team's notice (E-007),
-// the billing team lead's word as E-009 linked to C-003, a check of C-003
-// and a review of the answer.
+// person is the person's part on Thursday afternoon: two things to find
+// out (one left for later), a check of the billing team's notice (E-007),
+// the billing team lead's word as E-009 linked to C-003
+// and a check of the answer.
 func (s *seeder) person() {
 	a, ctx := s.a, s.ctx
 	s.at(80 * time.Minute)
@@ -551,11 +547,6 @@ func (s *seeder) person() {
 	}
 	_, err = a.LinkEvidenceToClaim(ctx, Person, FeaturedRef, "C-003", e9.Ref, app.RelationSupports)
 	if !s.check(FeaturedRef+" E-009 supports C-003", err) {
-		return
-	}
-	s.at(70 * time.Minute)
-	_, err = a.SetClaimVerification(ctx, Person, FeaturedRef, "C-003", app.VerificationHumanVerified)
-	if !s.check(FeaturedRef+" check C-003", err) {
 		return
 	}
 	s.at(65 * time.Minute)
@@ -634,7 +625,7 @@ func (s *seeder) helpDesk() {
 }
 
 // helpDeskStuck leaves INV-0003 without an answer since yesterday: two
-// things the AI could not find out.
+// things the AI could not find out, and both sources checked by the person.
 func (s *seeder) helpDeskStuck() {
 	a, ctx := s.a, s.ctx
 	if s.err != nil {
@@ -646,7 +637,16 @@ func (s *seeder) helpDeskStuck() {
 		"Did the help desk have fewer people in October?",
 	} {
 		_, err := a.AddQuestion(ctx, Codex, "INV-0003", app.QuestionInput{Question: q})
-		if !s.check("INV-0003 follow-up question", err) {
+		if !s.check("INV-0003 thing to find out", err) {
+			return
+		}
+	}
+	// The person opened both sources. Every source is checked and the
+	// answer is still to write.
+	s.at(29 * hour)
+	for _, ref := range []string{"E-001", "E-002"} {
+		_, err := a.SetEvidenceVerification(ctx, Person, "INV-0003", ref, app.VerificationHumanVerified)
+		if !s.check("INV-0003 check "+ref, err) {
 			return
 		}
 	}
@@ -682,7 +682,7 @@ func (s *seeder) lostCustomers() {
 		},
 		{
 			Title:       "Those eleven customers were 2% of sales from January to June",
-			Summary:     "The sales report by customer shows the eleven customers bought $61k of the $3.05M sold from January to June.",
+			Summary:     "The sales report by customer shows the eleven customers bought $61,000 of the $3,050,000 sold from January to June.",
 			SourceType:  app.SourceTypeFile,
 			SourceRef:   "Sales report by customer, January to June",
 			SourceLabel: "Sales report",

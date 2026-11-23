@@ -125,3 +125,15 @@ func TestReportHTMLIsRepeatableAndGolden(t *testing.T) {
 		t.Fatalf("unexpected shape: %s", html[:200])
 	}
 }
+
+// The plain text of a shared answer carries no Markdown marks: headings are
+// plain lines, list items keep a hyphen, nested items are indented.
+func TestReportTextHasNoMarks(t *testing.T) {
+	md := "# Why did refunds double?\n\nAsked on November 23, 2026.\n\n## Findings\n\n- A faulty batch (2 of 2 sources checked by a person)\n  - Backed by: Refund log (A person checked this)\n\n" +
+		"## How we got here\n\n### November 23, 2026\n\n- A person created this question\n\n" + `\# not a heading` + "\n\n" + `1\. not a list` + "\n\n_Made with Casebook._\n"
+	want := "Why did refunds double?\n\nAsked on November 23, 2026.\n\nFindings\n\n- A faulty batch (2 of 2 sources checked by a person)\n    Backed by: Refund log (A person checked this)\n\n" +
+		"How we got here\n\nNovember 23, 2026\n\n- A person created this question\n\n# not a heading\n\n1. not a list\n\nMade with Casebook.\n"
+	if got := contextpack.ReportText(md); got != want {
+		t.Errorf("ReportText:\n%q\nwant:\n%q", got, want)
+	}
+}

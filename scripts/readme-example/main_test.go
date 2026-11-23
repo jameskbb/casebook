@@ -26,17 +26,17 @@ func TestReadmeExample(t *testing.T) {
 		"Question: " + demo.FeaturedRef + "\nTitle: " + demo.FeaturedTitle + "\n",
 		"Answer so far:\n" + demo.Conclusion + "\n",
 		"Answer marked: A person checked this",
-		"C-003 [A person checked this]",
-		"C-002 [Not checked]",
+		"C-003 [Not checked]",
+		"E-007 [A person checked this]",
 		"Findings where sources disagree:\nC-001 [Sources disagree]",
 		"H-003 [Looks right so far, Not checked]",
 		"H-004 [Not tested yet, Not checked]",
 		"Findings ruled out:\nH-001 A new ad brought in more callers.",
 		"Ruled out by: E-004",
-		"Follow-up questions for later:\nQ-004",
+		"Still to find out, left for later:\nQ-004",
 		"E-001 Calls to buy: 2,000 in September, 2,050 in October.",
 		"[AI checked the source]",
-		"human casebook-ui: Checked the finding C-003",
+		"human casebook-ui: Checked the source E-007",
 	} {
 		if !strings.Contains(a.String(), want) {
 			t.Errorf("pack lacks %q:\n%s", want, a.String())

@@ -108,7 +108,7 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 func newInvestigationShowCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show [ref]",
-		Short: "Show a question with its answer, findings, sources, follow-up questions and recent activity",
+		Short: "Show a question with its answer, findings, sources, what is still to find out and recent activity",
 		Args:  usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref := ""
@@ -178,7 +178,7 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", h.Ref, statementState(h.Status.PlainLabel(), h.Verification.PlainLabel(), h.Imported),
 			line(h.Statement), cell(linkText(h.Links, h.SupersededBy)))
 	}
-	fmt.Fprintf(tw, "\nFollow-up questions (%d)\n", len(d.Questions))
+	fmt.Fprintf(tw, "\nStill to find out (%d)\n", len(d.Questions))
 	for _, q := range d.Questions {
 		extra := ""
 		switch {

@@ -239,7 +239,7 @@ func TestInvestigationShow(t *testing.T) {
 		"Sources (4)", "E-001", "E-002", "E-003", "E-004",
 		"Findings (3)", "C-001", "C-002", "C-003", "supports: E-001, E-004", "replaced by C-002",
 		"Findings being tested (2)", "H-001", "H-002", "contradicts: E-003",
-		"Follow-up questions (1)", "Q-001", "Can every service except payments go back to info level today?",
+		"Still to find out (1)", "Q-001", "Can every service except payments go back to info level today?",
 		"Recent activity (", "Updated the answer")
 	if strings.Contains(r.Stdout, "level: info") {
 		t.Errorf("show printed E-001's raw detail:\n%s", r.Stdout)
