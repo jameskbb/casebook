@@ -5,6 +5,7 @@ import type { ClaimStatus, HypothesisStatus, InvestigationDetail, ReviewFinding 
 import { claimStatusLabels, hypothesisStatusLabels, sourceTypeLabels, verificationLabels } from '../../lib/labels'
 import { CHECKED_ACTION, CONTRADICTING_TITLE, SETTLE_ACTION, SETTLE_COPY, SUPPORTING_TITLE } from '../drawers/StatementDrawer'
 import { useWrite } from '../../state/useWrite'
+import { RecordId } from '../record/RecordId'
 import { VerificationBadge } from '../record/VerificationBadge'
 import { Banner } from '../ui/Banner'
 import { Button } from '../ui/Button'
@@ -89,7 +90,7 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
         setCurrent(saved)
         setRows((rs) => rs.map((r) => r.ref === saved.ref && r.kind === saved.kind ? saved : r))
         setSettle(false)
-        setResult(verification === 'human_verified' ? `You checked ${saved.ref}.` : `Marked ${saved.ref}: sources disagree.`)
+        setResult(verification === 'human_verified' ? 'You checked this finding.' : 'Marked this finding: sources disagree.')
       }
     } catch (e) {
       setError(cleanMessage(toApiError(e).message))
@@ -118,7 +119,7 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
           </Banner>}
           <div className="review-comparison" aria-busy={busy || undefined}>
             <div className="review-statement">
-              <h3 ref={heading} tabIndex={-1}>Finding {current.ref}</h3>
+              <h3 ref={heading} tabIndex={-1}>Finding <RecordId>{current.ref}</RecordId></h3>
               <div className="review-labels"><VerificationBadge verification={current.verification} /><span>{current.kind === 'claim' ? claimStatusLabels[current.status as ClaimStatus] : hypothesisStatusLabels[current.status as HypothesisStatus]}</span></div>
               <p className="review-statement-text">{current.statement}</p>
 
@@ -137,8 +138,8 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
                 const evidence = current.evidence.filter((e) => e.relation === relation)
                 return <section key={relation} aria-label={relation === 'supports' ? SUPPORTING_TITLE : CONTRADICTING_TITLE}>
                   <h3>{relation === 'supports' ? SUPPORTING_TITLE : CONTRADICTING_TITLE}</h3>
-                  {evidence.length === 0 ? <p className="review-empty">{relation === 'supports' ? 'No supporting source is linked.' : 'No contradicting source is linked.'}</p> : evidence.map(({ evidence: e }) => <article className="review-evidence" key={e.ref}>
-                    <div className="review-labels"><span className="tabular">{e.ref}</span><VerificationBadge verification={e.verification} /></div>
+                  {evidence.length === 0 ? <p className="review-empty">{relation === 'supports' ? 'No source supports it yet.' : 'No source contradicts it.'}</p> : evidence.map(({ evidence: e }) => <article className="review-evidence" key={e.ref}>
+                    <div className="review-labels"><RecordId>{e.ref}</RecordId><VerificationBadge verification={e.verification} /></div>
                     <h4>{e.title}</h4>
                     <p>{e.summary}</p>
                     <p className="review-source">{sourceTypeLabels[e.source_type]}{e.source_label && `: ${e.source_label}`}</p>
@@ -151,7 +152,7 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
           </div>
 
         </>
-      ) : !loading && loaded && (rows.length === 0 ? <div className="review-finished"><h3>Nothing to review yet</h3><p>Findings your AI saves, and ones you add, appear here for you to check against their sources.</p></div> : <div className="review-finished"><h3>No more findings in this filter</h3><p>Skipped findings keep their label. Choose another filter or go back to the question.</p>{queue.length > 0 && <Button variant="secondary" onClick={() => select(queue[0])}>Start again</Button>}</div>)}
+      ) : !loading && loaded && (rows.length === 0 ? <div className="review-finished"><h3>Nothing to review yet</h3><p>Findings your AI saves, and ones you add, appear here for you to check against their sources.</p></div> : <div className="review-finished"><h3>No more findings in this list</h3><p>Findings you skipped keep their label. Choose another list above or go back to the question.</p>{queue.length > 0 && <Button variant="secondary" onClick={() => select(queue[0])}>Start again</Button>}</div>)}
     </section>
   )
 }

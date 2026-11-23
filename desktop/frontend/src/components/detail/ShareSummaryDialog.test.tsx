@@ -20,7 +20,7 @@ const preview = (patch: Partial<SharePreview> = {}): SharePreview => ({
   ], omitted: { claims: 0, hypotheses: 1, questions: 1, evidence: 2, claim_refs: [], hypothesis_refs: ['H-004'], question_refs: ['Q-001'], evidence_refs: ['E-002', 'E-003'] }, ...patch,
 })
 function renderDialog(invRef = 'INV-0001') {
-  return render(<ToastProvider><ShareSummaryDialog invRef={invRef} title="Northeast margin review" onClose={() => {}} /></ToastProvider>)
+  return render(<ToastProvider><ShareSummaryDialog invRef={invRef} title="Why did calls go up in October?" onClose={() => {}} /></ToastProvider>)
 }
 
 describe('ShareSummaryDialog', () => {
@@ -82,7 +82,7 @@ describe('ShareSummaryDialog', () => {
     await userEvent.click(open)
     expect(open).toBeChecked()
     expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled()
-    expect(screen.getByRole('status')).toHaveTextContent('Selection changed. Update the preview before sharing.')
+    expect(screen.getByRole('status')).toHaveTextContent('You changed what to include. Update the preview before sharing.')
     mocked.sharePreview.mockResolvedValue(preview({ snapshot_id: 'reviewed-travel', candidates: preview().candidates.map(c => c.ref === 'H-004' ? { ...c, selected: true } : c) }))
     await userEvent.click(screen.getByRole('button', { name: 'Update preview' }))
     await waitFor(() => expect(mocked.sharePreview).toHaveBeenLastCalledWith('INV-0001', { mode: 'brief', claim_refs: ['C-001', 'C-002'], hypothesis_refs: ['H-003', 'H-004'], question_refs: [], ruled_out_refs: [] }))
@@ -112,7 +112,7 @@ describe('ShareSummaryDialog', () => {
     mocked.sharePreview.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
     const view = renderDialog()
     mocked.sharePreview.mockResolvedValue(preview({ investigation_ref: 'INV-0002', snapshot_id: 'case-two', html: '<h1>Case two</h1>' }))
-    view.rerender(<ToastProvider><ShareSummaryDialog invRef="INV-0002" title="Northeast margin review" onClose={() => {}} /></ToastProvider>)
+    view.rerender(<ToastProvider><ShareSummaryDialog invRef="INV-0002" title="Why did calls go up in October?" onClose={() => {}} /></ToastProvider>)
     await screen.findByRole('heading', { level: 1, name: 'Case two' })
     resolveOld(preview())
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'INV-0001: Margin' })).not.toBeInTheDocument())
@@ -130,20 +130,20 @@ describe('ShareSummaryDialog', () => {
   it('builds the example request from the case and the chosen format', async () => {
     renderDialog('INV-0002')
     await screen.findByRole('heading', { level: 1 })
-    const brief = 'Save the leadership brief for INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its labels, source references and caveats.'
-    expect(exampleRequest('brief', 'INV-0002', 'Northeast margin review')).toBe(brief)
+    const brief = 'Save the leadership brief for INV-0002 in my connected notes app as a new note titled "Why did calls go up in October?". Keep its labels, its sources and its notes on what is not checked.'
+    expect(exampleRequest('brief', 'INV-0002', 'Why did calls go up in October?')).toBe(brief)
     expect(screen.getByText(brief)).toBeInTheDocument()
     expect(screen.getByText(ELSEWHERE_COPY)).toBeInTheDocument()
     expect(screen.getByText(ELSEWHERE_NOTE)).toBeInTheDocument()
     mocked.sharePreview.mockResolvedValue(preview({ mode: 'report', snapshot_id: 'reviewed-report' }))
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'report')
-    expect(await screen.findByText('Save the complete report for INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its labels, source references and caveats.')).toBeInTheDocument()
+    expect(await screen.findByText('Save the complete report for INV-0002 in my connected notes app as a new note titled "Why did calls go up in October?". Keep its labels, its sources and its notes on what is not checked.')).toBeInTheDocument()
   })
   it('copies the exact example request as text and sends nothing else', async () => {
     renderDialog('INV-0002')
     await screen.findByRole('heading', { level: 1 })
     await userEvent.click(screen.getByRole('button', { name: 'Copy example request' }))
-    expect(mocked.copyText).toHaveBeenCalledWith(exampleRequest('brief', 'INV-0002', 'Northeast margin review'))
+    expect(mocked.copyText).toHaveBeenCalledWith(exampleRequest('brief', 'INV-0002', 'Why did calls go up in October?'))
     expect(await screen.findByText(EXAMPLE_COPIED)).toBeInTheDocument()
     expect(mocked.copySharePreview).not.toHaveBeenCalled()
   })

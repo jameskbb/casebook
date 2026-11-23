@@ -6,13 +6,13 @@ import { FileInput } from 'lucide-react'
 import './ImportedTag.css'
 
 export const IMPORTED_TITLE =
-  'Imported from a file. Its author, label and history are as the file recorded them; Casebook did not see them happen.'
+  'This came from a file. Who wrote it, its label and its history are what the file says. Casebook did not see them happen.'
 
 export function ImportedTag() {
   return (
     <span className="imported-tag" title={IMPORTED_TITLE}>
       <FileInput className="imported-tag-icon" size={14} strokeWidth={1.75} aria-hidden="true" />
-      Imported
+      From a file
     </span>
   )
 }

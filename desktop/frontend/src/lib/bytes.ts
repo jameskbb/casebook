@@ -17,8 +17,8 @@ const fmt = new Intl.NumberFormat('en-US')
 export function nearLimit(value: string, max: number): string | undefined {
   const n = byteLength(value)
   if (n <= max * 0.9) return undefined
-  const counts = `(${fmt.format(n)} of ${fmt.format(max)} bytes)`
-  return n > max ? `Over the limit ${counts}` : `Close to the limit ${counts}`
+  const counts = `(${fmt.format(n)} of ${fmt.format(max)} characters)`
+  return n > max ? `Too long ${counts}` : `Almost too long ${counts}`
 }
 
 /** Engine byte limits the forms show counters for. */

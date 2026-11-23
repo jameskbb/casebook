@@ -24,9 +24,10 @@ import { usedBy } from '../../lib/records'
 import { formatAbsolute } from '../../lib/relativeTime'
 import { ImportedTag } from '../record/ImportedTag'
 import { kindRuleClass } from '../record/KindRule'
+import { RecordId } from '../record/RecordId'
 import { VerificationBadge } from '../record/VerificationBadge'
 import { useWrite } from '../../state/useWrite'
-import { DeleteDialog, refList } from '../dialogs/DeleteDialog'
+import { DeleteDialog } from '../dialogs/DeleteDialog'
 import { EvidenceDialog } from '../dialogs/EvidenceDialog'
 import { BreakablePath } from '../ui/BreakablePath'
 import { Button } from '../ui/Button'
@@ -90,7 +91,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
           )}
           {e.source_ref && (
             <div className="source-row">
-              <dt>Reference</dt>
+              <dt>Where to find it</dt>
               <dd className="source-reference">
                 <BreakablePath text={e.source_ref} />
               </dd>
@@ -98,7 +99,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
           )}
           {captured && (
             <div className="source-row">
-              <dt>Captured</dt>
+              <dt>As of</dt>
               <dd className="tabular">{captured}</dd>
             </div>
           )}
@@ -109,7 +110,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
 
       {metadata !== '' && (
         <DrawerGroup
-          title="Metadata"
+          title="Extra details"
           action={
             <Button
               variant="ghost"
@@ -123,7 +124,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
-              {showMetadata ? 'Hide metadata' : 'Show metadata'}
+              {showMetadata ? 'Hide extra details' : 'Show extra details'}
             </Button>
           }
         >
@@ -131,7 +132,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
         </DrawerGroup>
       )}
 
-      <DrawerGroup title="Used by">
+      <DrawerGroup title="Findings that use this source">
         {users.length === 0 ? (
           <p className="drawer-empty">No finding uses this source yet.</p>
         ) : (
@@ -156,13 +157,13 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                       </span>
                       {retired && rec && (
                         <span className="used-by-status">
-                          {rec.status === 'superseded'
-                            ? rec.superseded_by
-                              ? `Replaced by ${rec.superseded_by}`
-                              : claimStatusLabels.superseded
-                            : rec.status === 'rejected'
-                              ? 'Rejected'
-                              : 'Disproven'}
+                          {rec.status === 'superseded' ? claimStatusLabels.superseded : claimStatusLabels.rejected}
+                          {rec.status === 'superseded' && rec.superseded_by && (
+                            <>
+                              {' '}
+                              <RecordId>by {rec.superseded_by}</RecordId>
+                            </>
+                          )}
                         </span>
                       )}
                     </span>
@@ -180,13 +181,12 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
   )
 }
 
-export const supersedeEvidenceBody = (ref: string) =>
-  `${ref} stays in this question, struck through, and the text your AI reads lists it as replaced. A source has no replacement link: say what replaced it in a newer source. ${CHECKED_ACTION} brings it back.`
+export const supersedeEvidenceBody = `The source stays in this question, crossed out, and your AI is told it was replaced. Add the newer source and say there what it replaces. ${CHECKED_ACTION} brings this one back.`
 
 export const deleteEvidenceBody = (e: Evidence) =>
-  `${e.ref} "${e.title}" will be removed from this question with its summary, where it came from, raw detail and metadata.`
-export const evidenceLinkedBlocker = (ref: string, linkedBy: string[]) =>
-  `${ref} is linked to ${refList(linkedBy)}. Unlink it there first (open each one and choose Unlink), then delete it.`
+  `"${e.title}" will be removed from this question with everything saved about it.`
+export const evidenceLinkedBlocker = (linkedBy: string[]) =>
+  `${linkedBy.length === 1 ? 'A finding uses' : `${linkedBy.length} findings use`} this source. Open ${linkedBy.length === 1 ? 'it' : 'each one'}, choose Remove from this finding, then delete the source. ${linkedBy.length === 1 ? 'It is' : 'They are'} listed under Findings that use this source.`
 
 function EvidenceActions({
   evidence: e,
@@ -268,8 +268,8 @@ function EvidenceActions({
       {editing && <EvidenceDialog mode="edit" evidence={e} invRef={invRef} onClose={() => setEditing(false)} />}
       {superseding && (
         <ConfirmDialog
-          title={`Mark ${e.ref} replaced?`}
-          body={supersedeEvidenceBody(e.ref)}
+          title="Mark this source as replaced?"
+          body={supersedeEvidenceBody}
           confirmLabel="Mark replaced"
           confirmVariant="primary"
           onConfirm={() => {
@@ -281,14 +281,14 @@ function EvidenceActions({
       )}
       {deleting && (
         <DeleteDialog
-          title={`Delete source ${e.ref}?`}
+          title="Delete this source?"
           body={deleteEvidenceBody(e)}
-          blocker={linkedBy.length > 0 ? evidenceLinkedBlocker(e.ref, linkedBy) : null}
+          blocker={linkedBy.length > 0 ? evidenceLinkedBlocker(linkedBy) : null}
           confirmLabel="Delete source"
           onConfirm={async () => {
             const done = await write(() => api.deleteEvidence(invRef, e.ref).then(() => true), { rethrowConflict: true })
             if (done) {
-              toast.success(`Deleted source ${e.ref}.`)
+              toast.success('Deleted the source.')
               onDeleted?.()
             }
             return Boolean(done)
@@ -350,7 +350,7 @@ function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string
 
   return (
     <DrawerGroup
-      title="Raw detail"
+      title="Source detail"
       action={
         <Button variant="ghost" className="disclosure-button" aria-expanded={shown} onClick={toggle}>
           <ChevronDown
@@ -359,11 +359,11 @@ function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string
             strokeWidth={1.75}
             aria-hidden="true"
           />
-          {shown ? 'Hide raw detail' : 'Show raw detail'}
+          {shown ? 'Hide source detail' : 'Show source detail'}
         </Button>
       }
     >
-      {shown && slow && !raw && <p className="drawer-empty">Loading raw detail...</p>}
+      {shown && slow && !raw && <p className="drawer-empty">Loading source detail...</p>}
       {shown && raw && <pre className="raw-detail">{raw.text}</pre>}
     </DrawerGroup>
   )

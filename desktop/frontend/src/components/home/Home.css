@@ -1,0 +1,106 @@
+/* Home sits in the reading column: a date, one heading, then plain lists
+   separated by 1px rules (no cards, no shadows). */
+.home-eyebrow {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
+.home-heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+}
+
+.home-note {
+  margin-top: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.home-section-heading {
+  padding-bottom: var(--space-2);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.home-list {
+  border-top: 1px solid var(--rule);
+}
+
+.home-list > li {
+  border-bottom: 1px solid var(--rule);
+}
+
+.home-todo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.home-todo-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.home-todo-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading-serif);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.home-needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink);
+}
+
+.home-needs strong {
+  font-weight: var(--weight-semibold);
+}
+
+.home-answered {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) 0;
+}
+
+.home-answered h3 {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+}
+
+.home-answered h3 .text-button {
+  color: var(--ink-muted);
+  text-align: left;
+}
+
+.home-answer {
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.home-checked {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}

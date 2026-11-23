@@ -20,9 +20,9 @@ export function FirstFindingGuide({ onAddEvidence }: { onAddEvidence: () => void
   return (
     <section className="first-finding-guide" aria-labelledby="first-finding-heading">
       <h2 id="first-finding-heading">Get your first finding</h2>
-      <p>Ask your AI to work this question and save what it finds here. Connect it once, then use the first finding prompt.</p>
+      <p>Ask your AI to work on this question and save what it finds here. Connect it once, then copy the message it offers to start with.</p>
       <div className="first-finding-actions">
-        <Button variant="primary" icon={Plug} onClick={() => setConnectOpen(true)}>Connect AI clients...</Button>
+        <Button variant="primary" icon={Plug} onClick={() => setConnectOpen(true)}>Connect your AI...</Button>
         <Button variant="secondary" icon={Plus} onClick={onAddEvidence}>Add a source myself</Button>
       </div>
       {connectOpen && <ConnectClientsDialog onClose={() => setConnectOpen(false)} />}

@@ -113,7 +113,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
     >
       <div className="dialog-fields">
         <TextArea
-          label="Statement"
+          label="Finding"
           hint={kind === 'claim' ? 'What did you find? One clear sentence.' : 'What might explain it? One clear sentence.'}
           value={statement}
           onChange={setStatement}
@@ -133,7 +133,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
         <fieldset className="statement-links">
           <legend className="field-label">Sources</legend>
           {evidence.length === 0 ? (
-            <p className="statement-links-empty">No sources to link yet. You can link one later.</p>
+            <p className="statement-links-empty">No sources yet. You can add one to this finding later.</p>
           ) : (
             <ul className="statement-link-list">
               {evidence.map((e) => (

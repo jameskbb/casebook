@@ -26,7 +26,7 @@ export interface CopyOptions {
 }
 
 export const COPIED_MS = 2000
-export const COPIED_ANNOUNCEMENT = 'Context copied to the clipboard'
+export const COPIED_ANNOUNCEMENT = 'Copied for your AI'
 export const COPIED_PLAIN_ANNOUNCEMENT = 'Copied the question as text.'
 
 const CopyContextContext = createContext<CopyContextState | null>(null)

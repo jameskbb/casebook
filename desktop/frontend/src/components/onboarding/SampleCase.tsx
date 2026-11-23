@@ -57,12 +57,12 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
     <article className="sample-case" aria-label="Call center example">
       <header className="sample-toolbar">
         <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>Back to your questions</Button>
-        <span className="sample-readonly">Made-up example · Read-only</span>
+        <span className="sample-readonly">Made-up example. Nothing here can be changed.</span>
       </header>
       <div className="sample-reading">
         <div className="sample-intro">
           <h1 ref={headingRef} tabIndex={-1}>Why did calls go up 30% in October when sales stayed the same?</h1>
-          <p className="sample-note">Every figure, source and finding below is made up. This example is never saved to your data.</p>
+          <p className="sample-note">Every number, source and finding below is made up. The example is never saved with your questions.</p>
         </div>
         <section className="sample-section" aria-labelledby="sample-finding">
           <h2 id="sample-finding"><Quote size={20} strokeWidth={1.75} aria-hidden="true" />Start with one finding</h2>
@@ -100,10 +100,10 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
           <Button variant="secondary" aria-expanded={shareOpen} onClick={() => setShareOpen((open) => !open)}>{shareOpen ? 'Hide the example' : 'See an example'}</Button>
           {shareOpen && <div className="sample-summary">
             <h3>Example of a shared answer</h3>
-            <p><strong>Answer · Not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed the same.</p>
-            <p><strong>C-001 · Not checked:</strong> {FINDING} Supports: E-001, {SOURCE_TITLE} (Not checked).</p>
+            <p><strong>Answer, not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed the same.</p>
+            <p><strong>Finding, not checked:</strong> {FINDING} Source: {SOURCE_TITLE} (not checked).</p>
             <p><strong>Not tested yet:</strong> {NOT_TESTED}</p>
-            <p className="sample-note">Read the preview for anything sensitive before you copy or save it. Casebook prepares a file or text to paste; you choose where it goes.</p>
+            <p className="sample-note">Read the preview for anything private before you copy or save it. Casebook gives you text to paste or a file. You choose where it goes.</p>
           </div>}
         </section>
         <footer className="sample-next">

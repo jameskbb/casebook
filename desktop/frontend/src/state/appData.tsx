@@ -65,18 +65,6 @@ export interface AppData {
   pollTrouble: boolean
 }
 
-/**
- * The investigation to open at launch (and after a restore): the active one,
- * else the most recently updated non-archived one, else none. The list is
- * already ordered newest updated first.
- */
-export function pickLaunchSelection(list: InvestigationSummary[]): string | null {
-  const active = list.find((i) => i.is_active)
-  if (active) return active.ref
-  const open = list.find((i) => !i.archived)
-  return open ? open.ref : null
-}
-
 const AppDataContext = createContext<AppData | null>(null)
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
@@ -103,9 +91,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const detailSeq = useRef(0)
   const mounted = useRef(true)
   const refreshRef = useRef<() => Promise<void>>(async () => {})
-  // True until a list load succeeds and the launch selection is picked; a
-  // failed first load picks it on the first reload that succeeds.
-  const launchPending = useRef(true)
 
   const { setBaseline, markStale, trouble: pollTrouble } = useChangeToken({
     enabled: startup?.ok === true,
@@ -190,24 +175,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [loadDetail, markStale],
   )
 
-  /** Opens the launch selection once, after the first list load that succeeds. */
-  const pickLaunch = useCallback(
-    (list: InvestigationSummary[]) => {
-      if (!launchPending.current) return
-      launchPending.current = false
-      if (selectedRefRef.current !== null) return
-      const ref = pickLaunchSelection(list)
-      if (ref) {
-        selectedRefRef.current = ref
-        setSelectedRef(ref)
-        openDetail(ref)
-      }
-    },
-    [openDetail],
-  )
-
-  // Startup: learn whether the database opened, then load the list and pick
-  // the launch selection.
+  // Startup: learn whether the data opened, then load the list. No question
+  // is selected at launch: the main pane shows Home, what there is to check.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -231,13 +200,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const list = await loadList()
       if (list === null) markStale()
       else if (token !== null) setBaseline(token)
-      if (cancelled || !list) return
-      pickLaunch(list)
     })()
     return () => {
       cancelled = true
     }
-  }, [loadList, pickLaunch, readToken, setBaseline, markStale, startupAttempt])
+  }, [loadList, readToken, setBaseline, markStale, startupAttempt])
 
   // Opening another investigation unmounts every editor on the page, so it
   // asks before discarding unsaved input (dirtyGuard.tsx).
@@ -251,7 +218,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       const go = () => {
         setPendingOpen(opts?.openRecord ?? null)
-        launchPending.current = false
         selectedRefRef.current = ref
         setSelectedRef(ref)
         activityLimitRef.current = DEFAULT_ACTIVITY_LIMIT
@@ -273,9 +239,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // next poll tries again.
     if (list === null || !detailOk) markStale()
     else if (token !== null) setBaseline(token)
-    if (list && mounted.current) pickLaunch(list)
     if (mounted.current) setDataVersion((v) => v + 1)
-  }, [loadList, loadDetail, readToken, setBaseline, markStale, pickLaunch])
+  }, [loadList, loadDetail, readToken, setBaseline, markStale])
   refreshRef.current = refresh
 
   const setIncludeArchived = useCallback(

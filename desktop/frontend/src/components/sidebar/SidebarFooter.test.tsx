@@ -39,8 +39,9 @@ async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('menuitem', { name }))
 }
 
+/** Waits for the list to load. Nothing is selected at launch. */
 async function ready() {
-  await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0001'))
+  await waitFor(() => expect(mocks.api.listInvestigations).toHaveBeenCalled())
   return userEvent.setup()
 }
 
@@ -53,31 +54,29 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => cancelledImport) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import question...')
+    await choose(user, 'Add a question from a file...')
     await waitFor(() => expect(mocks.api.importInvestigation).toHaveBeenCalled())
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByTestId('selected')).toHaveTextContent('INV-0001')
+    expect(screen.getByTestId('selected')).toHaveTextContent('')
   })
 
-  it('opens an imported investigation that kept its ref', async () => {
+  it('opens the question it added from a file', async () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importSameRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import question...')
-    expect(await screen.findByText('Imported "September cloud bill up 38%" as INV-0004.')).toBeInTheDocument()
+    await choose(user, 'Add a question from a file...')
+    expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0004'))
   })
 
-  it('says why the ref changed', async () => {
+  it('says the same, with no codes, when the question got a new code', async () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importChangedRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import question...')
-    expect(
-      await screen.findByText('Imported "September cloud bill up 38%" as INV-0004 because INV-0001 was already in use.'),
-    ).toBeInTheDocument()
+    await choose(user, 'Add a question from a file...')
+    expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0004'))
   })
 
@@ -89,12 +88,12 @@ describe('SidebarFooter import', () => {
     })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import question...')
-    const dialog = await screen.findByRole('dialog', { name: "This file can't be imported" })
+    await choose(user, 'Add a question from a file...')
+    const dialog = await screen.findByRole('dialog', { name: "This file can't be added" })
     expect(dialog).toHaveTextContent('version: unsupported version 2. Nothing was added.')
     await user.click(within(dialog).getByRole('button', { name: 'Choose another file...' }))
     await waitFor(() => expect(mocks.api.importInvestigation).toHaveBeenCalledTimes(2))
-    const again = await screen.findByRole('dialog', { name: "This file can't be imported" })
+    const again = await screen.findByRole('dialog', { name: "This file can't be added" })
     await user.click(within(again).getAllByRole('button', { name: 'Close' }).at(-1)!)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
@@ -121,7 +120,7 @@ describe('SidebarFooter backup', () => {
     const user = await ready()
     await choose(user, 'Back up all data...')
     const toast = (await screen.findByText(`Backup saved to ${backupInfo.path}.`)).closest('.toast') as HTMLElement
-    await user.click(within(toast).getByRole('button', { name: 'Copy path' }))
+    await user.click(within(toast).getByRole('button', { name: 'Copy location' }))
     expect(mocks.api.copyText).toHaveBeenCalledWith(backupInfo.path)
   })
 
@@ -146,7 +145,7 @@ describe('SidebarFooter backup', () => {
     renderFooter()
     const user = await ready()
     await choose(user, 'Back up all data...')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the file window. Try again.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the window for choosing a file. Try again.')
   })
 })
 
@@ -154,7 +153,7 @@ describe('SidebarFooter data file', () => {
   async function openData() {
     const user = userEvent.setup()
     renderFooter()
-    await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0001'))
+    await waitFor(() => expect(mocks.api.listInvestigations).toHaveBeenCalled())
     await user.click(screen.getByRole('button', { name: 'Data' }))
     return user
   }
@@ -162,7 +161,7 @@ describe('SidebarFooter data file', () => {
   it('keeps the footer to the Data menu and the theme switch', async () => {
     Object.assign(mocks.api, mockApi())
     renderFooter()
-    await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0001'))
+    await waitFor(() => expect(mocks.api.listInvestigations).toHaveBeenCalled())
     expect(screen.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
@@ -176,14 +175,29 @@ describe('SidebarFooter data file', () => {
       .getAllByRole('menuitem')
       .map((el) => el.textContent)
     expect(names).toEqual([
-      'Import question...',
+      'Add a question from a file...',
       'Back up all data...',
       'Restore from backup...',
       `Data file${truncateMiddle(DB_PATH)}`,
-      'Connect AI clients...',
+      'Connect your AI...',
+      'Show the codes your AI usesLike C-001 and E-004',
       'Check for updates...',
       'Versionv0.1.0',
     ])
+  })
+
+  it('shows and hides the codes your AI uses, and remembers the choice', async () => {
+    Object.assign(mocks.api, mockApi())
+    window.localStorage.removeItem('casebook.showIds')
+    delete document.documentElement.dataset.showIds
+    const user = await openData()
+    await user.click(await screen.findByRole('menuitem', { name: /^Show the codes your AI uses/ }))
+    expect(document.documentElement.dataset.showIds).toBe('true')
+    expect(window.localStorage.getItem('casebook.showIds')).toBe('true')
+    await user.click(screen.getByRole('button', { name: 'Data' }))
+    await user.click(await screen.findByRole('menuitem', { name: /^Hide the codes your AI uses/ }))
+    expect(document.documentElement.dataset.showIds).toBeUndefined()
+    expect(window.localStorage.getItem('casebook.showIds')).toBe('false')
   })
 
   it('opens Check for updates from the Data menu without checking', async () => {
@@ -208,7 +222,7 @@ describe('SidebarFooter data file', () => {
     const item = await screen.findByRole('menuitem', { name: new RegExp('^Data file') })
     expect(item).toHaveTextContent(truncateMiddle(LONG_DB_PATH))
     expect(item).toHaveAttribute('title', LONG_DB_PATH)
-    expect(item).toHaveAccessibleName(`Data file ${LONG_DB_PATH}. Copy the path`)
+    expect(item).toHaveAccessibleName(`Data file ${LONG_DB_PATH}. Copy its location`)
   })
 
   it('shows a short path unchanged', async () => {
@@ -230,7 +244,7 @@ describe('SidebarFooter data file', () => {
     const user = await openData()
     await user.click(await screen.findByRole('menuitem', { name: /^Data file/ }))
     expect(mocks.api.copyText).toHaveBeenCalledWith(DB_PATH)
-    expect(await screen.findByText('Path copied to the clipboard.')).toBeInTheDocument()
+    expect(await screen.findByText('Location copied to the clipboard.')).toBeInTheDocument()
   })
 })
 
@@ -243,8 +257,8 @@ describe('Empty main pane import', () => {
     const user = userEvent.setup()
     render(<App />)
     const main = await screen.findByRole('main')
-    await user.click(await within(main).findByRole('button', { name: 'Import question...' }))
+    await user.click(await within(main).findByRole('button', { name: 'Add a question from a file...' }))
     expect(mocks.api.importInvestigation).toHaveBeenCalledTimes(1)
-    expect(await screen.findByText('Imported "September cloud bill up 38%" as INV-0004.')).toBeInTheDocument()
+    expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
   })
 })

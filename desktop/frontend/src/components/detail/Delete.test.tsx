@@ -12,6 +12,8 @@ import { detail, summaries } from '../../test/fixtures'
 import { archivedDetail } from '../../test/fixtures.detail'
 import { bareEvidence, detailWithBareEvidence } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
+import { findSourceButton } from '../../test/openQuestion'
 import { IRREVERSIBLE } from '../dialogs/DeleteDialog'
 import { ToastProvider } from '../ui/Toaster'
 import { DetailView } from './DetailView'
@@ -30,7 +32,7 @@ function renderDetail(d: InvestigationDetail = detail, overrides: Partial<Api> =
   )
   render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <CopyContextProvider>
           <DetailView />
         </CopyContextProvider>
@@ -50,12 +52,13 @@ describe('deleting records', () => {
 
   it('refuses linked evidence with what to do first, and offers no Delete', async () => {
     const user = renderDetail()
-    await openRecord(user, /^Open source E-001:/)
+    await user.click(await findSourceButton('E-001'))
     const drawer = screen.getByRole('dialog', { name: 'Source E-001' })
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete source...' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete source E-001?' })
-    expect(dialog).toHaveTextContent(/E-001 is linked to C-001.* Unlink it there first/)
+    const dialog = screen.getByRole('dialog', { name: 'Delete this source?' })
+    expect(dialog).toHaveTextContent('A finding uses this source. Open it, choose Remove from this finding, then delete the source.')
+    expect(dialog).not.toHaveTextContent('C-001')
     expect(within(dialog).queryByRole('button', { name: 'Delete source' })).toBeNull()
     expect(mocks.api.deleteEvidence).not.toHaveBeenCalled()
   })
@@ -66,13 +69,14 @@ describe('deleting records', () => {
     const drawer = screen.getByRole('dialog', { name: 'Source E-009' })
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete source...' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete source E-009?' })
-    expect(dialog).toHaveTextContent(`E-009 "${bareEvidence.title}" will be removed`)
+    const dialog = screen.getByRole('dialog', { name: 'Delete this source?' })
+    expect(dialog).toHaveTextContent(`"${bareEvidence.title}" will be removed from this question with everything saved about it.`)
+    expect(dialog).not.toHaveTextContent('E-009')
     expect(dialog).toHaveTextContent(IRREVERSIBLE)
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
     await user.click(within(dialog).getByRole('button', { name: 'Delete source' }))
     expect(mocks.api.deleteEvidence).toHaveBeenCalledWith('INV-0001', 'E-009')
-    expect(await screen.findByText('Deleted source E-009.')).toBeInTheDocument()
+    expect(await screen.findByText('Deleted the source.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Source E-009' })).toBeNull())
   })
 
@@ -85,7 +89,7 @@ describe('deleting records', () => {
     const drawer = screen.getByRole('dialog', { name: 'Source E-009' })
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete source...' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete source E-009?' })
+    const dialog = screen.getByRole('dialog', { name: 'Delete this source?' })
     await user.click(within(dialog).getByRole('button', { name: 'Delete source' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'E-009 is linked by 1 claim link and 0 hypothesis links; unlink it first. Nothing was deleted.',
@@ -97,23 +101,23 @@ describe('deleting records', () => {
     await openRecord(user, /^Open finding C-001:/)
     let drawer = screen.getByRole('dialog', { name: 'Finding C-001' })
     await user.click(within(drawer).getByRole('button', { name: 'Delete finding...' }))
-    let dialog = screen.getByRole('dialog', { name: 'Delete finding C-001?' })
-    expect(dialog).toHaveTextContent('The sources themselves stay.')
+    let dialog = screen.getByRole('dialog', { name: 'Delete this finding?' })
+    expect(dialog).toHaveTextContent('This finding will be removed from this question. Its sources stay.')
     await user.click(within(dialog).getByRole('button', { name: 'Delete finding' }))
     expect(mocks.api.deleteClaim).toHaveBeenCalledWith('INV-0001', 'C-001')
 
     await openRecord(user, /^Open finding C-002:/)
     drawer = screen.getByRole('dialog', { name: 'Finding C-002' })
     await user.click(within(drawer).getByRole('button', { name: 'Delete finding...' }))
-    dialog = screen.getByRole('dialog', { name: 'Delete finding C-002?' })
-    expect(dialog).toHaveTextContent('C-002 replaces C-003. Bring it back with a status, or delete it, first.')
+    dialog = screen.getByRole('dialog', { name: 'Delete this finding?' })
+    expect(dialog).toHaveTextContent('This finding replaced another finding. Bring that one back or delete it first. It is under Show replaced findings.')
     expect(within(dialog).queryByRole('button', { name: 'Delete finding' })).toBeNull()
   })
 
   it('deletes a question from its row', async () => {
     const user = renderDetail()
-    await user.click(await screen.findByRole('button', { name: 'Delete follow-up question Q-001' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete follow-up question Q-001?' })
+    await user.click(await screen.findByRole('button', { name: 'Delete follow-up question: Have the customers who were charged twice been paid back?' }))
+    const dialog = screen.getByRole('dialog', { name: 'Delete this follow-up question?' })
     expect(dialog).toHaveTextContent(IRREVERSIBLE)
     await user.click(within(dialog).getByRole('button', { name: 'Delete follow-up question' }))
     expect(mocks.api.deleteQuestion).toHaveBeenCalledWith('INV-0001', 'Q-001')
@@ -123,12 +127,13 @@ describe('deleting records', () => {
     const user = renderDetail(archivedDetail())
     await user.click(await screen.findByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete question...' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete INV-0003?' })
+    const dialog = screen.getByRole('dialog', { name: 'Delete this question?' })
     expect(dialog).toHaveTextContent(/will be removed with everything in it: \d+ sources?/)
-    expect(dialog).toHaveTextContent('Export it first')
+    expect(dialog).toHaveTextContent('Save it as a file first')
+    expect(dialog).not.toHaveTextContent('INV-0003')
     await user.click(within(dialog).getByRole('button', { name: 'Delete question' }))
     expect(mocks.api.deleteInvestigation).toHaveBeenCalledWith('INV-0003')
-    expect(await screen.findByText('Deleted INV-0003.')).toBeInTheDocument()
+    expect(await screen.findByText('Deleted the question.')).toBeInTheDocument()
   })
 
   it('does not offer Delete question while it is live', async () => {

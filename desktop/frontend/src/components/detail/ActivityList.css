@@ -28,6 +28,7 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
+  text-align: left;
   text-decoration: underline;
   text-decoration-color: var(--control-border);
   text-underline-offset: 3px;

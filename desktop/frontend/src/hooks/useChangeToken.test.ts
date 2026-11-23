@@ -201,6 +201,9 @@ describe('AppDataProvider live refresh', () => {
     Object.assign(mocks.api, mockApi({ changeToken: async () => token() }))
     const hook = renderHook(() => useAppData(), { wrapper: AppDataProvider })
     await tick(0)
+    // Nothing is open at launch (Home shows); open a question as a person would.
+    act(() => hook.result.current.select('INV-0001'))
+    await tick(0)
     expect(hook.result.current.detail).not.toBeNull()
     return hook
   }

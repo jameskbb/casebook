@@ -21,7 +21,7 @@ import './StartupError.css'
 
 export const RECOVER_WARNING =
   'Casebook moves the data file it could not open into the backups folder next to it (nothing is deleted), then opens this backup in its place.'
-export const FOLDER_COPY = 'Could not open the data folder. Copy the path and open it yourself.'
+export const FOLDER_COPY = 'Could not open the data folder. Copy its location and open it yourself.'
 
 export function StartupError({ info }: { info: StartupInfo }) {
   const toast = useToast()
@@ -56,7 +56,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
     try {
       if (viaLocation) await api.copyDataLocation()
       else await api.copyText(path)
-      toast.success('Path copied to the clipboard.')
+      toast.success('Location copied to the clipboard.')
     } catch {
       toast.error(CLIPBOARD_COPY)
     }
@@ -103,7 +103,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
                 Open data folder
               </Button>
               <Button variant="ghost" icon={Copy} onClick={() => void copyPath(info.db_path, true)}>
-                Copy path
+                Copy location
               </Button>
             </div>
           </div>

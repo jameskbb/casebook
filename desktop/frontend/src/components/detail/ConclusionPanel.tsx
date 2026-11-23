@@ -1,6 +1,7 @@
 // The answer: the one bold element on the screen. View mode shows the answer
 // in Literata 20, how many of the question's sources a person has checked,
-// its label, and the rationale after "Why:". Edit mode is inline in the same
+// its label, Check the next source while one is left and Share the answer,
+// and the rationale after "Why:". Edit mode is inline in the same
 // panel: the answer and the rationale, saved together through
 // UpdateConclusion. Confidence is stored and passed through unchanged, never
 // shown. Clearing asks first. Saves show no toast; the panel returns to view
@@ -20,11 +21,12 @@ import { LIMITS, nearLimit } from '../../lib/bytes'
 import { formatAbsolute } from '../../lib/relativeTime'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { claimStatusLabels, confidenceOptions, verificationLabels } from '../../lib/labels'
-import { plural } from '../../lib/plural'
+import { countOf, plural } from '../../lib/plural'
 import { sourceChecks } from '../../lib/records'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { VerificationBadge } from '../record/VerificationBadge'
+import { ShareSummaryButton } from './ShareSummaryButton'
 import { Select } from '../ui/Select'
 
 import { Banner } from '../ui/Banner'
@@ -66,6 +68,17 @@ export interface ConclusionPanelProps {
   claims?: Claim[]
   /** The question's sources, for the count of how many a person has checked. */
   evidence?: Evidence[]
+  /** Opens a source; with it the panel offers Check the next source. */
+  onOpenSource?: (ref: string) => void
+  /** Show Share the answer beside it. */
+  share?: boolean
+}
+
+export const CHECK_NEXT_SOURCE = 'Check the next source'
+
+/** The first source a person has not checked. Replaced sources are skipped. */
+export function nextSourceToCheck(evidence: Evidence[]): Evidence | undefined {
+  return evidence.find((e) => e.verification !== 'human_verified' && e.verification !== 'superseded')
 }
 
 /** "1 of 3 sources checked by you", then who checked the rest. A count, not a rating. */
@@ -81,7 +94,7 @@ export function SourcesChecked({ evidence }: { evidence: Evidence[] }) {
   )
 }
 
-export function ConclusionPanel({ investigation: inv, claims = [], evidence = [] }: ConclusionPanelProps) {
+export function ConclusionPanel({ investigation: inv, claims = [], evidence = [], onOpenSource, share = false }: ConclusionPanelProps) {
   const write = useWrite()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => draftOf(inv))
@@ -200,13 +213,16 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
 
   const claimLabel = (ref: string) => {
     const claim = claims.find((c) => c.ref === ref)
-    return claim ? `${ref}: ${claim.statement} (${verificationLabels[claim.verification]}, ${claimStatusLabels[claim.status]})` : `${ref}: finding unavailable`
+    return claim ? `${claim.statement} (${verificationLabels[claim.verification]}, ${claimStatusLabels[claim.status]})` : 'A finding that is no longer here'
   }
 
-  const claimSummary = (refs: string[]) => refs.slice(0, 3).map((ref) => {
-    const claim = claims.find((c) => c.ref === ref)
-    return `${ref} (${claim ? verificationLabels[claim.verification] : 'unavailable'})`
-  }).join('; ') + (refs.length > 3 ? `; ${refs.length - 3} more` : '')
+  const next = onOpenSource ? nextSourceToCheck(evidence) : undefined
+  const actions = (next || share) && !reviewSnapshot && (
+    <div className="conclusion-next">
+      {next && <Button variant="primary" onClick={() => onOpenSource?.(next.ref)}>{CHECK_NEXT_SOURCE}</Button>}
+      {share && <ShareSummaryButton investigationRef={inv.ref} title={inv.title} variant={next ? 'secondary' : 'primary'} />}
+    </div>
+  )
 
   const clear = async () => {
     setClearing(true)
@@ -281,7 +297,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
             options={(['ai_generated', 'human_verified', 'source_verified', 'disputed'] as Verification[]).map((v) => ({ value: v, label: verificationLabels[v] }))}
             onChange={(verification) => setDraft((d) => ({ ...d, verification: verification as Verification }))}
             error={fieldErrors.verification}
-            hint="This label covers the answer text. Record a review after checking the findings behind it and their sources." />
+            hint="This label covers the answer text. Review the answer after you check the findings behind it and their sources." />
           {claims.length > 0 && <fieldset className="conclusion-claim-selection">
             <legend>Findings behind this answer</legend>
             <p>Choose the findings you considered. Include the ones that contradict it so the next reader can check them.</p>
@@ -312,10 +328,11 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           <p className="conclusion-text">{inv.conclusion}</p>
           <SourcesChecked evidence={evidence} />
           <VerificationBadge verification={inv.conclusion_verification || 'ai_generated'} />
+          {actions}
           {inv.conclusion_verification === 'disputed' && <Banner>Sources disagree about this answer. Read the findings that contradict it and their sources before relying on it.</Banner>}
-          {(inv.conclusion_supporting_claims?.length ?? 0) > 0 && <details className="conclusion-basis"><summary>Findings that support it: {claimSummary(inv.conclusion_supporting_claims)}</summary><ul>{inv.conclusion_supporting_claims.map((ref) => <li key={ref}>{claimLabel(ref)}</li>)}</ul></details>}
-          {(inv.conclusion_contradicting_claims?.length ?? 0) > 0 && <details className="conclusion-basis"><summary>Findings that contradict it: {claimSummary(inv.conclusion_contradicting_claims)}</summary><ul>{inv.conclusion_contradicting_claims.map((ref) => <li key={ref}>{claimLabel(ref)}</li>)}</ul></details>}
-          {!(inv.conclusion_supporting_claims?.length || inv.conclusion_contradicting_claims?.length) && <p className="conclusion-review-record">No findings are linked to this answer.</p>}
+          {(inv.conclusion_supporting_claims?.length ?? 0) > 0 && <details className="conclusion-basis"><summary>{countOf(inv.conclusion_supporting_claims.length, 'finding supports it', 'findings support it')}</summary><ul>{inv.conclusion_supporting_claims.map((ref) => <li key={ref}>{claimLabel(ref)}</li>)}</ul></details>}
+          {(inv.conclusion_contradicting_claims?.length ?? 0) > 0 && <details className="conclusion-basis"><summary>{countOf(inv.conclusion_contradicting_claims.length, 'finding contradicts it', 'findings contradict it')}</summary><ul>{inv.conclusion_contradicting_claims.map((ref) => <li key={ref}>{claimLabel(ref)}</li>)}</ul></details>}
+          {!(inv.conclusion_supporting_claims?.length || inv.conclusion_contradicting_claims?.length) && <p className="conclusion-review-record">No findings are listed behind this answer.</p>}
           {inv.conclusion_reviewed_at ? <p className="conclusion-review-record">Reviewed <time dateTime={inv.conclusion_reviewed_at} title={inv.conclusion_reviewed_at}>{formatAbsolute(inv.conclusion_reviewed_at)}</time>.</p> : <p className="conclusion-review-record">You have not reviewed this answer.</p>}
           {(inv.conclusion_needs_review || !inv.conclusion_reviewed_at) && <Banner>{inv.conclusion_verification === 'disputed' ? 'Review needed: sources disagree about this answer.' : inv.conclusion_reviewed_at ? 'The findings behind this answer, or their sources, changed since your review. The label still describes the answer text that was checked.' : 'Review needed: check the answer against the findings behind it and their sources.'}</Banner>}
           {summary && <p className="conclusion-summary" role="alert">{summary}</p>}
@@ -337,13 +354,14 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
             Write the answer
           </Button>
+          {actions}
         </div>
       )}
 
       {confirmClear && (
         <ConfirmDialog
           title="Clear the answer?"
-          body="This removes the answer and its notes. The history keeps a record that it changed."
+          body="This removes the answer and its notes. The history still shows that it changed."
           confirmLabel="Clear answer"
           busy={clearing}
           busyLabel="Clearing..."

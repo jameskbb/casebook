@@ -46,7 +46,7 @@ describe('records', () => {
 
   it('indexes evidence by ref', () => {
     const m = evidenceByRef(detail)
-    expect(m.get('E-003')?.title).toBe('Log ingestion is 71% of the September increase')
+    expect(m.get('E-003')?.title).toBe('Calls about a bill: 400 in September, 1,070 in October')
     expect(m.get('E-999')).toBeUndefined()
   })
 
@@ -57,25 +57,25 @@ describe('records', () => {
         kind: 'claim',
         ref: 'C-002',
         relation: 'supports',
-        statement: 'Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.',
+        statement: 'The extra calls were about a bill. About the same number of people called to buy.',
       },
       {
         kind: 'claim',
         ref: 'C-003',
         relation: 'contradicts',
-        statement: 'The increase comes from the August autoscaling change adding compute nodes.',
+        statement: 'The extra calls were people calling to buy.',
       },
       {
         kind: 'claim',
         ref: 'C-004',
         relation: 'contradicts',
-        statement: "The payments team's own debug logs are most of the $96,400.",
+        statement: "Callers waited too long and hung up before buying.",
       },
       {
         kind: 'hypothesis',
         ref: 'H-002',
         relation: 'contradicts',
-        statement: 'Data transfer from the region move doubled the network line.',
+        statement: 'A new ad brought in more callers.',
       },
     ])
   })

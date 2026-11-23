@@ -26,7 +26,7 @@ export function RestoreResultDialog({ fileName, safetyCopyPath, body, onCopyPath
       footer={
         <>
           <Button variant="secondary" icon={Copy} onClick={onCopyPath}>
-            Copy path
+            Copy location
           </Button>
           <Button variant="primary" ref={doneRef} onClick={onDone}>
             Done

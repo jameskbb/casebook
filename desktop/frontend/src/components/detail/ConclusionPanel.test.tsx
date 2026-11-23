@@ -8,15 +8,16 @@ import type { Investigation, InvestigationDetail } from '../../api/types'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { detail, investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { ConclusionPanel } from './ConclusionPanel'
+import { CHECK_NEXT_SOURCE, ConclusionPanel, nextSourceToCheck } from './ConclusionPanel'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
 
 const providers = (ui: ReactNode) => (
   <ToastProvider>
-    <AppDataProvider>{ui}</AppDataProvider>
+    <AppDataProvider><OpenAtLaunch />{ui}</AppDataProvider>
   </ToastProvider>
 )
 
@@ -36,7 +37,7 @@ describe('ConclusionPanel editing', () => {
     renderPanel()
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
-      'Debug logging requested for payments only reached every service and drove most of the increase.',
+      'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.',
     )
     expect(within(panel()).queryByRole('radiogroup', { name: 'Confidence' })).toBeNull()
     expect(within(panel()).getByLabelText('Why (optional)')).toHaveValue(
@@ -91,7 +92,7 @@ describe('ConclusionPanel editing', () => {
     await user.type(within(panel()).getByLabelText('Answer'), ' More.')
     await user.click(within(panel()).getByRole('button', { name: 'Cancel' }))
     expect(within(panel()).queryByLabelText('Answer')).toBeNull()
-    expect(within(panel()).getByText('Debug logging requested for payments only reached every service and drove most of the increase.')).toBeInTheDocument()
+    expect(within(panel()).getByText('The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.')).toBeInTheDocument()
     expect(mocks.api.updateConclusion).not.toHaveBeenCalled()
   })
 
@@ -113,7 +114,7 @@ describe('ConclusionPanel editing', () => {
     const confirm = screen.getByRole('dialog', { name: 'Clear the answer?' })
     expect(
       within(confirm).getByText(
-        'This removes the answer and its notes. The history keeps a record that it changed.',
+        'This removes the answer and its notes. The history still shows that it changed.',
       ),
     ).toBeInTheDocument()
     expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveFocus()
@@ -180,7 +181,7 @@ describe('ConclusionPanel edit-in-place safety', () => {
     }
     rerender(providers(<ConclusionPanel investigation={elsewhere} />))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
-      'Debug logging requested for payments only reached every service and drove most of the increase. Mine.',
+      'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same. Mine.',
     )
     expect(within(panel()).getByText('This changed in another app.')).toBeInTheDocument()
 
@@ -198,7 +199,7 @@ describe('ConclusionPanel edit-in-place safety', () => {
     rerender(providers(<ConclusionPanel investigation={{ ...investigation, title: 'Renamed', status: 'blocked' }} />))
     expect(within(panel()).queryByText('This changed in another app.')).toBeNull()
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
-      'Debug logging requested for payments only reached every service and drove most of the increase. Mine.',
+      'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same. Mine.',
     )
   })
 
@@ -252,21 +253,69 @@ describe('ConclusionPanel with live polling (backstop)', () => {
 })
 
 
+describe('Check the next source and Share the answer', () => {
+  beforeEach(() => { Object.assign(mocks.api, mockApi()) })
+
+  it('picks the first source a person has not checked, skipping replaced ones', () => {
+    const [e1, e2, , e4] = detail.evidence
+    expect(nextSourceToCheck(detail.evidence)?.ref).toBe('E-001')
+    expect(nextSourceToCheck([{ ...e1, verification: 'superseded' }, { ...e2, verification: 'source_verified' }, e4])?.ref).toBe('E-002')
+    expect(nextSourceToCheck([e4, { ...e1, verification: 'human_verified' }])).toBeUndefined()
+    expect(nextSourceToCheck([])).toBeUndefined()
+  })
+
+  it('opens the next source to check, and Share the answer steps back to secondary beside it', async () => {
+    const user = userEvent.setup()
+    const onOpenSource = vi.fn()
+    render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onOpenSource={onOpenSource} share />))
+    const next = within(panel()).getByRole('button', { name: CHECK_NEXT_SOURCE })
+    expect(next).toHaveClass('btn-primary')
+    expect(within(panel()).getByRole('button', { name: 'Share the answer' })).toHaveClass('btn-secondary')
+    await user.click(next)
+    expect(onOpenSource).toHaveBeenCalledWith('E-001')
+  })
+
+  it('offers only Share the answer, as the primary action, once every source is checked', async () => {
+    const user = userEvent.setup()
+    const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
+    render(providers(<ConclusionPanel investigation={investigation} evidence={checked} onOpenSource={() => {}} share />))
+    expect(within(panel()).queryByRole('button', { name: CHECK_NEXT_SOURCE })).toBeNull()
+    const share = within(panel()).getByRole('button', { name: 'Share the answer' })
+    expect(share).toHaveClass('btn-primary')
+    await user.click(share)
+    const dialog = await screen.findByRole('dialog', { name: 'Share the answer' })
+    expect(mocks.api.sharePreview).toHaveBeenCalledWith('INV-0001', { mode: 'brief' })
+    await user.click(within(dialog).getByRole('button', { name: 'Copy' }))
+    expect(mocks.api.copySharePreview).toHaveBeenCalledWith('reviewed-1')
+    expect(await screen.findByText('Copied the summary. Paste it into an email or a document.')).toBeInTheDocument()
+  })
+
+  it('offers both while there is no answer yet, and neither unless asked for', () => {
+    const { unmount } = render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '' }} evidence={detail.evidence} onOpenSource={() => {}} share />))
+    expect(within(panel()).getByRole('button', { name: CHECK_NEXT_SOURCE })).toBeInTheDocument()
+    expect(within(panel()).getByRole('button', { name: 'Share the answer' })).toBeInTheDocument()
+    unmount()
+    renderPanel()
+    expect(within(panel()).queryByRole('button', { name: CHECK_NEXT_SOURCE })).toBeNull()
+    expect(within(panel()).queryByRole('button', { name: 'Share the answer' })).toBeNull()
+  })
+})
+
 describe('Conclusion accountability', () => {
   beforeEach(() => { Object.assign(mocks.api, mockApi()) })
 
   it('keeps the historical statement verification visible when the basis changed', () => {
-    renderPanel({ ...investigation, conclusion_verification: 'human_verified', conclusion_reviewed_at: '2026-10-20T12:00:00.000Z', conclusion_review_basis: 'Compared the billing export.', conclusion_needs_review: true })
+    renderPanel({ ...investigation, conclusion_verification: 'human_verified', conclusion_reviewed_at: '2026-10-20T12:00:00.000Z', conclusion_review_basis: 'Compared the call log.', conclusion_needs_review: true })
     expect(within(panel()).getByText('You checked this')).toBeInTheDocument()
     expect(within(panel()).getByText(/The findings behind this answer, or their sources, changed since your review/)).toBeInTheDocument()
-    expect(within(panel()).getByText(/Compared the billing export/)).toBeInTheDocument()
+    expect(within(panel()).getByText(/Compared the call log/)).toBeInTheDocument()
   })
 
   it('saves selected contradicting claim refs with the conclusion', async () => {
     const user = userEvent.setup()
     render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} />))
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
-    await user.selectOptions(within(panel()).getByRole('combobox', { name: /C-001:/ }), 'contradicts')
+    await user.selectOptions(within(panel()).getByRole('combobox', { name: /^A billing mistake on October 3 charged some customers twice\./ }), 'contradicts')
     await user.click(within(panel()).getByRole('button', { name: 'Save answer' }))
     expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ supporting_claims: [], contradicting_claims: ['C-001'] }))
   })

@@ -9,6 +9,7 @@ import { AppDataProvider } from '../../state/appData'
 import { evidence, hypotheses } from '../../test/fixtures'
 import { newClaim } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { StatementDialog } from './StatementDialog'
 
@@ -17,7 +18,7 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 
 const providers = (ui: ReactNode) => (
   <ToastProvider>
-    <AppDataProvider>{ui}</AppDataProvider>
+    <AppDataProvider><OpenAtLaunch />{ui}</AppDataProvider>
   </ToastProvider>
 )
 
@@ -43,7 +44,7 @@ describe('StatementDialog', () => {
     Object.assign(mocks.api, mockApi({ addClaim }))
     const user = userEvent.setup()
     const { onClose } = renderDialog('claim')
-    const statement = screen.getByLabelText('Statement')
+    const statement = screen.getByLabelText('Finding')
     await user.type(statement, 'First wording.')
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     const toast = await screen.findByRole('alert')
@@ -62,13 +63,13 @@ describe('StatementDialog', () => {
     expect(screen.getByRole('dialog', { name: 'Add finding' })).toBeInTheDocument()
     expect(screen.getByText('What did you find? One clear sentence.')).toBeInTheDocument()
     expect(screen.queryByRole('radiogroup', { name: 'Confidence' })).toBeNull()
-    await user.type(screen.getByLabelText('Statement'), 'The log level comes from the chart default.')
+    await user.type(screen.getByLabelText('Finding'), 'The bills went out twice because a file was loaded two times.')
     await user.type(screen.getByLabelText('Why (optional)'), 'Code and docs.')
     await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
     await user.click(within(row('E-003')).getByRole('radio', { name: 'Contradicts' }))
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(mocks.api.addClaim).toHaveBeenCalledWith('INV-0001', {
-      statement: 'The log level comes from the chart default.',
+      statement: 'The bills went out twice because a file was loaded two times.',
       confidence: 'unknown',
       confidence_rationale: 'Code and docs.',
       links: [
@@ -95,7 +96,7 @@ describe('StatementDialog', () => {
     const { onCreated } = renderDialog('hypothesis')
     expect(screen.getByRole('dialog', { name: 'Add finding to test' })).toBeInTheDocument()
     expect(screen.getByText('What might explain it? One clear sentence.')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Statement'), 'Data transfer.')
+    await user.type(screen.getByLabelText('Finding'), 'Data transfer.')
     await user.type(screen.getByLabelText('Why (optional)'), 'A hunch.')
     await user.click(screen.getByRole('button', { name: 'Add finding to test' }))
     expect(mocks.api.addHypothesis).toHaveBeenCalledWith('INV-0001', {
@@ -109,14 +110,14 @@ describe('StatementDialog', () => {
 
   it('says so when there is no evidence to link', () => {
     renderDialog('claim', [])
-    expect(screen.getByText('No sources to link yet. You can link one later.')).toBeInTheDocument()
+    expect(screen.getByText('No sources yet. You can add one to this finding later.')).toBeInTheDocument()
   })
 
   it('shows Adding... while the call runs', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ addClaim: () => new Promise<Claim>(() => {}) }))
     renderDialog('claim')
-    await user.type(screen.getByLabelText('Statement'), 'S')
+    await user.type(screen.getByLabelText('Finding'), 'S')
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
@@ -132,7 +133,7 @@ describe('StatementDialog', () => {
       }),
     )
     renderDialog('claim')
-    await user.type(screen.getByLabelText('Statement'), 'S')
+    await user.type(screen.getByLabelText('Finding'), 'S')
     await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
     await user.click(within(row('E-003')).getByRole('radio', { name: 'Supports' }))
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
@@ -153,6 +154,6 @@ describe('StatementDialog', () => {
     renderDialog('claim')
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(await screen.findByText('is required')).toBeInTheDocument()
-    expect(screen.getByLabelText('Statement')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Finding')).toHaveAttribute('aria-invalid', 'true')
   })
 })

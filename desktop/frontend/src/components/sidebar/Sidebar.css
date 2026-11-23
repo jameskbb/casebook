@@ -126,6 +126,15 @@
   gap: 2px;
 }
 
+/* A group label above its rows: No answer yet, Answered. */
+.sidebar-group {
+  padding: var(--space-4) var(--space-4) var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
 .sidebar-load-error {
   display: flex;
   flex-direction: column;

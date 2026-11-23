@@ -7,6 +7,7 @@ import { useWrite } from '../../state/useWrite'
 import { Banner } from '../ui/Banner'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toaster'
+import { UNARCHIVED_COPY } from './MoreMenu'
 import './ArchivedBanner.css'
 
 export function ArchivedBanner({ investigationRef }: { investigationRef: string }) {
@@ -17,7 +18,7 @@ export function ArchivedBanner({ investigationRef }: { investigationRef: string 
     setBusy(true)
     try {
       const inv = await write(() => api.unarchiveInvestigation(investigationRef))
-      if (inv) toast.success(`Unarchived ${investigationRef}.`)
+      if (inv) toast.success(UNARCHIVED_COPY)
     } finally {
       setBusy(false)
     }

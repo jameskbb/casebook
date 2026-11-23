@@ -1,9 +1,11 @@
-// One investigation in the sidebar list:
-// title (2 lines) and the "Your AI's current question" marker; then the ref,
-// the Archived tag and the relative updated time with the absolute time in its title. The list gives
-// each row its roving tabindex props, so the whole list is one Tab stop.
+// One question in the sidebar list: the title (2 lines); the "Your AI's
+// current question" marker on its own line; then one muted line, "1 of 3 sources checked by
+// you" when it has sources, otherwise when it was last worked on, with the
+// Archived tag. Its code shows only when codes are on. The list gives each
+// row its roving tabindex props, so the whole list is one Tab stop.
 import type { InvestigationSummary } from '../../api/types'
 import type { RovingItemProps } from '../../hooks/useRovingFocus'
+import { checkedLine } from '../../lib/questions'
 import { formatAbsolute, formatRelative } from '../../lib/relativeTime'
 import { ArchivedTag } from '../record/StatusLabel'
 import './InvestigationRow.css'
@@ -19,6 +21,7 @@ export interface InvestigationRowProps {
 
 export function InvestigationRow({ investigation: inv, selected, onSelect, now, roving }: InvestigationRowProps) {
   const classes = ['inv-row', selected ? 'is-selected' : '', inv.archived ? 'is-archived' : ''].filter(Boolean).join(' ')
+  const checked = checkedLine(inv)
   return (
     <li className="inv-row-item">
       <button
@@ -29,15 +32,13 @@ export function InvestigationRow({ investigation: inv, selected, onSelect, now, 
         data-ref={inv.ref}
         onClick={() => onSelect(inv.ref)}
       >
-        <span className="inv-row-line inv-row-top">
-          <span className="inv-row-title">{inv.title}</span>
-          {inv.is_active && <ActiveMarker />}
-        </span>
+        <span className="inv-row-title">{inv.title}</span>
+        {inv.is_active && <ActiveMarker />}
         <span className="inv-row-line inv-row-meta">
           <span className="inv-row-ref tabular">{inv.ref}</span>
           {inv.archived && <ArchivedTag />}
           <span className="inv-row-time tabular" title={formatAbsolute(inv.updated_at)}>
-            {formatRelative(inv.updated_at, now)}
+            {checked || `Last worked on ${formatRelative(inv.updated_at, now)}`}
           </span>
         </span>
       </button>
@@ -50,7 +51,7 @@ export function ActiveMarker({ className }: { className?: string }) {
   return (
     <span
       className={['active-marker', className ?? ''].filter(Boolean).join(' ')}
-      title="Your AI tools start from this question."
+      title="Your AI starts from this question."
     >
       <span className="active-dot" aria-hidden="true" />
       Your AI's current question

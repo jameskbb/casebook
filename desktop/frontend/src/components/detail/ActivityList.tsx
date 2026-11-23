@@ -1,5 +1,6 @@
 // How we got here (the history): newest first, each row a
-// plain sentence with the actor kind and client, the engine summary on a
+// plain sentence naming who did it and the source or finding by its words
+// (its code shows only when codes are on), the engine summary on a
 // second line as text (common shapes rewritten in plain words by
 // activitySummary, the stored text kept in its title), and a relative time with the absolute
 // time in its title, re-rendered once a minute (useNow). Twenty rows by default; the show-more button reloads
@@ -8,6 +9,7 @@ import { ScrollText } from 'lucide-react'
 import type { Activity } from '../../api/types'
 import { activitySentence, activitySummary } from '../../lib/activity'
 import { ImportedTag } from '../record/ImportedTag'
+import { hideIds, RecordId } from '../record/RecordId'
 import { formatAbsolute, formatRelative } from '../../lib/relativeTime'
 import { useNow } from '../../hooks/useNow'
 import { useAppData } from '../../state/appData'
@@ -20,13 +22,24 @@ export const MAX_ACTIVITY_LIMIT = 200
 export interface ActivityListProps {
   /** detail.recent_activity, newest first. */
   activities: Activity[]
-  /** Opens the drawer for an E, C or H ref; without it refs are plain text. */
+  /** Opens the drawer for a source or finding; without it they are plain text. */
   onOpenRef?: (ref: string) => void
-  /** The case's conclusion_reviewed_at, so the review row reads as a review. */
+  /** The title or statement of a record, shown in place of its code. */
+  nameOf?: (ref: string) => string | undefined
+  /** The question's conclusion_reviewed_at, so the review row reads as a review. */
   conclusionReviewedAt?: string
 }
 
-export function ActivityList({ activities, onOpenRef, conclusionReviewedAt }: ActivityListProps) {
+/** The first words of a title or statement that fit in max characters, ending in three periods when cut. */
+export function shortName(text: string, max = 60): string {
+  const t = text.trim().replace(/\s+/g, ' ')
+  if (t.length <= max) return t
+  const cut = t.slice(0, max - 3)
+  const space = cut.lastIndexOf(' ')
+  return (space > 0 ? cut.slice(0, space) : cut) + '...'
+}
+
+export function ActivityList({ activities, onOpenRef, nameOf, conclusionReviewedAt }: ActivityListProps) {
   const { activityLimit, setActivityLimit } = useAppData()
   const now = useNow()
   const more = activityLimit < MAX_ACTIVITY_LIMIT && activities.length >= activityLimit
@@ -39,7 +52,7 @@ export function ActivityList({ activities, onOpenRef, conclusionReviewedAt }: Ac
       emptyText="Nothing has happened yet."
       items={activities}
       itemKey={(a) => String(a.id)}
-      renderItem={(a) => <ActivityRow activity={a} onOpenRef={onOpenRef} now={now} conclusionReviewedAt={conclusionReviewedAt} />}
+      renderItem={(a) => <ActivityRow activity={a} onOpenRef={onOpenRef} nameOf={nameOf} now={now} conclusionReviewedAt={conclusionReviewedAt} />}
       footer={
         more ? (
           <div className="activity-more">
@@ -56,18 +69,22 @@ export function ActivityList({ activities, onOpenRef, conclusionReviewedAt }: Ac
 function ActivityRow({
   activity: a,
   onOpenRef,
+  nameOf,
   now,
   conclusionReviewedAt,
 }: {
   activity: Activity
   onOpenRef?: (ref: string) => void
+  nameOf?: (ref: string) => string | undefined
   now: Date
   conclusionReviewedAt?: string
 }) {
   const s = activitySentence(a)
   const summary = a.summary.trim()
   const plain = activitySummary(a, { conclusionReviewedAt })
-  const showSummary = summary !== '' && summary !== a.target_ref
+  const name = a.target_ref ? nameOf?.(a.target_ref) : undefined
+  // The second line shows only when it adds to the first.
+  const showSummary = summary !== '' && summary !== a.target_ref && plain !== '' && plain !== name
   return (
     <div className="activity-row">
       <div className="activity-main">
@@ -80,25 +97,29 @@ function ActivityRow({
           <span className="activity-actor" title={s.tooltip}>
             {s.actor}
           </span>{' '}
-          {s.segments.map((seg, i) =>
-            'ref' in seg ? (
-              onOpenRef ? (
-                <button key={i} type="button" className="activity-ref tabular" onClick={() => onOpenRef(seg.ref)}>
-                  {seg.ref}
-                </button>
-              ) : (
-                <span key={i} className="tabular">
-                  {seg.ref}
-                </span>
-              )
+          {s.segments.map((seg, i) => {
+            if ('text' in seg) return <span key={i}>{seg.text}</span>
+            if ('id' in seg) return <span key={i}> <RecordId>{seg.id}</RecordId></span>
+            // A record that is gone has no words to show, so its code stays visible.
+            const label = name ? (
+              <>
+                <RecordId>{seg.ref}</RecordId> {shortName(name)}
+              </>
             ) : (
-              <span key={i}>{seg.text}</span>
-            ),
-          )}
+              <span className="tabular">{seg.ref}</span>
+            )
+            return onOpenRef ? (
+              <button key={i} type="button" className="activity-ref" title={name} onClick={() => onOpenRef(seg.ref)}>
+                {label}
+              </button>
+            ) : (
+              <span key={i}>{label}</span>
+            )
+          })}
         </p>
         {showSummary && (plain === summary
-          ? <p className="activity-summary">{a.summary}</p>
-          : <p className="activity-summary" title={a.summary}>{plain}</p>)}
+          ? <p className="activity-summary">{hideIds(a.summary)}</p>
+          : <p className="activity-summary" title={a.summary}>{hideIds(plain)}</p>)}
       </div>
       <time className="activity-time tabular" dateTime={a.created_at} title={formatAbsolute(a.created_at)}>
         {formatRelative(a.created_at, now)}

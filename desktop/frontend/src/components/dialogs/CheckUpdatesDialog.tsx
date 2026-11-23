@@ -15,9 +15,9 @@ import { useToast } from '../ui/Toaster'
 import './CheckUpdatesDialog.css'
 
 export const UPDATE_INTRO_COPY =
-  'Casebook will ask GitHub for its latest release. The request carries no version or identifier and nothing is downloaded; you choose when to update.'
+  'Casebook will ask GitHub which version is the latest. It sends nothing about you or this computer and downloads nothing. You choose when to update.'
 export const UPDATE_HOW_COPY =
-  'Download it from the release page, then replace the program files. Your data stays where it is.'
+  'Download it from the download page, then install it over this one. Your data stays where it is.'
 export const LINK_COPIED = 'Download link copied to the clipboard.'
 
 /** The result lines for one check, by state. */
@@ -28,10 +28,10 @@ export function updateLines(r: UpdateCheck): string[] {
     case 'up_to_date':
       return [`You have the latest version, Casebook ${r.latest}.`]
     case 'ahead':
-      return [`You have Casebook ${r.current}, which is newer than the latest release, ${r.latest}.`]
+      return [`You have Casebook ${r.current}, which is newer than the latest published version, ${r.latest}.`]
     case 'unknown':
     default:
-      return [`This build (${r.current}) is not a release version. The latest release is Casebook ${r.latest}.`]
+      return [`This copy (${r.current}) is a test version. The latest published version is Casebook ${r.latest}.`]
   }
 }
 
@@ -108,7 +108,7 @@ export function CheckUpdatesDialog({ onClose }: CheckUpdatesDialogProps) {
           )}
           {offersRelease && (
             <Button key="open" variant="primary" icon={ExternalLink} onClick={() => void openRelease()}>
-              Open release page
+              Open the download page
             </Button>
           )}
         </>

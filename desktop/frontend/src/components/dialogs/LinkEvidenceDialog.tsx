@@ -54,7 +54,7 @@ export function LinkEvidenceDialog({
   const [choiceError, setChoiceError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
   const firstRef = useRef<HTMLInputElement>(null)
-  const title = `Link a source to ${record.ref}`
+  const title = 'Add a source to this finding'
 
   if (evidence.length === 0 || available.length === 0) {
     const noEvidence = evidence.length === 0
@@ -78,7 +78,7 @@ export function LinkEvidenceDialog({
         <p className="dialog-text">
           {noEvidence
             ? 'This question has no sources yet. Add a source first.'
-            : `Every source is already linked to ${record.ref}.`}
+            : 'Every source in this question is already under this finding.'}
         </p>
       </Dialog>
     )
@@ -90,7 +90,7 @@ export function LinkEvidenceDialog({
   const submit = async () => {
     if (busy) return
     if (!chosen) {
-      setChoiceError('Choose the source to link.')
+      setChoiceError('Choose a source.')
       firstRef.current?.focus()
       return
     }
@@ -121,8 +121,8 @@ export function LinkEvidenceDialog({
       title={title}
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Link a source"
-      busyLabel="Linking..."
+      submitLabel="Add source"
+      busyLabel="Adding..."
       busy={busy}
       initialFocus={firstRef}
       summary={
@@ -167,7 +167,7 @@ export function LinkEvidenceDialog({
                   <span className="choice-title">{e.title}</span>
                   {as && (
                     <span className="choice-note">
-                      {`Already linked as ${as === 'supports' ? 'supporting' : 'contradicting'}`}
+                      {as === 'supports' ? 'Already supports this finding' : 'Already contradicts this finding'}
                     </span>
                   )}
                 </span>
@@ -182,7 +182,7 @@ export function LinkEvidenceDialog({
           </p>
         )}
       </fieldset>
-      <SegmentedControl<Relation> label="Relation" options={RELATIONS} value={relation} onChange={setRelation} />
+      <SegmentedControl<Relation> label="What it does to the finding" options={RELATIONS} value={relation} onChange={setRelation} />
     </Dialog>
   )
 }

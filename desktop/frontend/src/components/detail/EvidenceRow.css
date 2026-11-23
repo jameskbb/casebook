@@ -40,18 +40,3 @@
   overflow-wrap: anywhere;
 }
 
-.evidence-links {
-  margin-top: var(--space-1);
-  column-gap: var(--space-4);
-}
-
-.evidence-link-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.evidence-link-label {
-  color: var(--ink-muted);
-}

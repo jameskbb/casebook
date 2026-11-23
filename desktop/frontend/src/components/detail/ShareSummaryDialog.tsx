@@ -14,15 +14,15 @@ import './ShareSummaryDialog.css'
 
 export const SUMMARY_COPIED = 'Copied the summary. Paste it into an email or a document.'
 export const SUMMARY_SAVED = (name: string) => `Saved the summary as ${name}.`
-export const EXAMPLE_COPIED = 'Copied the example request. Paste it into your AI client.'
+export const EXAMPLE_COPIED = 'Copied the example request. Paste it into a chat with your AI.'
 export const ELSEWHERE_SUMMARY = 'Use this summary in another app'
-export const ELSEWHERE_COPY = 'Use this summary in the tools you already use. Copy it into a note or document, save it as a file, or ask your AI to save it to an app it is already connected to. The connected app has to support creating or updating notes or documents through your AI client.'
-export const ELSEWHERE_NOTE = 'Your AI asks Casebook for the summary, then uses its own connection to that app; Casebook does not send anything itself. The copy your AI fetches is a separate snapshot with the default selection of findings, so it matches this preview only if the question has not changed and you kept that selection.'
+export const ELSEWHERE_COPY = 'Use this summary in the tools you already use. Copy it into a note or document, save it as a file, or ask your AI to save it to an app it is already connected to. This works only if your AI can already create or change notes or documents in that app.'
+export const ELSEWHERE_NOTE = 'Your AI asks Casebook for the summary, then puts it in that app itself. Casebook does not send anything. Your AI gets its own copy with the usual choice of findings, so it matches this preview only if the question has not changed and you did not change what to include.'
 
-/** The request to paste into an AI client, for the chosen format and the open question. */
+/** The request to paste into a chat with an AI, for the chosen format and the open question. It names the question by its code, which an AI needs. */
 export function exampleRequest(mode: ShareOptions['mode'], invRef: string, title: string): string {
   const what = mode === 'report' ? 'the complete report' : 'the leadership brief'
-  return `Save ${what} for ${invRef} in my connected notes app as a new note titled "${title}". Keep its labels, source references and caveats.`
+  return `Save ${what} for ${invRef} in my connected notes app as a new note titled "${title}". Keep its labels, its sources and its notes on what is not checked.`
 }
 
 type SelectionKey = 'claim_refs' | 'hypothesis_refs' | 'question_refs' | 'ruled_out_refs'
@@ -145,12 +145,12 @@ export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string;
           {GROUPS.map(({ group, key, legend }) => <fieldset key={group}>
             <legend>{legend}</legend>
             {preview.candidates.filter(c => c.group === group).map(c =>
-              <label key={c.ref} className="share-summary-choice"><input type="checkbox" checked={draft[key]?.includes(c.ref) ?? false} disabled={c.required || busy || sharing} onChange={() => toggle(c)} /><span><strong>{c.ref}</strong> {c.text}<small>{c.label}{c.required ? '; always included' : ''}</small></span></label>
+              <label key={c.ref} className="share-summary-choice"><input type="checkbox" checked={draft[key]?.includes(c.ref) ?? false} disabled={c.required || busy || sharing} onChange={() => toggle(c)} /><span><strong className="record-id">{c.ref}</strong> {c.text}<small>{c.label}{c.required ? '; always included' : ''}</small></span></label>
             )}
           </fieldset>)}
         </div>
       </details>}
-      <p className="share-summary-snapshot" role="status">{busy ? 'Preparing preview...' : dirty ? 'Selection changed. Update the preview before sharing.' : preview ? 'This preview stays unchanged until you refresh. Copy and Save use exactly what is shown.' : 'Preview unavailable. Refresh to try again.'}</p>
+      <p className="share-summary-snapshot" role="status">{busy ? 'Preparing preview...' : dirty ? 'You changed what to include. Update the preview before sharing.' : preview ? 'This preview stays unchanged until you refresh. Copy and Save use exactly what is shown.' : 'Preview unavailable. Refresh to try again.'}</p>
       {error ? <p role="alert" className="share-summary-error">{error}</p> : <NotePaper nodes={nodes} text={preview?.markdown ?? ''} label="Summary" />}
       <details className="share-summary-elsewhere">
         <summary>{ELSEWHERE_SUMMARY}</summary>

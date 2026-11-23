@@ -7,6 +7,7 @@ import type { Investigation } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { CHANGED_ELSEWHERE_COPY } from '../ui/ChangedElsewhereBanner'
 import { EditInvestigationDialog } from './EditInvestigationDialog'
@@ -17,7 +18,7 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 function renderDialog(onClose = vi.fn()) {
   render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <EditInvestigationDialog investigation={investigation} onClose={onClose} />
       </AppDataProvider>
     </ToastProvider>,
@@ -32,7 +33,7 @@ describe('EditInvestigationDialog', () => {
 
   it('prefills the title and primary question', () => {
     const { dialog } = renderDialog()
-    expect(within(dialog).getByLabelText('Question')).toHaveValue('September cloud bill up 38%')
+    expect(within(dialog).getByLabelText('Question')).toHaveValue('Why did calls go up 30% in October when sales stayed the same?')
     expect(within(dialog).getByLabelText('Background (optional)')).toHaveValue(
       investigation.problem_statement,
     )
@@ -44,9 +45,9 @@ describe('EditInvestigationDialog', () => {
     const { dialog, onClose } = renderDialog()
     const title = within(dialog).getByLabelText('Question')
     await user.clear(title)
-    await user.type(title, 'September cloud bill jump')
+    await user.type(title, 'Why did calls jump in October?')
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
-    expect(mocks.api.updateInvestigation).toHaveBeenCalledWith('INV-0001', { title: 'September cloud bill jump' })
+    expect(mocks.api.updateInvestigation).toHaveBeenCalledWith('INV-0001', { title: 'Why did calls jump in October?' })
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
@@ -112,7 +113,7 @@ describe('EditInvestigationDialog changed elsewhere', () => {
     const user = userEvent.setup()
     const ui = (inv: Investigation) => (
       <ToastProvider>
-        <AppDataProvider>
+        <AppDataProvider><OpenAtLaunch />
           <EditInvestigationDialog investigation={inv} onClose={vi.fn()} />
         </AppDataProvider>
       </ToastProvider>
@@ -123,7 +124,7 @@ describe('EditInvestigationDialog changed elsewhere', () => {
     expect(within(dialog).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
     rerender(ui({ ...investigation, title: 'Renamed by Codex' }))
     expect(within(dialog).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Question')).toHaveValue('September cloud bill up 38% (mine)')
+    expect(within(dialog).getByLabelText('Question')).toHaveValue('Why did calls go up 30% in October when sales stayed the same? (mine)')
     await user.click(within(dialog).getByRole('button', { name: 'Show latest' }))
     expect(within(dialog).getByLabelText('Question')).toHaveValue('Renamed by Codex')
     expect(within(dialog).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()

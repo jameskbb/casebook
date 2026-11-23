@@ -7,6 +7,7 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { backupInfo, restoreResult, summaries } from '../../test/fixtures'
 import { cancelledPick, restorePick } from '../../test/fixtures.dataops'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { restoreSummary } from '../../lib/restoreCopy'
 import { DataOpsProvider, useDataOps } from '../sidebar/DataOps'
 import { ToastProvider } from '../ui/Toaster'
@@ -26,10 +27,10 @@ describe('RestoreConfirmDialog', () => {
     const onCancel = vi.fn()
     const onConfirm = vi.fn()
     render(
-      <RestoreConfirmDialog fileName="casebook-backup-2026-10-02.db" info={backupInfo} onCancel={onCancel} onConfirm={onConfirm} />,
+      <RestoreConfirmDialog fileName="casebook-backup-2026-11-06.db" info={backupInfo} onCancel={onCancel} onConfirm={onConfirm} />,
     )
     const dialog = screen.getByRole('dialog', { name: 'Replace all Casebook data with this backup?' })
-    expect(dialog).toHaveTextContent(restoreSummary('casebook-backup-2026-10-02.db', backupInfo))
+    expect(dialog).toHaveTextContent(restoreSummary('casebook-backup-2026-11-06.db', backupInfo))
     expect(dialog).toHaveTextContent(WARNING)
     const cancel = within(dialog).getByRole('button', { name: 'Cancel' })
     expect(cancel).toHaveFocus()
@@ -53,7 +54,7 @@ describe('RestoreResultDialog and FileProblemDialog', () => {
     const onDone = vi.fn()
     render(
       <RestoreResultDialog
-        fileName="casebook-backup-2026-10-02.db"
+        fileName="casebook-backup-2026-11-06.db"
         safetyCopyPath={restoreResult.safety_copy_path}
         onCopyPath={onCopy}
         onDone={onDone}
@@ -61,9 +62,9 @@ describe('RestoreResultDialog and FileProblemDialog', () => {
     )
     const dialog = screen.getByRole('dialog', { name: 'Restore complete' })
     expect(dialog).toHaveTextContent(
-      `Casebook now shows the data from casebook-backup-2026-10-02.db. Your previous data was saved to ${restoreResult.safety_copy_path}.`,
+      `Casebook now shows the data from casebook-backup-2026-11-06.db. Your previous data was saved to ${restoreResult.safety_copy_path}.`,
     )
-    await user.click(within(dialog).getByRole('button', { name: 'Copy path' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Copy location' }))
     expect(onCopy).toHaveBeenCalledTimes(1)
     await user.click(within(dialog).getByRole('button', { name: 'Done' }))
     expect(onDone).toHaveBeenCalledTimes(1)
@@ -98,7 +99,7 @@ function Trigger() {
 function renderFlow() {
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <DataOpsProvider>
           <Trigger />
         </DataOpsProvider>
@@ -172,7 +173,7 @@ describe('two-step restore', () => {
     expect(mocks.api.restoreBackup).not.toHaveBeenCalled()
   })
 
-  it('replaces the data only after Replace all data, then shows the safety copy and reselects', async () => {
+  it('replaces the data only after Replace all data, then shows the safety copy and goes back to Home', async () => {
     const user = await start()
     const dialog = await screen.findByRole('dialog', { name: 'Replace all Casebook data with this backup?' })
     expect(dialog).toHaveTextContent(restoreSummary(restorePick.file_name, restorePick.info))
@@ -182,10 +183,11 @@ describe('two-step restore', () => {
 
     const result = await screen.findByRole('dialog', { name: 'Restore complete' })
     expect(result).toHaveTextContent(
-      `Casebook now shows the data from casebook-backup-2026-10-02.db. Your previous data was saved to ${restoreResult.safety_copy_path}.`,
+      `Casebook now shows the data from casebook-backup-2026-11-06.db. Your previous data was saved to ${restoreResult.safety_copy_path}.`,
     )
-    await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0002'))
-    await user.click(within(result).getByRole('button', { name: 'Copy path' }))
+    // The open question may not be in the restored data, so nothing stays open.
+    await waitFor(() => expect(screen.getByTestId('selected')).toBeEmptyDOMElement())
+    await user.click(within(result).getByRole('button', { name: 'Copy location' }))
     expect(mocks.api.copyText).toHaveBeenCalledWith(restoreResult.safety_copy_path)
     await user.click(within(result).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())

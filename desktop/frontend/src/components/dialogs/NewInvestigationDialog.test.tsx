@@ -7,6 +7,7 @@ import type { Investigation } from '../../api/types'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { NewInvestigationDialog } from './NewInvestigationDialog'
 
@@ -23,7 +24,7 @@ function renderDialog() {
   const onCreated = vi.fn()
   render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <WhenReady onClose={onClose} onCreated={onCreated} />
       </AppDataProvider>
     </ToastProvider>,
@@ -116,7 +117,7 @@ describe('NewInvestigationDialog', () => {
     const title = within(dialog).getByLabelText('Question')
     await user.click(title)
     await user.paste('a'.repeat(185))
-    expect(within(dialog).getByText('Close to the limit (185 of 200 bytes)')).toBeInTheDocument()
+    expect(within(dialog).getByText('Almost too long (185 of 200 characters)')).toBeInTheDocument()
   })
 
   it('shows the busy toast with Retry when the database is busy', async () => {

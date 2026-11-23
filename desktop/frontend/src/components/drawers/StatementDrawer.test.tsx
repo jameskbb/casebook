@@ -8,6 +8,7 @@ import { AppDataProvider } from '../../state/appData'
 import { CopyContextProvider } from '../../state/copyContext'
 import { detail, summaries, T0 } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { DetailView } from '../detail/DetailView'
 import { ToastProvider } from '../ui/Toaster'
 
@@ -24,7 +25,7 @@ function renderDetail(d: InvestigationDetail = detail) {
   )
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <CopyContextProvider>
           <DetailView />
         </CopyContextProvider>
@@ -49,7 +50,7 @@ describe('StatementDrawer drill-down', () => {
     expect(within(drawer).getByRole('heading', { level: 2, name: 'Finding C-001' })).toHaveFocus()
     expect(
       within(drawer).getByText(
-        'A shared platform default moved every service to debug logging on August 28; only payments asked for it.',
+        'A billing mistake on October 3 charged some customers twice.',
       ),
     ).toHaveClass('drawer-statement')
 
@@ -57,18 +58,18 @@ describe('StatementDrawer drill-down', () => {
     const blocks = supporting.querySelectorAll('[data-ref]')
     expect(Array.from(blocks).map((b) => b.getAttribute('data-ref'))).toEqual(['E-001', 'E-004'])
 
-    const e1 = within(supporting).getByRole('button', { name: 'Open source E-001: Service chart default log level set to debug' })
+    const e1 = within(supporting).getByRole('button', { name: 'Open source E-001: Notice dated October 4: 1,900 customers were charged twice' })
       .parentElement as HTMLElement
-    expect(within(e1).getByText('Service chart default log level set to debug')).toBeInTheDocument()
-    expect(within(e1).getByText(/from info to debug/)).toBeInTheDocument()
-    expect(within(e1).getByText('Code')).toBeInTheDocument()
-    expect(within(e1).getByText('Platform Helm chart')).toBeInTheDocument()
-    expect(within(e1).getByText('platform-charts/service/values.yaml')).toBeInTheDocument()
+    expect(within(e1).getByText('Notice dated October 4: 1,900 customers were charged twice')).toBeInTheDocument()
+    expect(within(e1).getByText(/charged 1,900 customers twice/)).toBeInTheDocument()
+    expect(within(e1).getByText('File')).toBeInTheDocument()
+    expect(within(e1).getByText('Email from the billing team')).toBeInTheDocument()
+    expect(within(e1).getByText('Shared drive, Billing, notice-2026-10-04.pdf')).toBeInTheDocument()
     expect(within(e1).getByText(formatAbsolute(T0), { exact: false })).toBeInTheDocument()
 
     const e4 = within(supporting).getByRole('button', { name: /^Open source E-004:/ }).parentElement as HTMLElement
-    expect(within(e4).getByText('User statement')).toBeInTheDocument()
-    expect(within(e4).getByText('Head of platform, in person')).toBeInTheDocument()
+    expect(within(e4).getByText('Something a person said')).toBeInTheDocument()
+    expect(within(e4).getByText('Head of billing, in person')).toBeInTheDocument()
 
     const contradicting = within(drawer).getByRole('region', { name: 'Sources that contradict it' })
     expect(within(contradicting).getByText('Nothing contradicts this yet.')).toBeInTheDocument()
@@ -80,7 +81,7 @@ describe('StatementDrawer drill-down', () => {
     const row = await openClaimButton('C-001')
     await user.click(row)
     await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: 'Open source E-001: Service chart default log level set to debug' }),
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Open source E-001: Notice dated October 4: 1,900 customers were charged twice' }),
     )
 
     const evidenceDrawer = screen.getByRole('dialog', { name: 'Source E-001' })
@@ -91,7 +92,7 @@ describe('StatementDrawer drill-down', () => {
     expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull()
 
     await user.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: 'Open source E-004: Head of platform: debug was requested for payments only' }),
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Open source E-004: Head of billing: the mistake was on October 3 only' }),
     )
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -105,7 +106,7 @@ describe('StatementDrawer drill-down', () => {
     const explain = await screen.findByRole('region', { name: 'Not tested yet' })
     await user.click(within(explain).getByRole('button', { name: /^Open finding H-001:/ }))
     const drawer = screen.getByRole('dialog', { name: 'Finding H-001' })
-    expect(within(drawer).getByText('No source is linked yet.')).toBeInTheDocument()
+    expect(within(drawer).getByText('This finding has no sources yet.')).toBeInTheDocument()
     expect(within(drawer).queryByRole('region', { name: 'Sources that contradict it' })).toBeNull()
   })
 
@@ -126,15 +127,14 @@ describe('StatementDrawer drill-down', () => {
     expect(within(status).queryByLabelText('Label')).not.toBeInTheDocument()
   })
 
-  it('shows Replaced by C-002 with a button that pushes the replacement', async () => {
+  it('offers the finding that replaced it with a button that pushes the replacement', async () => {
     const user = userEvent.setup()
     renderDetail()
     await user.click(await screen.findByRole('button', { name: 'Show 1 replaced finding' }))
     await user.click(await openClaimButton('C-003'))
     const drawer = screen.getByRole('dialog', { name: 'Finding C-003' })
     const status = within(drawer).getByRole('region', { name: 'Check this finding' })
-    expect(status).toHaveTextContent('Replaced by C-002')
-    await user.click(within(status).getByRole('button', { name: 'C-002' }))
+    await user.click(within(status).getByRole('button', { name: 'Open the finding that replaced it C-002' }))
     expect(screen.getByRole('dialog', { name: 'Finding C-002' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to C-003' })).toBeInTheDocument()
   })

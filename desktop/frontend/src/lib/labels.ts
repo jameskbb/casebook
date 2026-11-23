@@ -38,7 +38,7 @@ export const verificationHelp: Record<Verification, string> = {
   source_verified: 'Your AI compared this with its source. You have not checked it yourself.',
   human_verified: 'A person checked this against its source.',
   disputed: 'A source contradicts this. It stays here until you decide.',
-  superseded: 'A newer record replaced this one. It is kept for the history.',
+  superseded: 'A newer one replaced this. It is kept for the history.',
 }
 
 /** Status words used in the legend that are not verification values. */
@@ -69,25 +69,25 @@ export const hypothesisStatusOptions: HypothesisStatus[] = ['open', 'supported',
 
 export const questionStatusLabels: Record<QuestionStatus, string> = {
   open: 'Open',
-  resolved: 'Resolved',
-  deferred: 'Deferred',
+  resolved: 'Answered',
+  deferred: 'Set aside',
 }
 
 export const sourceTypeLabels: Record<SourceType, string> = {
-  sql_query: 'SQL query',
+  sql_query: 'Data query',
   code: 'Code',
   file: 'File',
   jira: 'Jira',
   // Kept for existing records, so a source of this type still shows its true
   // origin. A new source cannot pick it (see sourceTypeOptions).
   evernote_note: 'Evernote note',
-  documentation: 'Documentation',
-  api_response: 'API response',
-  user_statement: 'User statement',
-  ai_tool_output: 'AI tool output',
-  manual_observation: 'Manual observation',
-  external_url: 'External URL',
-  casebook_artifact: 'Casebook artifact',
+  documentation: 'Document',
+  api_response: 'Data from another system',
+  user_statement: 'Something a person said',
+  ai_tool_output: 'Result from your AI',
+  manual_observation: 'Something you saw',
+  external_url: 'Web page',
+  casebook_artifact: 'Another Casebook question',
 }
 
 export const sourceTypeOptions: SourceType[] = [
@@ -110,10 +110,10 @@ export const relationLabels: Record<Relation, string> = {
 }
 
 export const actorKindLabels: Record<ActorKind, string> = {
-  human: 'Human',
+  human: 'Person',
   ai: 'AI',
-  import: 'Import',
-  system: 'System',
+  import: 'File',
+  system: 'Casebook',
 }
 
 export const recordTypeLabels: Record<RecordType, string> = {

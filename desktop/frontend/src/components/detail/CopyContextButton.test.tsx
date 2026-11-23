@@ -51,7 +51,7 @@ describe('CopyContextButton', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
-    expect(screen.getByText('Context copied to the clipboard')).toBeInTheDocument()
+    expect(screen.getByText('Copied for your AI')).toBeInTheDocument()
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1999)

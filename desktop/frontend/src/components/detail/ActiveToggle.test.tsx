@@ -5,6 +5,7 @@ import type { Investigation } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { investigation as inv } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { ActiveToggle } from './ActiveToggle'
 
@@ -14,7 +15,7 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 function renderToggle(investigation: Investigation) {
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <ActiveToggle investigation={investigation} />
       </AppDataProvider>
     </ToastProvider>,
@@ -30,7 +31,7 @@ describe('ActiveToggle', () => {
     renderToggle({ ...inv, is_active: false })
     expect(screen.getByRole('button', { name: 'Use with my AI' })).toHaveAttribute(
       'title',
-      'Click so your AI tools start from this question.',
+      'Click so your AI starts from this question.',
     )
   })
 

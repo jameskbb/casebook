@@ -6,10 +6,12 @@ import '@fontsource/public-sans/600.css'
 import '@fontsource/literata/400.css'
 import './styles/tokens.css'
 import './styles/base.css'
+import { applyShowIds, getShowIds } from './lib/showIds'
 import { startTheme } from './lib/windowTheme'
 import App from './App'
 
 startTheme()
+applyShowIds(getShowIds())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

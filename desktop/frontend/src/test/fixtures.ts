@@ -1,5 +1,6 @@
-// Shared test data mirroring the --seed-demo investigations (desktop/seed.go).
-// Plans 02 to 04 add their own fixture files instead of editing this one.
+// Shared test data: a call center question with findings and sources in
+// every state, a help desk question with no answer yet, and an archived
+// payroll question. Screenshots are taken over this, so it stays plain.
 import type {
   Activity,
   Actor,
@@ -16,8 +17,8 @@ import type {
   StartupInfo,
 } from '../api/types'
 
-export const T0 = '2026-09-28T13:00:00.000Z'
-export const T_RECENT = '2026-10-02T09:00:00.000Z'
+export const T0 = '2026-11-02T13:00:00.000Z'
+export const T_RECENT = '2026-11-06T09:00:00.000Z'
 
 export const human: Actor = { kind: 'human', client: 'casebook-ui' }
 export const claude: Actor = { kind: 'ai', client: 'claude-code' }
@@ -30,13 +31,14 @@ export const startupOk: StartupInfo = { ok: true, kind: '', message: '', db_path
 export const investigation: Investigation = {
   id: 1,
   ref: 'INV-0001',
-  title: 'September cloud bill up 38%',
-  problem_statement: 'Why did the cloud bill rise 38% in September when traffic was flat?',
+  title: 'Why did calls go up 30% in October when sales stayed the same?',
+  problem_statement: 'Calls to the call center went up 30% in October, from 2,400 to 3,120. Sales stayed the same. Why?',
   status: 'investigating',
-  conclusion: 'Debug logging requested for payments only reached every service and drove most of the increase.',
+  conclusion:
+    'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.',
   conclusion_confidence: 'high',
   conclusion_rationale:
-    'The change, the pricing page and the billing export agree; the remaining 29% is still open.',
+    "The billing team's notice and the call log agree. Whether long waits cost any sales is still open.",
   conclusion_verification: 'ai_generated',
   conclusion_supporting_claims: ['C-001'],
   conclusion_contradicting_claims: [],
@@ -56,7 +58,7 @@ export const summaries: InvestigationSummary[] = [
   {
     id: 1,
     ref: 'INV-0001',
-    title: 'September cloud bill up 38%',
+    title: 'Why did calls go up 30% in October when sales stayed the same?',
     status: 'investigating',
     conclusion_confidence: 'high',
     created_at: T0,
@@ -65,32 +67,45 @@ export const summaries: InvestigationSummary[] = [
     archived: false,
     is_active: true,
     counts: { evidence: 4, claims: 4, hypotheses: 3, questions: 3, open_questions: 1 },
+    conclusion:
+      'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.',
+    sources_total: 4,
+    sources_checked_by_you: 1,
+    findings_disagree: 1,
   },
   {
     id: 2,
     ref: 'INV-0002',
-    title: 'Checkout p99 doubled after the region move',
+    title: 'Why are help desk tickets taking longer to close this month?',
     status: 'blocked',
     conclusion_confidence: 'unknown',
-    created_at: '2026-09-29T10:00:00.000Z',
-    updated_at: '2026-10-01T16:00:00.000Z',
+    created_at: '2026-11-03T10:00:00.000Z',
+    updated_at: '2026-11-05T16:00:00.000Z',
     archived_at: '',
     archived: false,
     is_active: false,
     counts: { evidence: 2, claims: 1, hypotheses: 0, questions: 1, open_questions: 1 },
+    conclusion: '',
+    sources_total: 2,
+    sources_checked_by_you: 0,
+    findings_disagree: 0,
   },
   {
     id: 3,
     ref: 'INV-0003',
-    title: '31 former employees still have active SSO accounts',
+    title: 'Why was March payroll $18k over budget?',
     status: 'archived',
     conclusion_confidence: 'high',
-    created_at: '2026-09-28T15:00:00.000Z',
-    updated_at: '2026-09-30T11:00:00.000Z',
-    archived_at: '2026-09-30T11:00:00.000Z',
+    created_at: '2026-11-02T15:00:00.000Z',
+    updated_at: '2026-11-04T11:00:00.000Z',
+    archived_at: '2026-11-04T11:00:00.000Z',
     archived: true,
     is_active: false,
     counts: { evidence: 1, claims: 1, hypotheses: 0, questions: 0, open_questions: 0 },
+    conclusion: 'Two new hires started a month earlier than the budget assumed.',
+    sources_total: 1,
+    sources_checked_by_you: 1,
+    findings_disagree: 0,
   },
 ]
 
@@ -119,32 +134,32 @@ function ev(n: number, partial: Partial<Evidence>): Evidence {
 
 export const evidence: Evidence[] = [
   ev(1, {
-    title: 'Service chart default log level set to debug',
+    title: 'Notice dated October 4: 1,900 customers were charged twice',
     summary:
-      "A platform change merged on August 28 changed the shared service chart's default log level from info to debug, so every service picks up debug logging at its next deploy.",
-    source_type: 'code',
-    source_ref: 'platform-charts/service/values.yaml',
-    source_label: 'Platform Helm chart',
+      'The billing team wrote to all managers on October 4. A mistake on October 3 charged 1,900 customers twice. Refunds were promised within two weeks.',
+    source_type: 'file',
+    source_ref: 'Shared drive, Billing, notice-2026-10-04.pdf',
+    source_label: 'Email from the billing team',
     has_raw_detail: true,
     claim_links: [{ ref: 'C-001', relation: 'supports' }],
   }),
   ev(2, {
-    title: 'Logs are billed per GB ingested in the month',
-    summary: "The provider's pricing page bills logs per GB ingested, with no volume discount below 500 TB a month, so a jump in log volume lands on the same month's bill in full.",
+    title: 'Sales were $510k in September and $512k in October',
+    summary: 'The October sales report shows $510k of sales in September and $512k in October. The number of orders was 4,080 and 4,100.',
     source_type: 'documentation',
-    source_ref: 'Provider pricing page, Logs and monitoring section',
-    source_label: 'Provider pricing page',
+    source_ref: 'October sales report, page 2, Sales by month',
+    source_label: 'October sales report',
     claim_links: [{ ref: 'C-002', relation: 'supports' }],
     hypothesis_links: [{ ref: 'H-003', relation: 'supports' }],
   }),
   ev(3, {
-    title: 'Log ingestion is 71% of the September increase',
+    title: 'Calls about a bill: 400 in September, 1,070 in October',
     summary:
-      'In the billing export, log ingestion rose from $12,100 to $108,500, which is $96,400 of the $135,800 month-over-month increase, spread across 214 services with none above 4% of the total; compute and network moved less than 2%.',
+      'In the call log, calls about a bill went from 400 in September to 1,070 in October. Calls to buy went from 2,000 to 2,050. The average wait was 40 seconds in both months.',
     source_type: 'sql_query',
-    source_label: 'Billing export query',
+    source_label: 'Call log',
     has_raw_detail: true,
-    metadata: '{"affected_records":214}',
+    metadata: '{"calls_counted":5520}',
     claim_links: [
       { ref: 'C-002', relation: 'supports' },
       { ref: 'C-003', relation: 'contradicts' },
@@ -153,10 +168,10 @@ export const evidence: Evidence[] = [
     hypothesis_links: [{ ref: 'H-002', relation: 'contradicts' }],
   }),
   ev(4, {
-    title: 'Head of platform: debug was requested for payments only',
-    summary: 'The head of platform engineering said the payments team asked for debug logs for the card network audit, and the change went in as the chart default instead of in the payments values file.',
+    title: 'Head of billing: the mistake was on October 3 only',
+    summary: 'The head of billing said the bills sent on October 3 went out twice because a file was loaded two times. Bills sent on other days were not affected.',
     source_type: 'user_statement',
-    source_label: 'Head of platform, in person',
+    source_label: 'Head of billing, in person',
     created_by: human,
     verification: 'human_verified',
     claim_links: [{ ref: 'C-001', relation: 'supports' }],
@@ -173,10 +188,9 @@ export const claims: Claim[] = [
     id: 1,
     ref: 'C-001',
     investigation_ref: 'INV-0001',
-    statement:
-      'A shared platform default moved every service to debug logging on August 28; only payments asked for it.',
+    statement: 'A billing mistake on October 3 charged some customers twice.',
     confidence: 'high',
-    confidence_rationale: 'The chart diff and the head of platform agree.',
+    confidence_rationale: 'The notice and the head of billing agree.',
     status: 'active',
     verification: 'human_verified',
     superseded_by: '',
@@ -189,9 +203,9 @@ export const claims: Claim[] = [
     id: 2,
     ref: 'C-002',
     investigation_ref: 'INV-0001',
-    statement: 'Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.',
+    statement: 'The extra calls were about a bill. About the same number of people called to buy.',
     confidence: 'high',
-    confidence_rationale: 'The pricing model and the billing export agree.',
+    confidence_rationale: 'The call log and the sales report agree.',
     status: 'active',
     verification: 'ai_generated',
     superseded_by: '',
@@ -204,7 +218,7 @@ export const claims: Claim[] = [
     id: 3,
     ref: 'C-003',
     investigation_ref: 'INV-0001',
-    statement: 'The increase comes from the August autoscaling change adding compute nodes.',
+    statement: 'The extra calls were people calling to buy.',
     confidence: 'low',
     confidence_rationale: '',
     status: 'superseded',
@@ -219,7 +233,7 @@ export const claims: Claim[] = [
     id: 4,
     ref: 'C-004',
     investigation_ref: 'INV-0001',
-    statement: "The payments team's own debug logs are most of the $96,400.",
+    statement: 'Callers waited too long and hung up before buying.',
     confidence: 'low',
     confidence_rationale: '',
     status: 'disputed',
@@ -237,7 +251,7 @@ export const hypotheses: Hypothesis[] = [
     id: 1,
     ref: 'H-001',
     investigation_ref: 'INV-0001',
-    statement: "The new tracing agent may also be shipping some services' logs twice.",
+    statement: 'Customers who were charged twice are less likely to buy again.',
     confidence: 'medium',
     rationale: '',
     status: 'open',
@@ -252,9 +266,9 @@ export const hypotheses: Hypothesis[] = [
     id: 2,
     ref: 'H-002',
     investigation_ref: 'INV-0001',
-    statement: 'Data transfer from the region move doubled the network line.',
+    statement: 'A new ad brought in more callers.',
     confidence: 'low',
-    rationale: 'Network spend fell $600 month over month.',
+    rationale: 'Calls to buy barely moved: 2,000 in September, 2,050 in October.',
     status: 'disproven',
     verification: 'ai_generated',
     superseded_by: '',
@@ -267,7 +281,7 @@ export const hypotheses: Hypothesis[] = [
     id: 3,
     ref: 'H-003',
     investigation_ref: 'INV-0001',
-    statement: 'Services that pin their own log level were not affected, which is why 214 of 260 services show the jump.',
+    statement: 'People who called to buy bought about as often as in September.',
     confidence: 'medium',
     rationale: '',
     status: 'supported',
@@ -285,7 +299,7 @@ export const questions: Question[] = [
     id: 1,
     ref: 'Q-001',
     investigation_ref: 'INV-0001',
-    question: 'Can every service except payments go back to info level today?',
+    question: 'Have the customers who were charged twice been paid back?',
     status: 'open',
     resolution: '',
     defer_note: '',
@@ -298,9 +312,9 @@ export const questions: Question[] = [
     id: 2,
     ref: 'Q-002',
     investigation_ref: 'INV-0001',
-    question: 'Which cost center does log ingestion bill to in the finance export?',
+    question: 'Do calls about a bill go to the same phone line as calls to buy?',
     status: 'resolved',
-    resolution: 'Platform shared services (CC-4100), so no product team saw the jump in its own showback (see E-003).',
+    resolution: 'Yes. Both go to the sales line, which is why the total went up (see E-003).',
     defer_note: '',
     resolved_at: T0,
     created_at: T0,
@@ -311,10 +325,10 @@ export const questions: Question[] = [
     id: 3,
     ref: 'Q-003',
     investigation_ref: 'INV-0001',
-    question: 'Should finance restate September showback so the debug logs are charged to the teams that produced them?',
+    question: 'Should we call the customers who were charged twice to say sorry?',
     status: 'deferred',
     resolution: '',
-    defer_note: 'Waiting for the quarter close on October 10.',
+    defer_note: 'Waiting for the refund list on November 10.',
     resolved_at: '',
     created_at: T0,
     updated_at: T0,
@@ -339,9 +353,9 @@ export const activity: Activity[] = [
     actor: human,
     action: 'conclusion.update',
     target_ref: 'INV-0001',
-    summary: 'conclusion, confidence, rationale',
+    summary: 'Updated conclusion of INV-0001 (confidence high)',
     note: '',
-    created_at: '2026-10-02T08:30:00.000Z',
+    created_at: '2026-11-06T08:30:00.000Z',
   },
   {
     id: 20,
@@ -349,9 +363,9 @@ export const activity: Activity[] = [
     actor: claude,
     action: 'evidence.add',
     target_ref: 'E-003',
-    summary: 'Log ingestion is 71% of the September increase',
+    summary: 'Calls about a bill: 400 in September, 1,070 in October',
     note: '',
-    created_at: '2026-09-30T12:00:00.000Z',
+    created_at: '2026-11-04T12:00:00.000Z',
   },
   {
     id: 1,
@@ -359,7 +373,7 @@ export const activity: Activity[] = [
     actor: human,
     action: 'investigation.create',
     target_ref: 'INV-0001',
-    summary: 'September cloud bill up 38%',
+    summary: 'Why did calls go up 30% in October when sales stayed the same?',
     note: '',
     created_at: T0,
   },
@@ -375,14 +389,14 @@ export const detail: InvestigationDetail = {
   review_bases: [...claims, ...hypotheses].map((record) => ({ ref: record.ref, basis: `fixture-${record.ref}` })),
 }
 
-/** A brand-new investigation with nothing in it yet. */
+/** A brand-new question with nothing in it yet. */
 export function emptyDetail(inv: Partial<Investigation> = {}): InvestigationDetail {
   return {
     investigation: {
       ...investigation,
       id: 9,
       ref: 'INV-0009',
-      title: 'New investigation',
+      title: 'Why did returns double in May?',
       problem_statement: '',
       status: 'new',
       conclusion: '',
@@ -421,6 +435,10 @@ export function summaryOf(inv: Investigation): InvestigationSummary {
     archived: inv.archived,
     is_active: inv.is_active,
     counts: { evidence: 0, claims: 0, hypotheses: 0, questions: 0, open_questions: 0 },
+    conclusion: inv.conclusion,
+    sources_total: 0,
+    sources_checked_by_you: 0,
+    findings_disagree: 0,
   }
 }
 
@@ -436,7 +454,7 @@ export const counts: Counts = {
 }
 
 export const backupInfo: BackupInfo = {
-  path: 'C:\\Users\\Ada\\Documents\\casebook-backup-2026-10-02.db',
+  path: 'C:\\Users\\Ada\\Documents\\casebook-backup-2026-11-06.db',
   size_bytes: 245760,
   schema_version: 1,
   created_at: T_RECENT,
@@ -445,7 +463,7 @@ export const backupInfo: BackupInfo = {
 
 export const restoreResult: RestoreResult = {
   source_path: backupInfo.path,
-  safety_copy_path: 'C:\\Users\\Ada\\AppData\\Local\\Casebook\\backups\\casebook-pre-restore-20261002T090000Z.db',
+  safety_copy_path: 'C:\\Users\\Ada\\AppData\\Local\\Casebook\\backups\\casebook-pre-restore-20261106T090000Z.db',
   source_schema_version: 1,
   counts: { ...counts, activity: 49 },
 }

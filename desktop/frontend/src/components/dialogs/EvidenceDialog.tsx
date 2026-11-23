@@ -254,12 +254,12 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
   const rawField = (
     <TextArea
       ref={rawRef}
-      label="Raw detail (optional)"
+      label="Source detail (optional)"
       hint={capture?.detail}
       value={values.raw_detail}
       onChange={set('raw_detail')}
       error={fieldErrors.raw_detail}
-      note={rawState === 'failed' ? 'The stored raw detail could not be loaded, so it cannot be edited now.' : nearLimit(values.raw_detail, LIMITS.rawDetail)}
+      note={rawState === 'failed' ? 'The saved source detail could not be loaded, so it cannot be edited now.' : nearLimit(values.raw_detail, LIMITS.rawDetail)}
       disabled={rawState === 'loading' || rawState === 'failed'}
       rows={6}
       spellCheck={false}
@@ -271,7 +271,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
 
   return (
     <Dialog
-      title={existing ? `Edit source ${existing.ref}` : 'Add source'}
+      title={existing ? 'Edit source' : 'Add source'}
       onClose={onClose}
       onSubmit={() => void submit()}
       submitLabel={existing ? 'Save changes' : 'Add source'}
@@ -319,7 +319,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
             error={fieldErrors.source_type}
           />
           <TextField
-            label="Captured (optional)"
+            label="As of (optional)"
             hint={existing ? 'Leave empty to use the time it was added' : 'Leave empty to use now'}
             type="datetime-local"
             value={values.captured}
@@ -329,14 +329,14 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
         </div>
         <TextField
           label="Where it came from (optional)"
-          hint="Like Billing export query"
+          hint="Like Call log or Email from the billing team"
           value={values.source_label}
           onChange={set('source_label')}
           error={fieldErrors.source_label}
           note={nearLimit(values.source_label, LIMITS.sourceLabel)}
         />
         <TextField
-          label="Reference (optional)"
+          label="Where to find it (optional)"
           hint={capture?.reference}
           value={values.source_ref}
           onChange={set('source_ref')}
@@ -358,26 +358,26 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
               strokeWidth={1.75}
               aria-hidden="true"
             />
-            Capture details guide
+            What to write down
           </Button>
           {guideOpen && (
             <div id="evidence-capture-guide-content" className="evidence-capture-guide-content">
-              <p>Keep enough source detail for someone to check this later. Use what applies; observations do not need numerical context.</p>
+              <p>Write down enough for someone else to find this source and check it later. Use what applies.</p>
               <ul>
-                <li>For a comparison, record the period, comparison period, scope and filters.</li>
-                <li>For a metric, record its definition, units and denominator. Distinguish percent from percentage points.</li>
-                <li>Keep the exact sheet and range, page, section or query in Reference, and a concise source excerpt in Raw detail.</li>
+                <li>When two numbers are compared, say which months or dates, and what was counted and what was left out.</li>
+                <li>For a number, say what it counts and in what unit: calls, dollars, days.</li>
+                <li>Put the exact page, sheet or report under Where to find it, and the lines that matter under Source detail.</li>
               </ul>
               {capture && <>
-                <p className="evidence-capture-example-label">Illustrative {sourceTypeLabels[values.source_type].toLowerCase()} example. Nothing is added to your evidence.</p>
+                <p className="evidence-capture-example-label">A made-up example. Nothing is added to your sources.</p>
                 <dl>
-                  <dt>Reference</dt>
+                  <dt>Where to find it</dt>
                   <dd>{capture.exampleReference}</dd>
-                  <dt>Raw detail</dt>
+                  <dt>Source detail</dt>
                   <dd>{capture.exampleDetail}</dd>
                 </dl>
               </>}
-              <p>Advanced metadata can hold optional keys such as <code>period</code>, <code>comparison_period</code>, <code>scope</code>, <code>filters</code>, <code>metric_definition</code>, <code>units</code> and <code>denominator</code>. Preserve any keys already there. Keep secrets and transcripts out.</p>
+              <p>Keep passwords and whole chat histories out.</p>
             </div>
           )}
         </div>
@@ -395,7 +395,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
               }}
             >
               <ChevronDown className="disclosure-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-              Add raw detail
+              Add source detail
             </Button>
           </div>
         )}
@@ -413,13 +413,13 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
-              Advanced
+              For your AI
             </Button>
           </div>
           {advancedOpen && (
             <TextArea
-              label="Metadata (optional)"
-              hint={'A JSON object, like {"affected_records": 22}'}
+              label="Extra details (optional)"
+              hint={'Your AI keeps extra details here as JSON, like {"customers": 1900}. Leave it as it is unless you know the format.'}
               value={values.metadata}
               onChange={set('metadata')}
               error={fieldErrors.metadata}

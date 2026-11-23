@@ -1,8 +1,8 @@
 // Grouped search results.
-// Hits are grouped under their investigation in rank order (a group appears
-// where its best hit ranks). Each group header shows the title, the ref, the
-// "Your AI's current case" marker and the Archived tag; each hit is a button with its kind
-// icon, record ref and snippet. Snippets are built from text segments and
+// Hits are grouped under their question in rank order (a group appears
+// where its best hit ranks). Each group header shows the title, the
+// "Your AI's current question" marker and the Archived tag; each hit is a button with its kind
+// icon and word (Finding, Source) and the snippet. Codes show only when codes are on. Snippets are built from text segments and
 // <mark> elements only, so stored text can never become markup.
 // Activating a hit opens its investigation and, for evidence, claims,
 // hypotheses and questions, that record (select with openRecord).
@@ -120,7 +120,7 @@ export function SearchResults({ query, hits, handle }: SearchResultsProps) {
                     >
                       <span className="search-hit-line">
                         <Icon className="search-hit-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-                        <span className="sr-only">{kind.label} </span>
+                        <span className="search-hit-kind">{kind.label} </span>
                         <span className="search-hit-ref tabular">{hit.record_ref}</span>
                       </span>
                       <span className="search-hit-snippet">

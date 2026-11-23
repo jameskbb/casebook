@@ -7,6 +7,7 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { claude, detail, human, summaries } from '../../test/fixtures'
 import { act as row, manyActivity } from '../../test/fixtures.detail'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { ActivityList } from './ActivityList'
 
@@ -30,7 +31,7 @@ function renderList(activities: Activity[], onOpenRef?: (ref: string) => void) {
   )
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <Harness onOpenRef={onOpenRef} />
       </AppDataProvider>
     </ToastProvider>,
@@ -44,15 +45,43 @@ describe('ActivityList', () => {
 
   it('reads each row as a plain sentence with the actor tooltip', async () => {
     renderList([
-      row(claude, 'evidence.add', 'E-005', 'Trace store query'),
-      row(human, 'question.resolve', 'Q-001', 'Intentional business logic.'),
+      row(claude, 'evidence.add', 'E-005', 'Call log'),
+      row(human, 'question.resolve', 'Q-001', 'Yes, says the head of billing.'),
     ])
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Claude Code (AI) added source E-005')
-    expect(items[1]).toHaveTextContent('You (Casebook) resolved Q-001')
-    expect(within(items[0]).getByText('Claude Code (AI)')).toHaveAttribute('title', 'AI, claude-code')
-    expect(within(items[1]).getByText('You (Casebook)')).toHaveAttribute('title', 'Human, casebook-ui')
+    expect(items[0]).toHaveTextContent('Claude Code added the source E-005')
+    expect(items[1]).toHaveTextContent('You answered a follow-up question Q-001')
+    // The follow-up question's code is there for an AI, but hidden from a reader with the other codes.
+    expect(within(items[1]).getByText('Q-001')).toHaveClass('record-id')
+    expect(within(items[0]).getByText('Claude Code')).toHaveAttribute('title', 'AI, claude-code')
+    expect(within(items[1]).getByText('You')).toHaveAttribute('title', 'Person, casebook-ui')
+  })
+
+  it('names a source or finding by its words, with its code kept for when codes are on', async () => {
+    const onOpenRef = vi.fn()
+    const user = userEvent.setup()
+    const d: InvestigationDetail = { ...detail, recent_activity: [row(claude, 'evidence.add', 'E-003', detail.evidence[2].title), row(human, 'claim.update', 'C-001', 'Updated claim C-001: verification human_verified')] }
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [summaries[0]], getInvestigationDetail: async () => d }))
+    function Named() {
+      const { detail: loaded } = useAppData()
+      if (!loaded) return null
+      const names = new Map([[loaded.evidence[2].ref, loaded.evidence[2].title], [loaded.claims[0].ref, loaded.claims[0].statement]])
+      return <ActivityList activities={loaded.recent_activity} onOpenRef={onOpenRef} nameOf={(ref) => names.get(ref)} />
+    }
+    render(<ToastProvider><AppDataProvider><OpenAtLaunch /><Named /></AppDataProvider></ToastProvider>)
+    const history = await screen.findByRole('region', { name: 'How we got here' })
+    const items = within(history).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Claude Code added the source E-003 Calls about a bill: 400 in September, 1,070 in October')
+    expect(within(items[0]).getByText('E-003')).toHaveClass('record-id')
+    // The second line would only repeat the title, so it is left out.
+    expect(items[0].querySelector('.activity-summary')).toBeNull()
+    // A code inside the second line is hidden the same way.
+    const marked = items[1].querySelector('.activity-summary') as HTMLElement
+    expect(marked).toHaveTextContent('Marked C-001: You checked this')
+    expect(within(marked).getByText('C-001')).toHaveClass('record-id')
+    await user.click(within(items[0]).getByRole('button', { name: /Calls about a bill/ }))
+    expect(onOpenRef).toHaveBeenCalledWith('E-003')
   })
 
   it('shows the engine summary on a second line as text, omitted when empty or equal to the target', async () => {
@@ -74,9 +103,12 @@ describe('ActivityList', () => {
     renderList([row(claude, 'claim.update', 'C-001', raw), row(human, 'active.set', 'INV-0001', 'Set active investigation to INV-0001')])
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    const reset = within(items[0]).getByText('Edited finding C-001 (statement). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
+    const reset = items[0].querySelector('.activity-summary') as HTMLElement
+    expect(reset).toHaveTextContent('Edited finding C-001 (wording). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
     expect(reset).toHaveAttribute('title', raw)
-    expect(within(items[1]).getByText("Made INV-0001 your AI's current question")).toHaveAttribute('title', 'Set active investigation to INV-0001')
+    // The first line already says it, so the second is left out.
+    expect(items[1]).toHaveTextContent("You made this your AI's current question")
+    expect(items[1].querySelector('.activity-summary')).toBeNull()
     expect(history).not.toHaveTextContent('ai_generated')
   })
 

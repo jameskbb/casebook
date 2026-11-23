@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from './api/api'
 import { mockApi } from './test/mockApi'
+import { openQuestionNow } from './test/openQuestion'
 import App from './App'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -35,7 +36,11 @@ describe('App live refresh banner', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
-    expect(screen.getByRole('heading', { level: 1, name: 'September cloud bill up 38%' })).toBeInTheDocument()
+    openQuestionNow()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(screen.getByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })).toBeInTheDocument()
     expect(screen.queryByText(BANNER)).toBeNull()
 
     fail = true

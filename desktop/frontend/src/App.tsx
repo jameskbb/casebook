@@ -1,6 +1,8 @@
-// The app shell: providers, the sidebar and the main pane. App owns the New
-// investigation dialog so the sidebar, the empty state and the Ctrl+N
-// shortcut all open the same one, and binds the global keyboard map.
+// The app shell: providers, the sidebar and the main pane. The main pane
+// shows the open question, else Home (what there is to check), else the
+// first-open screen when there are no questions. App owns the New question
+// dialog so the sidebar, the empty state and the Ctrl+N shortcut all open the
+// same one, and binds the global keyboard map.
 import { useCallback, useState } from 'react'
 import { AppDataProvider, useAppData } from './state/appData'
 import { DirtyGuardProvider } from './state/dirtyGuard'
@@ -13,6 +15,7 @@ import { DataOpsProvider, useDataOps } from './components/sidebar/DataOps'
 import { DetailView } from './components/detail/DetailView'
 import { NewInvestigationDialog } from './components/dialogs/NewInvestigationDialog'
 import { EmptyMain } from './components/EmptyMain'
+import { Home } from './components/home/Home'
 import { StartupError } from './components/StartupError'
 import './App.css'
 
@@ -57,7 +60,7 @@ function Shell() {
   } else if (listStatus === 'ready' && investigations.length === 0) {
     content = <EmptyMain onNew={openNew} onImport={() => void dataOps.importInvestigation()} />
   } else if (listStatus === 'ready') {
-    content = <p className="main-quiet">Choose a question from the list.</p>
+    content = <Home />
   }
 
   return (

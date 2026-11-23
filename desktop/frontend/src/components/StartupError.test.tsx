@@ -33,7 +33,7 @@ describe('StartupError', () => {
       ),
     ).toBeInTheDocument()
     const buttons = screen.getAllByRole('button')
-    expect(buttons.map((b) => b.textContent)).toEqual(['Open data folder', 'Copy path', 'Close Casebook'])
+    expect(buttons.map((b) => b.textContent)).toEqual(['Open data folder', 'Copy location', 'Close Casebook'])
     expect(screen.queryByRole('button', { name: /Restore from backup/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
     expect(mocks.api.listInvestigations).not.toHaveBeenCalled()
@@ -65,7 +65,7 @@ describe('StartupError', () => {
     const buttons = screen.getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual([
       'Open data folder',
-      'Copy path',
+      'Copy location',
       'Restore from backup...',
       'Close Casebook',
     ])
@@ -101,9 +101,9 @@ describe('StartupError', () => {
     expect(await screen.findByText(PATH)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Open data folder' }))
     expect(mocks.api.openDataFolder).toHaveBeenCalledTimes(1)
-    await user.click(screen.getByRole('button', { name: 'Copy path' }))
+    await user.click(screen.getByRole('button', { name: 'Copy location' }))
     expect(mocks.api.copyDataLocation).toHaveBeenCalledTimes(1)
-    expect(await screen.findByText('Path copied to the clipboard.')).toBeInTheDocument()
+    expect(await screen.findByText('Location copied to the clipboard.')).toBeInTheDocument()
   })
 
   it('says so when the folder cannot be opened', async () => {

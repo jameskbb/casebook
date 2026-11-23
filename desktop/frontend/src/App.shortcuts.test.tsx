@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from './api/api'
 import { mockApi } from './test/mockApi'
+import { openQuestion } from './test/openQuestion'
 import App from './App'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -17,8 +18,9 @@ function setPlatform(value: string) {
 async function renderApp() {
   const user = userEvent.setup()
   render(<App />)
-  await screen.findByRole('heading', { level: 1, name: 'September cloud bill up 38%' })
-  const search = screen.getByRole('searchbox', { name: 'Search' })
+  await openQuestion()
+  await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })
+  const search = screen.getByRole('searchbox', { name: 'Search answers and sources' })
   return { user, search }
 }
 

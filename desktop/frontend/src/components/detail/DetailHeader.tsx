@@ -1,8 +1,8 @@
-// The sticky 56px detail header: ref,
-// title and Answered or No answer yet on the left; on the right, 8px apart, the AI
-// toggle, Copy for your AI (secondary), Share summary (the one primary
-// action) and the More menu. The title is
-// the page's h1 and takes focus after an investigation is created. The
+// The sticky 56px header: the title and Answered or No answer yet on the
+// left (the question's code too, when codes are on); on the right, 8px
+// apart, the AI toggle, Copy for your AI and the More menu. Share the answer
+// lives in the answer panel. The title is
+// the page's h1 and takes focus after a question is created. The
 // title truncates first; the right cluster never wraps or shrinks, so the
 // header holds at the 640px minimum main pane.
 import { useEffect, useRef, type ReactNode } from 'react'
@@ -10,7 +10,6 @@ import type { Investigation } from '../../api/types'
 import { ActiveToggle } from './ActiveToggle'
 import { CopyContextButton } from './CopyContextButton'
 import { MoreMenu } from './MoreMenu'
-import { ShareSummaryButton } from './ShareSummaryButton'
 import { AnswerState } from '../record/StatusLabel'
 import './DetailHeader.css'
 
@@ -57,7 +56,6 @@ export function DetailHeader({
         <ActiveToggle investigation={inv} />
         {rightExtra}
         <CopyContextButton investigationRef={inv.ref} />
-        <ShareSummaryButton investigationRef={inv.ref} title={inv.title} />
         <MoreMenu investigation={inv} />
         {trailing}
       </div>

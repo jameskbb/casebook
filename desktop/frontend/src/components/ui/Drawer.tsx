@@ -11,18 +11,21 @@ import { ArrowLeft, X, type LucideIcon } from 'lucide-react'
 import { pushLayer } from '../../lib/layers'
 import { trapFocus } from '../../lib/focusTrap'
 import { Button } from './Button'
+import { RecordId } from '../record/RecordId'
 import { IconButton } from './IconButton'
 import './Drawer.css'
 
 export interface DrawerBack {
-  /** The ref shown in "Back to C-001". */
+  /** The code of the record Back returns to; hidden with the other codes. */
   ref: string
   onClick: () => void
 }
 
 export interface DrawerProps {
-  /** "Claim C-001", "Evidence E-003". */
+  /** "Finding" or "Source". */
   heading: string
+  /** The record's code, shown after the heading when codes are on. */
+  recordId?: string
   icon?: LucideIcon
   /** Tints the heading icon with the kind hue. */
   kind?: 'evidence' | 'claim' | 'hypothesis'
@@ -34,7 +37,7 @@ export interface DrawerProps {
   children?: ReactNode
 }
 
-export function Drawer({ heading, icon: Icon, kind, back, onClose, contentKey, children }: DrawerProps) {
+export function Drawer({ heading, recordId, icon: Icon, kind, back, onClose, contentKey, children }: DrawerProps) {
   const headingId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -63,7 +66,8 @@ export function Drawer({ heading, icon: Icon, kind, back, onClose, contentKey, c
         <div className="drawer-header">
           {back && (
             <Button variant="ghost" icon={ArrowLeft} className="drawer-back" onClick={back.onClick}>
-              {`Back to ${back.ref}`}
+              Back{' '}
+              <RecordId>to {back.ref}</RecordId>
             </Button>
           )}
           <div className="drawer-title-row">
@@ -77,6 +81,12 @@ export function Drawer({ heading, icon: Icon, kind, back, onClose, contentKey, c
             )}
             <h2 className="drawer-heading tabular" id={headingId} ref={headingRef} tabIndex={-1}>
               {heading}
+              {recordId && (
+                <>
+                  {' '}
+                  <RecordId>{recordId}</RecordId>
+                </>
+              )}
             </h2>
             <IconButton icon={X} label="Close" onClick={() => onCloseRef.current()} />
           </div>

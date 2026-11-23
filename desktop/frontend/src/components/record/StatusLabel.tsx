@@ -6,6 +6,7 @@
 import { CircleCheck, CirclePause, Lightbulb } from 'lucide-react'
 import type { ClaimStatus, HypothesisStatus, QuestionStatus } from '../../api/types'
 import { claimStatusLabels, hypothesisStatusLabels } from '../../lib/labels'
+import { RecordId } from './RecordId'
 import { DisputedMark } from './VerificationBadge'
 import './StatusLabel.css'
 
@@ -57,7 +58,17 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
       )
     case 'superseded': {
       const by = props.supersededBy
-      return <span className="record-status">{by ? `Replaced by ${by}` : claimStatusLabels.superseded}</span>
+      return (
+        <span className="record-status">
+          {claimStatusLabels.superseded}
+          {by && (
+            <>
+              {' '}
+              <RecordId>by {by}</RecordId>
+            </>
+          )}
+        </span>
+      )
     }
     case 'rejected':
     case 'disproven':
@@ -66,14 +77,14 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
       return (
         <span className="record-status record-status-resolved">
           <CircleCheck {...icon} />
-          Resolved
+          Answered
         </span>
       )
     case 'deferred':
       return (
         <span className="record-status record-status-deferred">
           <CirclePause {...icon} />
-          Deferred
+          Set aside
         </span>
       )
     default:

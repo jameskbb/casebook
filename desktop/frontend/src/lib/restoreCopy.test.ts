@@ -12,8 +12,8 @@ describe('restore copy', () => {
   })
 
   it('describes a backup with plural counts', () => {
-    expect(restoreSummary('casebook-backup-2026-10-02.db', backupInfo)).toBe(
-      `casebook-backup-2026-10-02.db, saved ${formatAbsolute(backupInfo.created_at)}, contains 3 questions, 7 sources, 9 findings and 5 follow-up questions.`,
+    expect(restoreSummary('casebook-backup-2026-11-06.db', backupInfo)).toBe(
+      `casebook-backup-2026-11-06.db, saved ${formatAbsolute(backupInfo.created_at)}, contains 3 questions, 7 sources, 9 findings and 5 follow-up questions.`,
     )
   })
 

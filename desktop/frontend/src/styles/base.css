@@ -118,3 +118,21 @@ button:disabled,
     transition-delay: 0ms !important;
   }
 }
+
+/* Record codes (C-001, E-004, INV-0001) are for an AI, not a reader. They
+   stay in the page and show only after "Show the codes your AI uses". */
+:root:not([data-show-ids]) :is(
+  .record-id,
+  .row-ref,
+  .inv-row-ref,
+  .detail-header-ref,
+  .search-group-ref,
+  .search-hit-ref,
+  .used-by-ref,
+  .evidence-block-ref,
+  .statement-link-ref,
+  .choice-ref,
+  .sample-ref
+) {
+  display: none;
+}

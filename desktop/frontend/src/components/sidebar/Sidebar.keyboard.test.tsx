@@ -30,11 +30,14 @@ function renderSidebar() {
   )
 }
 
+/** The question rows in the order they show: No answer yet, then Answered. */
 async function rows() {
   const nav = await screen.findByRole('navigation', { name: 'Questions' })
-  await within(nav).findByRole('button', { current: true })
-  const list = within(nav).getByRole('list', { name: 'Question list' })
-  return within(list).getAllByRole('button')
+  await within(nav).findByRole('list', { name: 'Answered' })
+  return [
+    ...within(within(nav).getByRole('list', { name: 'No answer yet' })).getAllByRole('button'),
+    ...within(within(nav).getByRole('list', { name: 'Answered' })).getAllByRole('button'),
+  ]
 }
 
 describe('Sidebar keyboard', () => {
@@ -42,12 +45,17 @@ describe('Sidebar keyboard', () => {
     Object.assign(mocks.api, mockApi({ search: async () => hits }))
   })
 
-  it('makes the list one Tab stop on the selected row', async () => {
+  it('makes both groups one Tab stop, on the first row until one is selected', async () => {
+    const user = userEvent.setup()
     renderSidebar()
     const r = await rows()
-    expect(r).toHaveLength(3)
+    // The help desk question has no answer, so it comes first; the answered ones follow.
+    expect(r.map((b) => b.dataset.ref)).toEqual(['INV-0002', 'INV-0001', 'INV-0003'])
     expect(r.map((b) => b.tabIndex)).toEqual([0, -1, -1])
-    expect(r[0]).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /^To check/ })).toHaveAttribute('aria-current', 'true')
+    await user.click(r[1])
+    expect(r[1]).toHaveAttribute('aria-current', 'true')
+    expect(r.map((b) => b.tabIndex)).toEqual([-1, 0, -1])
   })
 
   it('moves focus with Up, Down, Home and End and selects with Enter', async () => {
@@ -59,6 +67,7 @@ describe('Sidebar keyboard', () => {
     expect(r[1]).toHaveFocus()
     expect(r[1].tabIndex).toBe(0)
     expect(r[0].tabIndex).toBe(-1)
+    // Down crosses from No answer yet into Answered, and stops at the last row.
     await user.keyboard('{ArrowDown}{ArrowDown}')
     expect(r[2]).toHaveFocus()
     await user.keyboard('{ArrowUp}')
@@ -68,7 +77,7 @@ describe('Sidebar keyboard', () => {
     await user.keyboard('{End}')
     expect(r[2]).toHaveFocus()
     await user.keyboard('{ArrowUp}{Enter}')
-    expect(screen.getByTestId('probe')).toHaveTextContent('selected:INV-0002')
+    expect(screen.getByTestId('probe')).toHaveTextContent('selected:INV-0001')
     expect(r[1]).toHaveAttribute('aria-current', 'true')
   })
 
@@ -76,8 +85,8 @@ describe('Sidebar keyboard', () => {
     const user = userEvent.setup()
     renderSidebar()
     await rows()
-    const field = screen.getByRole('searchbox', { name: 'Search' })
-    await user.type(field, 'debug')
+    const field = screen.getByRole('searchbox', { name: 'Search answers and sources' })
+    await user.type(field, 'billing')
     const results = await screen.findByRole('region', { name: 'Search results' })
     const buttons = within(results).getAllByRole('button')
     expect(buttons.map((b) => b.tabIndex)).toEqual([0, -1, -1])

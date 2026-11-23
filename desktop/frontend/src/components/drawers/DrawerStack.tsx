@@ -15,6 +15,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { FileText, Lightbulb, Quote, type LucideIcon } from 'lucide-react'
 import type { InvestigationDetail } from '../../api/types'
 import { useAppData } from '../../state/appData'
+import { RecordId } from '../record/RecordId'
 import { useRequestNavigate } from '../../state/dirtyGuard'
 import { Drawer } from '../ui/Drawer'
 import { EvidenceDrawer } from './EvidenceDrawer'
@@ -170,7 +171,8 @@ function TopDrawer({ detail, refs, push, back, closeAll }: TopDrawerProps) {
   }
   return (
     <Drawer
-      heading={`${meta.noun} ${top}`}
+      heading={meta.noun}
+      recordId={top}
       icon={meta.icon}
       kind={kind}
       back={previous ? { ref: previous, onClick: back } : undefined}
@@ -183,7 +185,11 @@ function TopDrawer({ detail, refs, push, back, closeAll }: TopDrawerProps) {
 }
 
 function NotFound({ refText }: { refText: string }) {
-  return <p className="drawer-empty">{`${refText} was not found. It may have changed in another app.`}</p>
+  return (
+    <p className="drawer-empty">
+      This was not found. It may have changed in another app. <RecordId>{refText}</RecordId>
+    </p>
+  )
 }
 
 export function useDrawers(): DrawerStackApi {

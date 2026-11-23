@@ -59,7 +59,7 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
 
   return (
     <Dialog
-      title={question ? `Edit follow-up question ${question.ref}` : 'Add follow-up question'}
+      title={question ? 'Edit follow-up question' : 'Add follow-up question'}
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}

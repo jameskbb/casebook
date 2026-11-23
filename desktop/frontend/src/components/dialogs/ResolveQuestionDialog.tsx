@@ -28,7 +28,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
   const submit = async () => {
     if (busy) return
     if (text.trim() === '') {
-      setError('Write the answer before resolving.')
+      setError('Write the answer first.')
       return
     }
     setBusy(true)
@@ -52,12 +52,12 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
 
   return (
     <Dialog
-      title={`Resolve ${question.ref}`}
+      title="Answer this follow-up question"
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Resolve"
-      busyLabel="Resolving..."
+      submitLabel="Save answer"
+      busyLabel="Saving..."
       busy={busy}
       dirty={text !== ''}
       summary={
@@ -70,7 +70,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
     >
       <p className="dialog-text dialog-quote">{question.question}</p>
       <TextArea
-        label="Resolution"
+        label="Answer"
         hint="What is the answer, and how do we know?"
         value={text}
         onChange={(v) => {

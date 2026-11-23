@@ -1,17 +1,13 @@
-// Fixtures for Plan 03 (drawers, record editing and record dialogs). Built
-// from fixtures.ts, which stays unchanged.
+// Fixtures for drawers, record editing and record dialogs, built from fixtures.ts.
 import type { Claim, Evidence, Hypothesis, InvestigationDetail, Question } from '../api/types'
 import { claims, detail, evidence, hypotheses, questions, T0 } from './fixtures'
 
-/** The billing export query stored as E-003's raw detail in the demo seed. */
-export const E003_RAW = `SELECT line_item,
-       SUM(CASE WHEN usage_month = '2026-09' THEN cost END)
-     - SUM(CASE WHEN usage_month = '2026-08' THEN cost END) AS delta_usd
-FROM billing.monthly_costs
-WHERE usage_month IN ('2026-08', '2026-09')
-GROUP BY line_item
-ORDER BY delta_usd DESC;
--- log_ingestion +96,400 | traces +29,800 | other +8,300 | compute +1,900 | network -600`
+/** The call counts stored as E-003's source detail. */
+export const E003_RAW = `Reason for the call    September    October
+Wanted to buy              2,000      2,050
+Asked about a bill           400      1,070
+All calls                  2,400      3,120
+Average wait          40 seconds  40 seconds`
 
 /** A raw detail of exactly 64 KiB (the engine maximum), many short lines. */
 export function bigRawDetail(): string {
@@ -36,8 +32,8 @@ export const bareEvidence: Evidence = {
   ...evidence[0],
   id: 9,
   ref: 'E-009',
-  title: 'Screenshot of the billing console',
-  summary: 'The billing console lists log ingestion as the largest line item.',
+  title: 'Photo of the call center wall board',
+  summary: 'The wall board showed 3,120 calls for October.',
   source_type: 'manual_observation',
   source_ref: '',
   source_label: '',
@@ -77,7 +73,7 @@ export function question(partial: Partial<Question>): Question {
 export const newClaim: Claim = claim({
   id: 5,
   ref: 'C-005',
-  statement: 'The log level comes from the chart default.',
+  statement: 'The bills went out twice because a file was loaded two times.',
   confidence: 'medium',
   confidence_rationale: '',
   verification: 'human_verified',

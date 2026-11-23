@@ -86,7 +86,7 @@ export const INTERNAL_COPY =
   'Something went wrong and nothing was saved. Try again. If it keeps happening, back up your data and restart Casebook.'
 export const NO_ACTIVE_COPY = 'No question is selected. Choose one from the list.'
 export const CLIPBOARD_COPY = 'Could not copy to the clipboard. Try again.'
-export const DIALOG_COPY = 'Could not open the file window. Try again.'
+export const DIALOG_COPY = 'Could not open the window for choosing a file. Try again.'
 
 /** cleanMessage plus a closing period when the message has none. */
 export function asSentence(msg: string): string {

@@ -67,26 +67,56 @@ describe('people-facing copy', () => {
     expect(offenders).toEqual([])
   })
 
-  // The screen says question, answer, finding and source, and one verb,
-  // check. The engine's nouns, the old labels and confidence never reach a
-  // person. Checked in string literals and JSX text, one line at a time.
-  // Code inside ${...} is skipped, and so is a string with no spaces (a
-  // field name, a class name, an enum value or an action key).
-  it('never shows a retired noun, label or confidence', () => {
-    const banned = /\b(cases?|claims?|evidence|hypothes[ie]s|conclusions?|disput\w*|verif\w*|confiden\w*|supersed\w*)\b/i
+  // Every string literal and every run of JSX text in the people-facing
+  // sources, one line at a time, as a person would read it. Code inside
+  // ${...} is skipped, and so is a string with no spaces (a field name, a
+  // class name, an enum value or an action key). JSX text counts whether it
+  // sits between two tags, beside a {expression}, or on a line of its own.
+  function copyOffenders(...banned: RegExp[]): string[] {
     const offenders: string[] = []
     for (const [file, src] of Object.entries(sources)) {
       if (/\.test\./.test(file) || /fixtures|mockApi/.test(file)) continue
       for (const line of src.split('\n')) {
         if (/^\s*(\/\/|\*|\/\*|import )/.test(line)) continue
-        for (const m of line.matchAll(/(['"`])((?:(?!\1).)*?)\1|>([^<>{}]*?)</g)) {
-          const text = (m[2] ?? m[3] ?? '').replace(/\$\{[^}]*\}/g, '').trim()
+        // A line of prose inside JSX: starts with a capital, has a space, and no code punctuation.
+        const prose = /^\s+([A-Z][^<>{}=;()|`]* [^<>{}=;()|`]*)$/.exec(line)
+        const found = prose ? [prose[1]] : Array.from(line.matchAll(/(['"`])((?:(?!\1).)*?)\1|[>}]([^<>{}'"`=;()]*?)[<{]/g), (m) => m[2] ?? m[3] ?? '')
+        for (const raw of found) {
+          const text = raw.replace(/\$\{[^}]*\}/g, '').trim()
           // No spaces, or only lowercase words and hyphens: an identifier or a class list.
           if ((!text.includes(' ') && !/^[A-Z]/.test(text)) || /^[a-z0-9 -]+$/.test(text) && /-/.test(text)) continue
-          if (banned.test(text)) offenders.push(`${file.slice(2)}: ${text}`)
+          if (banned.some((re) => re.test(text))) offenders.push(`${file.slice(2)}: ${text}`)
         }
       }
     }
-    expect(offenders).toEqual([])
+    return offenders
+  }
+
+  // The screen says question, answer, finding and source, and one verb,
+  // check. The engine's nouns, the old labels and confidence never reach a
+  // person.
+  it('never shows a retired noun, label or confidence', () => {
+    expect(copyOffenders(/\b(cases?|claims?|evidence|hypothes[ie]s|conclusions?|disput\w*|verif\w*|confiden\w*|supersed\w*)\b/i)).toEqual([])
+  })
+
+  // Words a business leader would not say out loud, each with a plain one in
+  // use instead: stayed the same (flat), why (rationale), profit or sales
+  // (margin), add a source to a finding and remove it (link, unlink),
+  // answered and set aside (resolve, defer), add from a file and save as a
+  // file (import, export), extra details (metadata), source detail (raw
+  // detail), your AI (client), a chat (session), the codes your AI uses (ID,
+  // ref, reference), copy (snapshot), the helper program (CLI).
+  it('never shows a word a leader would not say', () => {
+    // "ref" inside a selector such as [data-ref] is code, and the acronyms are matched as written.
+    const words =
+      /(?<![-\w])(flat|rationales?|margins?|unlink\w*|linked|resolv\w*|resolutions?|defer\w*|import\w*|export\w*|metadata|raw detail|clients?|sessions?|databases?|refs?|references?|records?|snapshots?|command-line)\b/i
+    expect(copyOffenders(words, /\b(IDs?|CLI)\b/)).toEqual([])
+  })
+
+  it('allows MCP only once, where another AI tool has to support it', () => {
+    const mentions = Object.entries(sources)
+      .filter(([file]) => !/\.test\./.test(file))
+      .flatMap(([file, src]) => src.split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line) && /['">][^'"<]*\bMCP\b/.test(line)).map(() => file.slice(2)))
+    expect(mentions).toEqual(['components/dialogs/ConnectClientsDialog.tsx'])
   })
 })

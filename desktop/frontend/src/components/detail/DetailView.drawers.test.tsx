@@ -7,8 +7,10 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { CopyContextProvider } from '../../state/copyContext'
 import { activity, claims, detail, human, questions, summaries } from '../../test/fixtures'
 import { act as activityRow } from '../../test/fixtures.detail'
-import { detailWith, detailWithNewClaim, newClaim, question } from '../../test/fixtures.records'
+import { detailWith, detailWithBareEvidence, detailWithNewClaim, newClaim, question } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
+import { findSourceButton } from '../../test/openQuestion'
 import { ToastProvider } from '../ui/Toaster'
 import { DetailView } from './DetailView'
 
@@ -47,7 +49,7 @@ function renderDetail(d: InvestigationDetail = detail) {
   )
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <CopyContextProvider>
           <Controls />
           <DetailView />
@@ -62,25 +64,35 @@ describe('DetailView drawers', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('opens the evidence drawer directly from a contradicting chip on a claim row', async () => {
+  it('opens the source drawer directly from a source nested under a finding', async () => {
     const user = userEvent.setup()
     renderDetail()
-    const chips = await screen.findAllByRole('button', {
-      name: 'E-003 contradicts this: Log ingestion is 71% of the September increase',
+    const nested = await screen.findAllByRole('button', {
+      name: 'Contradicts this: E-003 Calls about a bill: 400 in September, 1,070 in October Call log Not checked',
     })
-    await user.click(chips[0])
+    await user.click(nested[0])
     expect(screen.getByRole('dialog', { name: 'Source E-003' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull()
   })
 
-  it('opens drawers from the evidence row', async () => {
+  it('opens the drawer from a source row under Other sources', async () => {
     const user = userEvent.setup()
-    renderDetail()
-    await user.click(await screen.findByRole('button', { name: /^Open source E-002:/ }))
-    expect(screen.getByRole('dialog', { name: 'Source E-002' })).toBeInTheDocument()
+    renderDetail(detailWithBareEvidence())
+    const other = await screen.findByRole('region', { name: 'Other sources' })
+    await user.click(within(other).getByRole('button', { name: /^Open source E-009:/ }))
+    expect(screen.getByRole('dialog', { name: 'Source E-009' })).toBeInTheDocument()
   })
 
-  it('makes E, C and H refs in History buttons that open drawers, and leaves Q refs as text', async () => {
+  it('puts focus back on the nested source after its drawer closes', async () => {
+    const user = userEvent.setup()
+    renderDetail()
+    const nested = await findSourceButton('E-002')
+    await user.click(nested)
+    await user.click(within(screen.getByRole('dialog', { name: 'Source E-002' })).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(nested).toHaveFocus())
+  })
+
+  it('names sources and findings in How we got here as buttons that open drawers, and leaves follow-up questions as text', async () => {
     const user = userEvent.setup()
     renderDetail(
       detailWith({
@@ -89,8 +101,8 @@ describe('DetailView drawers', () => {
     )
     const history = await screen.findByRole('region', { name: 'How we got here' })
     expect(within(history).queryByRole('button', { name: 'Q-001' })).toBeNull()
-    expect(within(history).getByText('resolved Q-001')).toBeInTheDocument()
-    await user.click(within(history).getByRole('button', { name: 'E-003' }))
+    expect(within(history).getByText('answered a follow-up question')).toBeInTheDocument()
+    await user.click(within(history).getByRole('button', { name: 'E-003 Calls about a bill: 400 in September, 1,070 in October' }))
     expect(screen.getByRole('dialog', { name: 'Source E-003' })).toBeInTheDocument()
   })
 
@@ -132,7 +144,7 @@ describe('DetailView drawers', () => {
     current = detailWith({ claims: claims.filter((c) => c.ref !== 'C-004') })
     await user.click(screen.getByRole('button', { name: 'Reload' }))
     const drawer = screen.getByRole('dialog', { name: 'Finding C-004' })
-    expect(await within(drawer).findByText('C-004 was not found. It may have changed in another app.')).toBeInTheDocument()
+    expect(await within(drawer).findByText(/^This was not found\. It may have changed in another app\./)).toBeInTheDocument()
   })
 })
 
@@ -150,7 +162,7 @@ describe('DetailView adding and question actions', () => {
     })
     const claimsSection = await screen.findByRole('region', { name: 'What backs this up' })
     await user.click(within(claimsSection).getByRole('button', { name: 'Add finding' }))
-    await user.type(screen.getByLabelText('Statement'), 'The log level comes from the chart default.')
+    await user.type(screen.getByLabelText('Finding'), 'The bills went out twice because a file was loaded two times.')
     await user.click(within(screen.getByRole('dialog', { name: 'Add finding' })).getByRole('button', { name: 'Add finding' }))
     await waitFor(() =>
       expect(document.querySelector('.reading-column [data-ref="C-005"] .row-hit')).toHaveFocus(),
@@ -166,25 +178,26 @@ describe('DetailView adding and question actions', () => {
       ['Not tested yet', 'Add follow-up question'],
     ]
     for (const [section, label] of cases) {
-      const region = await screen.findByRole('region', { name: section })
+      // Every fixture source sits under a finding, so the section for the rest reads Other sources.
+      const region = await screen.findByRole('region', { name: section === 'Sources' ? 'Other sources' : section })
       await user.click(within(region).getByRole('button', { name: label }))
       expect(screen.getByRole('dialog', { name: label })).toBeInTheDocument()
       await user.click(within(screen.getByRole('dialog', { name: label })).getByRole('button', { name: 'Cancel' }))
     }
   })
 
-  it('shows Resolve, Defer and Edit question on open questions', async () => {
+  it('shows Answer, Set aside and Edit on open follow-up questions', async () => {
     const user = userEvent.setup()
     renderDetail()
     const row = (await screen.findByRole('region', { name: 'Not tested yet' })).querySelector('[data-ref="Q-001"]') as HTMLElement
-    await user.click(within(row).getByRole('button', { name: 'Resolve' }))
-    expect(screen.getByRole('dialog', { name: 'Resolve Q-001' })).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: 'Answer' }))
+    expect(screen.getByRole('dialog', { name: 'Answer this follow-up question' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
-    await user.click(within(row).getByRole('button', { name: 'Defer' }))
-    expect(screen.getByRole('dialog', { name: 'Defer Q-001' })).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: 'Set aside' }))
+    expect(screen.getByRole('dialog', { name: 'Set this follow-up question aside' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await user.click(within(row).getByRole('button', { name: 'Edit follow-up question' }))
-    expect(screen.getByRole('dialog', { name: 'Edit follow-up question Q-001' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Edit follow-up question' })).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: 'Reopen' })).toBeNull()
   })
 
@@ -194,9 +207,9 @@ describe('DetailView adding and question actions', () => {
     const section = await screen.findByRole('region', { name: 'Not tested yet' })
     const deferred = section.querySelector('[data-ref="Q-003"]') as HTMLElement
     expect(within(deferred).getByRole('button', { name: 'Reopen' })).toBeInTheDocument()
-    await user.click(within(section).getByRole('button', { name: 'Show 1 resolved follow-up question' }))
+    await user.click(within(section).getByRole('button', { name: 'Show 1 answered follow-up question' }))
     const resolved = section.querySelector('[data-ref="Q-002"]') as HTMLElement
-    expect(within(resolved).queryByRole('button', { name: 'Resolve' })).toBeNull()
+    expect(within(resolved).queryByRole('button', { name: 'Answer' })).toBeNull()
     await user.click(within(resolved).getByRole('button', { name: 'Reopen' }))
     expect(mocks.api.reopenQuestion).toHaveBeenCalledWith('INV-0001', 'Q-002')
   })
@@ -204,14 +217,14 @@ describe('DetailView adding and question actions', () => {
   it('focuses a newly added question', async () => {
     const user = userEvent.setup()
     renderDetail()
-    const added = question({ id: 4, ref: 'Q-004', question: 'Who approves a change to a shared chart default?' })
+    const added = question({ id: 4, ref: 'Q-004', question: 'Who signs off a refund over $100?' })
     vi.mocked(mocks.api.addQuestion).mockImplementation(async () => {
       current = detailWith({ questions: [...questions, added] })
       return added
     })
     const section = await screen.findByRole('region', { name: 'Not tested yet' })
     await user.click(within(section).getByRole('button', { name: 'Add follow-up question' }))
-    await user.type(screen.getByLabelText('Follow-up question'), 'Who approves a change to a shared chart default?')
+    await user.type(screen.getByLabelText('Follow-up question'), 'Who signs off a refund over $100?')
     await user.click(within(screen.getByRole('dialog', { name: 'Add follow-up question' })).getByRole('button', { name: 'Add follow-up question' }))
     await waitFor(() => expect(document.querySelector('[data-ref="Q-004"]')).toHaveFocus())
   })

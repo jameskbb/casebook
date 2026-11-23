@@ -12,7 +12,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { api } from '../../api/api'
 import { asSentence, CLIPBOARD_COPY, cleanMessage, errorCopy, toApiError } from '../../api/errors'
 import type { RestorePick } from '../../api/types'
-import { LIST_LIMIT, pickLaunchSelection, useAppData } from '../../state/appData'
+import { useAppData } from '../../state/appData'
 import { useRequestNavigate } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { FileProblemDialog } from '../dialogs/FileProblemDialog'
@@ -27,7 +27,7 @@ export interface DataOps {
 }
 
 export const BACKUP_EXISTS_COPY = 'A file with that name already exists. Choose a new name.'
-export const PATH_COPIED = 'Path copied to the clipboard'
+export const PATH_COPIED = 'Location copied to the clipboard'
 
 type Problem = { kind: 'import' | 'restore'; body: string }
 
@@ -83,9 +83,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     if (!out || out.cancelled) return
     const r = out.result
     toast.success(
-      r.ref_changed
-        ? `Imported "${out.title}" as ${r.investigation_ref} because ${r.original_ref} was already in use.`
-        : `Imported "${out.title}" as ${r.investigation_ref}.`,
+      `Added "${out.title}" to your questions.`,
     )
     select(r.investigation_ref)
   }, [write, toast, select, showError])
@@ -102,7 +100,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     }
     if (out.cancelled) return
     const path = out.info.path
-    toast.success(`Backup saved to ${path}.`, { label: 'Copy path', onClick: () => void copyPath(path) })
+    toast.success(`Backup saved to ${path}.`, { label: 'Copy location', onClick: () => void copyPath(path) })
   }, [toast, copyPath])
 
   const restore = useCallback(async () => {
@@ -144,12 +142,8 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
       setRestoring(false)
       setPick(null)
     }
-    try {
-      const list = await api.listInvestigations({ include_archived: includeArchivedRef.current, limit: LIST_LIMIT })
-      select(pickLaunchSelection(list), { discarded: true })
-    } catch {
-      // The refresh below still reloads the list.
-    }
+    // The open question may not exist in the restored data: go back to Home.
+    select(null, { discarded: true })
     await refresh()
   }
 
@@ -167,7 +161,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
       {children}
       {problem && (
         <FileProblemDialog
-          title={problem.kind === 'import' ? "This file can't be imported" : "This file can't be restored"}
+          title={problem.kind === 'import' ? "This file can't be added" : "This file can't be restored"}
           body={problem.body}
           onChooseAnother={chooseAnother}
           onClose={() => setProblem(null)}

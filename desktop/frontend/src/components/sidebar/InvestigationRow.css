@@ -49,13 +49,7 @@
   min-width: 0;
 }
 
-.inv-row-top {
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
 .inv-row-title {
-  flex: 1;
   min-width: 0;
   font-weight: var(--weight-semibold);
   display: -webkit-box;
@@ -68,10 +62,6 @@
 .inv-row-ref,
 .inv-row-time {
   color: var(--ink-muted);
-}
-
-.inv-row-meta .inv-row-time {
-  margin-left: auto;
 }
 
 .inv-row-time {
@@ -98,4 +88,15 @@
   height: 8px;
   border-radius: 50%;
   background: var(--primary);
+}
+
+/* With codes on, the code keeps to one line and the muted line wraps under it if it must. */
+.inv-row-meta {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.inv-row-ref {
+  flex: none;
+  white-space: nowrap;
 }

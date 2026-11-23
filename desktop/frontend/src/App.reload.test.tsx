@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from './api/api'
 import { detail } from './test/fixtures'
 import { mockApi } from './test/mockApi'
+import { openQuestionNow } from './test/openQuestion'
 import { DETAIL_GONE_COPY, DETAIL_STALE_COPY } from './components/detail/DetailView'
 import { LIST_ERROR_COPY } from './components/sidebar/Sidebar'
 import App from './App'
@@ -14,7 +15,7 @@ import App from './App'
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('./api/api', () => ({ api: mocks.api }))
 
-const TITLE = 'September cloud bill up 38%'
+const TITLE = 'Why did calls go up 30% in October when sales stayed the same?'
 const internal = () => JSON.stringify({ kind: 'internal', message: 'database is locked' })
 
 async function tick(ms: number) {
@@ -53,7 +54,7 @@ describe('App failed loads', () => {
     failList = false
     await tick(1500)
     expect(screen.queryByText(LIST_ERROR_COPY)).toBeNull()
-    expect(screen.getByRole('heading', { level: 1, name: TITLE })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
   })
 
   it('reloads the list from Try again', async () => {
@@ -73,7 +74,7 @@ describe('App failed loads', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await tick(0)
     expect(screen.queryByText(LIST_ERROR_COPY)).toBeNull()
-    expect(screen.getByText('Checkout p99 doubled after the region move')).toBeInTheDocument()
+    expect(screen.getAllByText('Why are help desk tickets taking longer to close this month?').length).toBeGreaterThan(0)
   })
 
   it('keeps the last detail with a banner when a background reload fails, then recovers', async () => {
@@ -90,6 +91,8 @@ describe('App failed loads', () => {
       }),
     )
     render(<App />)
+    await tick(0)
+    openQuestionNow()
     await tick(0)
     expect(screen.getByRole('heading', { level: 1, name: TITLE })).toBeInTheDocument()
 
@@ -127,12 +130,14 @@ describe('App failed loads', () => {
     )
     render(<App />)
     await tick(0)
+    openQuestionNow()
+    await tick(0)
     expect(screen.getByRole('heading', { level: 1, name: TITLE })).toBeInTheDocument()
 
     token = '1.2'
     gone = true
     await tick(1500)
     expect(screen.queryByRole('heading', { level: 1, name: TITLE })).toBeNull()
-    expect(screen.getByText(DETAIL_GONE_COPY('INV-0001'))).toBeInTheDocument()
+    expect(screen.getByText(DETAIL_GONE_COPY)).toBeInTheDocument()
   })
 })

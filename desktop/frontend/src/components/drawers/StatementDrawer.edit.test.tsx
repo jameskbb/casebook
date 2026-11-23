@@ -9,6 +9,7 @@ import { AppDataProvider } from '../../state/appData'
 import { claims, detail, hypotheses } from '../../test/fixtures'
 import { claim, hypothesis } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { MORE_OPTIONS_LABEL, StatementDrawer, SUPERSEDED_HINT } from './StatementDrawer'
 
@@ -17,7 +18,7 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 
 const providers = (ui: ReactNode) => (
   <ToastProvider>
-    <AppDataProvider>{ui}</AppDataProvider>
+    <AppDataProvider><OpenAtLaunch />{ui}</AppDataProvider>
   </ToastProvider>
 )
 
@@ -71,13 +72,13 @@ describe('StatementDrawer statement', () => {
   it('edits the claim statement inline and saves it without a toast', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    await user.click(screen.getByRole('button', { name: 'Edit statement' }))
-    const box = screen.getByLabelText('Statement')
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    const box = screen.getByLabelText('Finding')
     expect(box).toHaveFocus()
     await user.clear(box)
-    await user.type(box, 'The log level comes from the chart default.')
-    await user.click(screen.getByRole('button', { name: 'Save statement' }))
-    expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-001', { statement: 'The log level comes from the chart default.' })
+    await user.type(box, 'The bills went out twice because a file was loaded two times.')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
+    expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-001', { statement: 'The bills went out twice because a file was loaded two times.' })
     await waitFor(() => expect(screen.queryByLabelText('Statement')).toBeNull())
     expect(screen.queryByRole('status')).toBeNull()
   })
@@ -85,17 +86,17 @@ describe('StatementDrawer statement', () => {
   it('saves a hypothesis statement through updateHypothesis', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    await user.click(screen.getByRole('button', { name: 'Edit statement' }))
-    await user.type(screen.getByLabelText('Statement'), ' Maybe.')
-    await user.click(screen.getByRole('button', { name: 'Save statement' }))
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.type(screen.getByLabelText('Finding'), ' Maybe.')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { statement: `${H001.statement} Maybe.` })
   })
 
   it('Cancel restores the view without saving', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    await user.click(screen.getByRole('button', { name: 'Edit statement' }))
-    await user.type(screen.getByLabelText('Statement'), ' Draft.')
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.type(screen.getByLabelText('Finding'), ' Draft.')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Statement')).toBeNull()
     expect(screen.getByText(C001.statement)).toBeInTheDocument()
@@ -113,12 +114,12 @@ describe('StatementDrawer statement', () => {
       }),
     )
     renderDrawer(C001)
-    await user.click(screen.getByRole('button', { name: 'Edit statement' }))
-    await user.clear(screen.getByLabelText('Statement'))
-    await user.type(screen.getByLabelText('Statement'), ' ')
-    await user.click(screen.getByRole('button', { name: 'Save statement' }))
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.clear(screen.getByLabelText('Finding'))
+    await user.type(screen.getByLabelText('Finding'), ' ')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
     expect(await screen.findByText('is required')).toBeInTheDocument()
-    expect(screen.getByLabelText('Statement')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Finding')).toHaveAttribute('aria-invalid', 'true')
   })
 })
 
@@ -283,7 +284,7 @@ describe('StatementDrawer status and verification', () => {
     const C003 = claims[2]
     renderDrawer(C003)
     const g = await statusSelects(user)
-    expect(g).toHaveTextContent('Replaced by C-002')
+    expect(within(g).getByRole('button', { name: 'Open the finding that replaced it C-002' })).toBeInTheDocument()
     const status = within(g).getByLabelText('Status') as HTMLSelectElement
     expect(status.value).toBe('superseded')
     await user.selectOptions(status, 'active')
@@ -368,7 +369,7 @@ describe('StatementDrawer status and verification', () => {
     const user = userEvent.setup()
     renderDrawer(C002)
     await user.click(within(group('Check this finding')).getByRole('button', { name: 'Replace with...' }))
-    expect(screen.getByRole('dialog', { name: 'Replace C-002' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Replace this finding' })).toBeInTheDocument()
   })
 })
 
@@ -382,7 +383,7 @@ describe('StatementDrawer links', () => {
     renderDrawer(C001)
     const supporting = group('Sources that support it')
     const block = supporting.querySelector('[data-ref="E-001"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'Mark as contradicting' }))
+    await user.click(within(block).getByRole('button', { name: 'It contradicts this' }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-001', 'contradicts')
   })
 
@@ -390,7 +391,7 @@ describe('StatementDrawer links', () => {
     const user = userEvent.setup()
     renderDrawer(hypotheses[1])
     const block = group('Sources that contradict it').querySelector('[data-ref="E-003"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'Mark as supporting' }))
+    await user.click(within(block).getByRole('button', { name: 'It supports this' }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-002', 'E-003', 'supports')
   })
 
@@ -398,9 +399,9 @@ describe('StatementDrawer links', () => {
     const user = userEvent.setup()
     renderDrawer(C001)
     const block = group('Sources that support it').querySelector('[data-ref="E-004"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'Unlink' }))
+    await user.click(within(block).getByRole('button', { name: 'Remove from this finding' }))
     expect(mocks.api.unlinkEvidenceFromClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-004')
-    const toast = await screen.findByText('Unlinked E-004 from C-001.')
+    const toast = await screen.findByText('Removed the source from this finding.')
     await user.click(within(toast.closest('.toast') as HTMLElement).getByRole('button', { name: 'Undo' }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-004', 'supports')
   })
@@ -409,15 +410,15 @@ describe('StatementDrawer links', () => {
     const user = userEvent.setup()
     renderDrawer(hypothesis({ ref: 'H-003', links: hypotheses[2].links }))
     const block = group('Sources that support it').querySelector('[data-ref="E-002"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'Unlink' }))
+    await user.click(within(block).getByRole('button', { name: 'Remove from this finding' }))
     expect(mocks.api.unlinkEvidenceFromHypothesis).toHaveBeenCalledWith('INV-0001', 'H-003', 'E-002')
-    expect(await screen.findByText('Unlinked E-002 from H-003.')).toBeInTheDocument()
+    expect(await screen.findByText('Removed the source from this finding.')).toBeInTheDocument()
   })
 
   it('Link a source opens the link dialog for this record', async () => {
     const user = userEvent.setup()
     renderDrawer(claim({ ref: 'C-001' }))
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
-    expect(screen.getByRole('dialog', { name: 'Link a source to C-001' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add a source to this finding' }))
+    expect(screen.getByRole('dialog', { name: 'Add a source to this finding' })).toBeInTheDocument()
   })
 })

@@ -17,7 +17,7 @@ describe('App tracer flow', () => {
     list = []
     const created = emptyDetail({
       ref: 'INV-0001',
-      title: 'Cloud bill up in September',
+      title: 'Why did calls go up in October?',
       problem_statement: 'Why do the two systems disagree?',
       is_active: true,
     })
@@ -47,22 +47,22 @@ describe('App tracer flow', () => {
     expect(title).toHaveFocus()
     expect(within(dialog).getByLabelText("Make this your AI's current question")).toBeChecked()
 
-    await user.type(title, 'Cloud bill up in September')
+    await user.type(title, 'Why did calls go up in October?')
     await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
 
     expect(mocks.api.createInvestigation).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Cloud bill up in September', make_active: true }),
+      expect.objectContaining({ title: 'Why did calls go up in October?', make_active: true }),
     )
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Cloud bill up in September' })
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Why did calls go up in October?' })
     await waitFor(() => expect(heading).toHaveFocus())
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(within(nav).getByRole('button', { current: true })).toHaveTextContent('Cloud bill up in September')
+    expect(within(nav).getByRole('button', { current: true })).toHaveTextContent('Why did calls go up in October?')
     expect(screen.getByText('Why do the two systems disagree?')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Copy for your AI' }))
     expect(mocks.api.copyContext).toHaveBeenCalledWith('INV-0001')
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
-    expect(screen.getByText('Context copied to the clipboard')).toBeInTheDocument()
+    expect(screen.getByText('Copied for your AI')).toBeInTheDocument()
   })
 })
 
@@ -80,7 +80,14 @@ describe('App main pane states', () => {
     expect(within(main).getByRole('button', { name: 'Connect your AI' })).toHaveClass('btn-primary')
     expect(within(main).getByRole('button', { name: 'New question' })).toHaveClass('btn-secondary')
     expect(within(main).getByRole('button', { name: 'New question' })).toBeInTheDocument()
-    expect(within(main).getByRole('button', { name: 'Import question...' })).toBeInTheDocument()
+    expect(within(main).getByRole('button', { name: 'Add a question from a file...' })).toBeInTheDocument()
+    // Three short steps say how to use it.
+    const steps = within(within(main).getByRole('list', { name: 'How to use it' })).getAllByRole('listitem')
+    expect(steps.map((li) => li.textContent)).toEqual([
+      'Connect your AI. You do this once.',
+      'Ask your AI a question. Tell it to save what it finds here.',
+      'Check the sources and share the answer. Mark each source you have checked yourself.',
+    ])
     expect(await screen.findByText('No questions yet.')).toBeInTheDocument()
   })
 
@@ -93,16 +100,21 @@ describe('App main pane states', () => {
     expect(await screen.findByRole('dialog', { name: 'New question' })).toBeInTheDocument()
   })
 
-  it('asks to choose an investigation when none is selected', async () => {
-    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [summaries[2]] }))
+  it('shows Home at launch, with no question open, and Check opens one', async () => {
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => summaries.filter((s) => !s.archived) }))
+    const user = userEvent.setup()
     render(<App />)
-    expect(await screen.findByText('Choose a question from the list.')).toBeInTheDocument()
-  })
+    const main = await screen.findByRole('main')
+    expect(await within(main).findByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
+    expect(mocks.api.getInvestigationDetail).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /^To check/ })).toHaveAttribute('aria-current', 'true')
 
-  it('opens the active investigation at launch', async () => {
-    Object.assign(mocks.api, mockApi())
-    render(<App />)
-    expect(await screen.findByRole('heading', { level: 1, name: 'September cloud bill up 38%' })).toBeInTheDocument()
+    await user.click(within(main).getByRole('button', { name: 'Check: Why did calls go up 30% in October when sales stayed the same?' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })).toBeInTheDocument()
     expect(mocks.api.getInvestigationDetail).toHaveBeenCalledWith('INV-0001', { activity_limit: 20 })
+
+    // To check goes back to Home.
+    await user.click(screen.getByRole('button', { name: /^To check/ }))
+    expect(await within(main).findByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
   })
 })

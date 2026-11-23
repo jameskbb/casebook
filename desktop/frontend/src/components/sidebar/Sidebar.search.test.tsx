@@ -41,7 +41,7 @@ function renderSidebar() {
 
 async function typeQuery(text: string) {
   const user = userEvent.setup()
-  const field = await screen.findByRole('searchbox', { name: 'Search' })
+  const field = await screen.findByRole('searchbox', { name: 'Search answers and sources' })
   await user.type(field, text)
   return { user, field }
 }
@@ -60,12 +60,12 @@ describe('Sidebar search', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
-    const field = screen.getByRole('searchbox', { name: 'Search' })
+    const field = screen.getByRole('searchbox', { name: 'Search answers and sources' })
     fireEvent.change(field, { target: { value: 'deb' } })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100)
     })
-    fireEvent.change(field, { target: { value: 'debug' } })
+    fireEvent.change(field, { target: { value: 'billing' } })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(199)
     })
@@ -74,7 +74,7 @@ describe('Sidebar search', () => {
       await vi.advanceTimersByTimeAsync(1)
     })
     expect(mocks.api.search).toHaveBeenCalledTimes(1)
-    expect(mocks.api.search).toHaveBeenCalledWith('debug', { include_archived: false, limit: 50 })
+    expect(mocks.api.search).toHaveBeenCalledWith('billing', { include_archived: false, limit: 50 })
   })
 
   it('does not search for an empty or blank query', async () => {
@@ -82,18 +82,18 @@ describe('Sidebar search', () => {
     await typeQuery('   ')
     await new Promise((r) => setTimeout(r, 260))
     expect(mocks.api.search).not.toHaveBeenCalled()
-    expect(screen.getByText('Checkout p99 doubled after the region move')).toBeInTheDocument()
+    expect(screen.getByText('Why are help desk tickets taking longer to close this month?')).toBeInTheDocument()
   })
 
   it('groups hits by investigation in rank order with highlighted snippets', async () => {
     renderSidebar()
-    await typeQuery('debug')
+    await typeQuery('billing')
     const results = await screen.findByRole('region', { name: 'Search results' })
     const groups = within(results).getAllByRole('group')
     expect(groups).toHaveLength(2)
-    expect(groups[0]).toHaveAccessibleName('September cloud bill up 38% INV-0001')
+    expect(groups[0]).toHaveAccessibleName('Why did calls go up 30% in October when sales stayed the same? INV-0001')
     expect(within(groups[0]).getByText("Your AI's current question")).toBeInTheDocument()
-    expect(groups[1]).toHaveAccessibleName('Checkout p99 doubled after the region move INV-0002')
+    expect(groups[1]).toHaveAccessibleName('Why are help desk tickets taking longer to close this month? INV-0002')
     expect(within(groups[1]).queryByText("Your AI's current question")).not.toBeInTheDocument()
 
     const first = within(groups[0]).getAllByRole('button')
@@ -102,8 +102,8 @@ describe('Sidebar search', () => {
     expect(first[1]).toHaveTextContent('E-003')
     const mark = first[0].querySelector('mark')
     expect(mark).not.toBeNull()
-    expect(mark).toHaveTextContent('debug')
-    expect(first[0]).toHaveTextContent('A shared platform default moved every service to debug logging on August 28')
+    expect(mark).toHaveTextContent('billing')
+    expect(first[0]).toHaveTextContent('A billing mistake on October 3 charged some customers twice.')
     // The list is replaced by the results.
     expect(screen.queryByRole('button', { current: true })).not.toBeInTheDocument()
   })
@@ -111,18 +111,18 @@ describe('Sidebar search', () => {
   it('renders markup inside a snippet as literal text', async () => {
     Object.assign(mocks.api, mockApi({ search: async () => [markupHit] }))
     const { container } = renderSidebar()
-    await typeQuery('debug')
+    await typeQuery('billing')
     const results = await screen.findByRole('region', { name: 'Search results' })
     await within(results).findByText(/onerror/)
     expect(container.querySelector('img')).toBeNull()
-    expect(results).toHaveTextContent('<img src=x onerror="alert(1)"> is debug')
+    expect(results).toHaveTextContent('<img src=x onerror="alert(1)"> is billing')
   })
 
   it('says so when nothing matches', async () => {
     Object.assign(mocks.api, mockApi({ search: async () => [] }))
     renderSidebar()
-    await typeQuery('debug')
-    expect(await screen.findByText('No matches for "debug"')).toBeInTheDocument()
+    await typeQuery('billing')
+    expect(await screen.findByText('No matches for "billing"')).toBeInTheDocument()
     expect(
       screen.getByText('Try fewer or different words. Archived questions are searched only when Show archived is on.'),
     ).toBeInTheDocument()
@@ -138,13 +138,13 @@ describe('Sidebar search', () => {
       }),
     )
     renderSidebar()
-    await typeQuery('debug')
+    await typeQuery('billing')
     expect(await screen.findByText('Must be at most 500 bytes')).toBeInTheDocument()
   })
 
   it('opens the record of a claim hit and only the investigation for an investigation hit', async () => {
     renderSidebar()
-    const { user } = await typeQuery('debug')
+    const { user } = await typeQuery('billing')
     const results = await screen.findByRole('region', { name: 'Search results' })
     const claimHit = within(results).getByRole('button', { name: /C-001/ })
     claimHit.focus()
@@ -159,15 +159,15 @@ describe('Sidebar search', () => {
 
   it('clears the query with Esc and with the Clear search button', async () => {
     renderSidebar()
-    const { user, field } = await typeQuery('debug')
+    const { user, field } = await typeQuery('billing')
     await screen.findByRole('region', { name: 'Search results' })
     field.focus()
     await user.keyboard('{Escape}')
     expect(field).toHaveValue('')
     expect(screen.queryByRole('region', { name: 'Search results' })).not.toBeInTheDocument()
-    expect(screen.getByText('Checkout p99 doubled after the region move')).toBeInTheDocument()
+    expect(screen.getByText('Why are help desk tickets taking longer to close this month?')).toBeInTheDocument()
 
-    await user.type(field, 'debug')
+    await user.type(field, 'billing')
     await screen.findByRole('region', { name: 'Search results' })
     await user.click(screen.getByRole('button', { name: 'Clear search' }))
     expect(field).toHaveValue('')
@@ -177,11 +177,11 @@ describe('Sidebar search', () => {
 
   it('shows the / hint only while the field is empty', async () => {
     const { container } = renderSidebar()
-    await screen.findByText('Checkout p99 doubled after the region move')
+    await screen.findByText('Why are help desk tickets taking longer to close this month?')
     expect(container.querySelector('.sidebar-search-kbd')).toHaveTextContent('/')
     expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
     const user = userEvent.setup()
-    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'c')
+    await user.type(screen.getByRole('searchbox', { name: 'Search answers and sources' }), 'c')
     expect(container.querySelector('.sidebar-search-kbd')).toBeNull()
     expect(screen.getByRole('button', { name: 'Clear search' })).toBeInTheDocument()
   })
@@ -197,8 +197,8 @@ describe('Sidebar search', () => {
     await waitFor(() =>
       expect(mocks.api.listInvestigations).toHaveBeenCalledWith(expect.objectContaining({ include_archived: true })),
     )
-    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'debug')
-    await waitFor(() => expect(mocks.api.search).toHaveBeenCalledWith('debug', { include_archived: true, limit: 50 }))
+    await user.type(screen.getByRole('searchbox', { name: 'Search answers and sources' }), 'billing')
+    await waitFor(() => expect(mocks.api.search).toHaveBeenCalledWith('billing', { include_archived: true, limit: 50 }))
     const group = await screen.findByRole('group', { name: /INV-0003/ })
     expect(within(group).getByText('Archived')).toBeInTheDocument()
   })
@@ -230,7 +230,7 @@ describe('Sidebar search', () => {
       }),
     )
     renderSidebar()
-    const { user } = await typeQuery('debug')
+    const { user } = await typeQuery('billing')
     const results = await screen.findByRole('region', { name: 'Search results' })
     expect(within(results).getAllByRole('group')).toHaveLength(2)
 

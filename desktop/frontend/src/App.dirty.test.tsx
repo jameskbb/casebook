@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from './api/api'
 import { mockApi } from './test/mockApi'
+import { openQuestion } from './test/openQuestion'
 import App from './App'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -16,10 +17,11 @@ const DISCARD = 'Discard this draft?'
 async function openClaimWithDraft() {
   const user = userEvent.setup()
   render(<App />)
+    await openQuestion()
   await user.click(await screen.findByRole('button', { name: /^Open finding C-001:/ }))
   const drawer = screen.getByRole('dialog', { name: 'Finding C-001' })
-  await user.click(within(drawer).getByRole('button', { name: 'Edit statement' }))
-  await user.type(within(drawer).getByLabelText('Statement'), ' Draft words.')
+  await user.click(within(drawer).getByRole('button', { name: 'Edit finding' }))
+  await user.type(within(drawer).getByLabelText('Finding'), ' Draft words.')
   return { user, drawer }
 }
 
@@ -35,7 +37,7 @@ describe('dirty drawer and conclusion editors', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Keep editing' }))
     expect(screen.queryByRole('dialog', { name: DISCARD })).toBeNull()
     const drawer = screen.getByRole('dialog', { name: 'Finding C-001' })
-    expect((within(drawer).getByLabelText('Statement') as HTMLTextAreaElement).value).toContain('Draft words.')
+    expect((within(drawer).getByLabelText('Finding') as HTMLTextAreaElement).value).toContain('Draft words.')
   })
 
   it('closes after Discard', async () => {
@@ -53,7 +55,7 @@ describe('dirty drawer and conclusion editors', () => {
     expect(screen.getByRole('dialog', { name: DISCARD })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(screen.getByRole('dialog', { name: 'Finding C-001' })).toBeInTheDocument()
-    expect((screen.getByLabelText('Statement') as HTMLTextAreaElement).value).toContain('Draft words.')
+    expect((screen.getByLabelText('Finding') as HTMLTextAreaElement).value).toContain('Draft words.')
 
     await user.click(within(screen.getByRole('dialog', { name: 'Finding C-001' })).getAllByRole('button', { name: /^Open source E-/ })[0])
     await user.click(screen.getByRole('button', { name: 'Discard' }))
@@ -63,6 +65,7 @@ describe('dirty drawer and conclusion editors', () => {
   it('closes a clean drawer at once', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await openQuestion()
     await user.click(await screen.findByRole('button', { name: /^Open finding C-001:/ }))
     fireEvent.mouseDown(document.querySelector('.drawer-scrim')!)
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finding C-001' })).toBeNull())
@@ -72,11 +75,12 @@ describe('dirty drawer and conclusion editors', () => {
   it('asks before opening another investigation over a dirty conclusion, and only then switches', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await openQuestion()
     const panel = await screen.findByRole('region', { name: 'The answer' })
     await user.click(within(panel).getByRole('button', { name: 'Edit answer' }))
     await user.type(within(panel).getByLabelText('Answer'), ' Unsaved.')
 
-    const other = screen.getByText('Checkout p99 doubled after the region move').closest('button')!
+    const other = screen.getByText('Why are help desk tickets taking longer to close this month?').closest('button')!
     await user.click(other)
     expect(screen.getByRole('dialog', { name: DISCARD })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Keep editing' }))
@@ -92,6 +96,7 @@ describe('dirty drawer and conclusion editors', () => {
   it('does not ask when closing a clean drawer over a dirty conclusion', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await openQuestion()
     const panel = await screen.findByRole('region', { name: 'The answer' })
     await user.click(within(panel).getByRole('button', { name: 'Edit answer' }))
     await user.type(within(panel).getByLabelText('Answer'), ' Unsaved.')

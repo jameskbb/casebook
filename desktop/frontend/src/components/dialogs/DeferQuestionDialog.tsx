@@ -49,12 +49,12 @@ export function DeferQuestionDialog({ invRef, question, onClose }: DeferQuestion
 
   return (
     <Dialog
-      title={`Defer ${question.ref}`}
+      title="Set this follow-up question aside"
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Defer"
-      busyLabel="Deferring..."
+      submitLabel="Set aside"
+      busyLabel="Saving..."
       busy={busy}
       dirty={note !== ''}
       summary={

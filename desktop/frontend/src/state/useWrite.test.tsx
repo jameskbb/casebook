@@ -5,6 +5,7 @@ import type { Api } from '../api/api'
 import { ApiError } from '../api/errors'
 import { ToastProvider } from '../components/ui/Toaster'
 import { mockApi } from '../test/mockApi'
+import { OpenAtLaunch } from '../test/OpenAtLaunch'
 import { AppDataProvider, useAppData } from './appData'
 import { useWrite } from './useWrite'
 
@@ -31,7 +32,7 @@ function renderHarness(fn: () => Promise<string>) {
   const onResult = vi.fn()
   render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <Harness fn={fn} onResult={onResult} />
       </AppDataProvider>
     </ToastProvider>,
@@ -43,7 +44,7 @@ function renderToggleable(fn: () => Promise<string>) {
   const onResult = vi.fn()
   const view = (shown: boolean) => (
     <ToastProvider>
-      <AppDataProvider>{shown && <Harness fn={fn} onResult={onResult} />}</AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />{shown && <Harness fn={fn} onResult={onResult} />}</AppDataProvider>
     </ToastProvider>
   )
   const r = render(view(true))

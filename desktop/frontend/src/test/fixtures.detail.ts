@@ -1,9 +1,8 @@
-// Extra detail fixtures for Plan 02 (reading column, history, editing and
-// live refresh). Built from fixtures.ts, which stays unchanged.
+// Extra detail fixtures for the question page, history, editing and live refresh.
 import type { Activity, Actor, Claim, InvestigationDetail, Question } from '../api/types'
 import { claims, detail, emptyDetail, investigation, questions, T0 } from './fixtures'
 
-/** The seeded INV-0001 detail with the investigation archived. */
+/** The INV-0001 detail, archived. */
 export function archivedDetail(): InvestigationDetail {
   return {
     ...detail,
@@ -30,9 +29,9 @@ export function manyRuledOutDetail(): InvestigationDetail {
     ...detail,
     claims: [
       claims[0],
-      claimWith({ id: 11, ref: 'C-011', statement: 'Retired one.', status: 'superseded', superseded_by: 'C-001', verification: 'superseded' }),
-      claimWith({ id: 12, ref: 'C-012', statement: 'Retired two.', status: 'rejected' }),
-      claimWith({ id: 13, ref: 'C-013', statement: 'Retired three.', status: 'rejected' }),
+      claimWith({ id: 11, ref: 'C-011', statement: 'The phone lines were down for a day.', status: 'superseded', superseded_by: 'C-001', verification: 'superseded' }),
+      claimWith({ id: 12, ref: 'C-012', statement: 'A holiday moved calls into October.', status: 'rejected' }),
+      claimWith({ id: 13, ref: 'C-013', statement: 'The call log counted some calls twice.', status: 'rejected' }),
     ],
     questions: [questions[0], resolved],
   }
@@ -76,7 +75,7 @@ export function manyActivity(n: number): Activity[] {
   const rows: Activity[] = []
   for (let i = 0; i < n; i++) {
     rows.push({
-      ...act({ kind: 'ai', client: 'claude-code' }, 'evidence.add', `E-${String(n - i).padStart(3, '0')}`, `Finding ${n - i}`),
+      ...act({ kind: 'ai', client: 'claude-code' }, 'evidence.add', `E-${String(n - i).padStart(3, '0')}`, `Source ${n - i}`),
       id: n - i,
     })
   }

@@ -3,10 +3,10 @@ import { hitSegments, parseSnippet } from './snippet'
 
 describe('parseSnippet', () => {
   it('splits marked and plain segments', () => {
-    expect(parseSnippet('the **debug** level')).toEqual([
+    expect(parseSnippet('the **billing** team')).toEqual([
       { text: 'the ', mark: false },
-      { text: 'debug', mark: true },
-      { text: ' level', mark: false },
+      { text: 'billing', mark: true },
+      { text: ' team', mark: false },
     ])
   })
 

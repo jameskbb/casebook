@@ -10,7 +10,7 @@
 }
 
 /* The stretched button that opens the row's record. Content sits above it
-   and lets clicks through, except for its own controls (chips). */
+   and lets clicks through, except for its own controls (nested sources). */
 .row-hit {
   position: absolute;
   inset: 0;
@@ -72,21 +72,56 @@
   text-decoration-thickness: 1px;
 }
 
-.record-foot {
+/* A finding's sources, nested under it: sign, title and origin, check label. */
+.finding-sources {
+  display: flex;
+  flex-direction: column;
   margin-top: var(--space-1);
 }
 
-.chip-list {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
+.finding-source {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: baseline;
   gap: var(--space-2);
+  width: 100%;
+  padding: 6px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
 }
 
-/* A ruled-out row names the evidence that ruled it out, in full. */
-.record-ruled-out-by {
-  color: var(--ink);
+button.finding-source {
+  cursor: pointer;
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+button.finding-source:hover {
+  background: var(--primary-tint);
+}
+
+.finding-source-sign {
+  align-self: center;
+  color: var(--claim);
+}
+
+.finding-source.is-against .finding-source-sign {
+  color: var(--disputed);
+}
+
+.finding-source-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.finding-source-from {
+  color: var(--ink-muted);
 }
 
 /* Still open repeats an open explanation as a compact row: ref, labels and

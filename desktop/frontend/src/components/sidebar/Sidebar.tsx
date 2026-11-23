@@ -1,14 +1,15 @@
-// The investigation sidebar: wordmark, New
-// case, the search field, the Show archived switch, the scrolling
-// list (grouped search hits while a query is present) and the footer with
-// the data operations, theme and data file. Everything but the list stays
-// fixed while the list scrolls.
+// The sidebar: wordmark, New question, the search field, the Show archived
+// switch, then the scrolling list: To check (opens Home), the questions
+// under No answer yet and Answered (grouped search hits while a query is
+// present), and the footer with the data menu and theme. Everything but the
+// list stays fixed while the list scrolls.
 //
 // Search: typing waits 200 ms, then calls Search with the switch's
 // include_archived; an empty or blank query shows the list without a call.
 // While a newer search runs the previous results stay visible, and a data
 // change (dataVersion) reruns the current search. The list and the hits are
-// each one Tab stop (roving tabindex); Down from the field enters them.
+// each one Tab stop (roving tabindex, running through both groups); Down
+// from the field enters them.
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { CircleAlert, Plus, Search, X } from 'lucide-react'
 import { api } from '../../api/api'
@@ -18,6 +19,8 @@ import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { useNow } from '../../hooks/useNow'
 import { useRovingFocus } from '../../hooks/useRovingFocus'
 import { hasOpenLayer } from '../../lib/layers'
+import { countOf } from '../../lib/plural'
+import { groupQuestions, homeLists } from '../../lib/questions'
 import { LIST_LIMIT, useAppData } from '../../state/appData'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
@@ -30,7 +33,10 @@ import './Sidebar.css'
 export const SEARCH_DEBOUNCE_MS = 200
 export const SEARCH_LIMIT = 50
 export const SEARCH_FIELD_ID = 'sidebar-search'
-const SEARCH_LABEL = 'Search'
+export const SEARCH_LABEL = 'Search answers and sources'
+export const TO_CHECK_LABEL = 'To check'
+export const NO_ANSWER_GROUP = 'No answer yet'
+export const ANSWERED_GROUP = 'Answered'
 export const LIST_ERROR_COPY = 'Casebook could not load the list.'
 export const LIST_CAPPED_COPY = `Showing the ${LIST_LIMIT.toLocaleString('en-US')} most recently updated questions. Search to find older ones.`
 
@@ -112,7 +118,7 @@ export function Sidebar({ onNew }: SidebarProps) {
   )
 
   // With the switch off and nothing listed, learn whether archived
-  // investigations exist so the empty line can point to the switch.
+  // questions exist so the empty line can point to the switch.
   const listEmpty = listStatus === 'ready' && investigations.length === 0
   const [archivedExist, setArchivedExist] = useState<boolean | null>(null)
   useEffect(() => {
@@ -134,8 +140,33 @@ export function Sidebar({ onNew }: SidebarProps) {
     }
   }, [listEmpty, includeArchived, dataVersion])
 
-  const selectedIndex = investigations.findIndex((i) => i.ref === selectedRef)
-  const roving = useRovingFocus(investigations.length, selectedIndex)
+  // The rows in the order they show: No answer yet, then Answered.
+  const groups = groupQuestions(investigations)
+  const ordered = [...groups.noAnswer, ...groups.answered]
+  const selectedIndex = ordered.findIndex((i) => i.ref === selectedRef)
+  const roving = useRovingFocus(ordered.length, selectedIndex)
+  const toCheck = homeLists(investigations).needYou.length
+  const groupId = useId()
+  const group = (label: string, items: typeof ordered, offset: number) =>
+    items.length > 0 && (
+      <>
+        <h2 className="sidebar-group" id={`${groupId}-${offset}`}>
+          {label}
+        </h2>
+        <ul className="sidebar-rows" aria-labelledby={`${groupId}-${offset}`}>
+          {items.map((inv, i) => (
+            <InvestigationRow
+              key={inv.ref}
+              investigation={inv}
+              selected={inv.ref === selectedRef}
+              onSelect={(ref) => select(ref)}
+              now={now}
+              roving={roving.itemProps(offset + i)}
+            />
+          ))}
+        </ul>
+      </>
+    )
   const showResults = searching && result !== null
 
   const clearQuery = () => {
@@ -232,18 +263,21 @@ export function Sidebar({ onNew }: SidebarProps) {
             )}
             {investigations.length >= LIST_LIMIT && <p className="sidebar-empty">{LIST_CAPPED_COPY}</p>}
             {investigations.length > 0 && (
-              <ul className="sidebar-rows" aria-label="Question list" onKeyDown={roving.onKeyDown}>
-                {investigations.map((inv, i) => (
-                  <InvestigationRow
-                    key={inv.ref}
-                    investigation={inv}
-                    selected={inv.ref === selectedRef}
-                    onSelect={(ref) => select(ref)}
-                    now={now}
-                    roving={roving.itemProps(i)}
-                  />
-                ))}
-              </ul>
+              <>
+                <button
+                  type="button"
+                  className={['inv-row', 'sidebar-home', selectedRef === null ? 'is-selected' : ''].filter(Boolean).join(' ')}
+                  aria-current={selectedRef === null ? 'true' : undefined}
+                  onClick={() => select(null)}
+                >
+                  <span className="inv-row-title">{TO_CHECK_LABEL}</span>
+                  <span className="inv-row-time">{countOf(toCheck, 'question', 'questions')}</span>
+                </button>
+                <div className="sidebar-groups" onKeyDown={roving.onKeyDown}>
+                  {group(NO_ANSWER_GROUP, groups.noAnswer, 0)}
+                  {group(ANSWERED_GROUP, groups.answered, groups.noAnswer.length)}
+                </div>
+              </>
             )}
           </>
         )}

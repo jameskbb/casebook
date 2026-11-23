@@ -8,6 +8,8 @@ import { CopyContextProvider } from '../../state/copyContext'
 import { detail, evidence, summaries } from '../../test/fixtures'
 import { bigRawDetail, detailWith, detailWithBareEvidence, E003_RAW, evidenceWith } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
+import { findSourceButton } from '../../test/openQuestion'
 import { DetailView } from '../detail/DetailView'
 import { supersedeEvidenceBody } from './EvidenceDrawer'
 import { ToastProvider } from '../ui/Toaster'
@@ -30,7 +32,7 @@ function renderDetail(d: InvestigationDetail = detail, overrides: Partial<Api> =
   )
   return render(
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider><OpenAtLaunch />
         <CopyContextProvider>
           <DetailView />
         </CopyContextProvider>
@@ -41,7 +43,7 @@ function renderDetail(d: InvestigationDetail = detail, overrides: Partial<Api> =
 
 async function openEvidence(ref: string) {
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: new RegExp(`^Open source ${ref}:`) }))
+  await user.click(await findSourceButton(ref))
   return { user, drawer: screen.getByRole('dialog', { name: `Source ${ref}` }) }
 }
 
@@ -66,19 +68,19 @@ describe('EvidenceDrawer', () => {
   it('shows the title, full summary and the source details, omitting missing ones', async () => {
     renderDetail()
     const { drawer } = await openEvidence('E-003')
-    expect(within(drawer).getByText('Log ingestion is 71% of the September increase')).toHaveClass('evidence-drawer-title')
-    expect(within(drawer).getByText(/In the billing export, log ingestion rose/)).toBeInTheDocument()
+    expect(within(drawer).getByText('Calls about a bill: 400 in September, 1,070 in October')).toHaveClass('evidence-drawer-title')
+    expect(within(drawer).getByText(/In the call log, calls about a bill went from 400/)).toBeInTheDocument()
     const rows = sourceRows(drawer)
-    expect(rows.map(([label]) => label)).toEqual(['Kind of source', 'From', 'Captured'])
-    expect(rows[0][1]).toBe('SQL query')
-    expect(rows[1][1]).toBe('Billing export query')
+    expect(rows.map(([label]) => label)).toEqual(['Kind of source', 'From', 'As of'])
+    expect(rows[0][1]).toBe('Data query')
+    expect(rows[1][1]).toBe('Call log')
   })
 
   it('shows the reference as selectable text, never a link', async () => {
     renderDetail()
     const { drawer } = await openEvidence('E-001')
     const rows = sourceRows(drawer)
-    expect(rows.find(([l]) => l === 'Reference')?.[1]).toBe('platform-charts/service/values.yaml')
+    expect(rows.find(([l]) => l === 'Where to find it')?.[1]).toBe('Shared drive, Billing, notice-2026-10-04.pdf')
     expect(drawer.querySelector('a')).toBeNull()
   })
 
@@ -86,8 +88,8 @@ describe('EvidenceDrawer', () => {
     renderDetail(detailWithBareEvidence())
     const { drawer } = await openEvidence('E-009')
     expect(sourceRows(drawer).map(([l]) => l)).toEqual(['Kind of source'])
-    expect(within(drawer).queryByRole('button', { name: 'Show raw detail' })).toBeNull()
-    expect(within(drawer).queryByRole('button', { name: 'Show metadata' })).toBeNull()
+    expect(within(drawer).queryByRole('button', { name: 'Show source detail' })).toBeNull()
+    expect(within(drawer).queryByRole('button', { name: 'Show extra details' })).toBeNull()
     expect(within(drawer).getByText('No finding uses this source yet.')).toBeInTheDocument()
   })
 
@@ -95,15 +97,15 @@ describe('EvidenceDrawer', () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
     expect(mocks.api.getEvidence).not.toHaveBeenCalled()
-    await user.click(within(drawer).getByRole('button', { name: 'Show raw detail' }))
+    await user.click(within(drawer).getByRole('button', { name: 'Show source detail' }))
     expect(mocks.api.getEvidence).toHaveBeenCalledWith('INV-0001', 'E-003', { include_raw_detail: true })
-    const pre = await within(drawer).findByText(/SELECT line_item/)
+    const pre = await within(drawer).findByText(/Reason for the call/)
     expect(pre.tagName).toBe('PRE')
     expect(pre).toHaveClass('raw-detail')
     expect(pre.textContent).toBe(E003_RAW)
-    await user.click(within(drawer).getByRole('button', { name: 'Hide raw detail' }))
-    expect(within(drawer).queryByText(/SELECT line_item/)).toBeNull()
-    expect(within(drawer).getByRole('button', { name: 'Show raw detail' })).toBeInTheDocument()
+    await user.click(within(drawer).getByRole('button', { name: 'Hide source detail' }))
+    expect(within(drawer).queryByText(/Reason for the call/)).toBeNull()
+    expect(within(drawer).getByRole('button', { name: 'Show source detail' })).toBeInTheDocument()
   })
 
   it('fetches raw detail once when the record changed after the detail loaded (no refetch loop)', async () => {
@@ -111,7 +113,7 @@ describe('EvidenceDrawer', () => {
       getEvidence: async (_inv, ref) => ({ ...evidenceWith(ref), updated_at: '2099-01-01T00:00:00.000Z', raw_detail: 'newer' }),
     })
     const { user, drawer } = await openEvidence('E-003')
-    await user.click(within(drawer).getByRole('button', { name: 'Show raw detail' }))
+    await user.click(within(drawer).getByRole('button', { name: 'Show source detail' }))
     expect(await within(drawer).findByText('newer')).toHaveClass('raw-detail')
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50))
@@ -126,7 +128,7 @@ describe('EvidenceDrawer', () => {
       getEvidence: async (_inv, ref) => ({ ...evidenceWith(ref), raw_detail: raw }),
     })
     const { user, drawer } = await openEvidence('E-001')
-    await user.click(within(drawer).getByRole('button', { name: 'Show raw detail' }))
+    await user.click(within(drawer).getByRole('button', { name: 'Show source detail' }))
     const pre = await within(drawer).findByText(/row 0000: value=/)
     expect(pre).toHaveClass('raw-detail')
     expect(pre.textContent?.length).toBe(65536)
@@ -137,51 +139,51 @@ describe('EvidenceDrawer', () => {
     renderDetail(detail, { getEvidence: () => new Promise<Evidence>((r) => (resolve = r)) })
     const { drawer } = await openEvidence('E-003')
     vi.useFakeTimers()
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Show raw detail' }))
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Show source detail' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(299)
     })
-    expect(within(drawer).queryByText('Loading raw detail...')).toBeNull()
+    expect(within(drawer).queryByText('Loading source detail...')).toBeNull()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1)
     })
-    expect(within(drawer).getByText('Loading raw detail...')).toBeInTheDocument()
+    expect(within(drawer).getByText('Loading source detail...')).toBeInTheDocument()
     await act(async () => {
       resolve({ ...evidenceWith('E-003'), raw_detail: E003_RAW })
       await vi.advanceTimersByTimeAsync(0)
     })
-    expect(within(drawer).queryByText('Loading raw detail...')).toBeNull()
-    expect(within(drawer).getByText(/SELECT line_item/)).toBeInTheDocument()
+    expect(within(drawer).queryByText('Loading source detail...')).toBeNull()
+    expect(within(drawer).getByText(/Reason for the call/)).toBeInTheDocument()
   })
 
   it('pretty-prints metadata behind Show metadata', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
-    expect(within(drawer).queryByText(/affected_records/)).toBeNull()
-    await user.click(within(drawer).getByRole('button', { name: 'Show metadata' }))
-    const pre = within(drawer).getByText(/affected_records/)
+    expect(within(drawer).queryByText(/calls_counted/)).toBeNull()
+    await user.click(within(drawer).getByRole('button', { name: 'Show extra details' }))
+    const pre = within(drawer).getByText(/calls_counted/)
     expect(pre.tagName).toBe('PRE')
-    expect(pre.textContent).toBe('{\n  "affected_records": 214\n}')
+    expect(pre.textContent).toBe('{\n  "calls_counted": 5520\n}')
   })
 
   it('shows metadata that is not valid JSON as it is', async () => {
     const d = detailWith({ evidence: evidence.map((e) => (e.ref === 'E-003' ? { ...e, metadata: 'not json {' } : e)) })
     renderDetail(d)
     const { user, drawer } = await openEvidence('E-003')
-    await user.click(within(drawer).getByRole('button', { name: 'Show metadata' }))
+    await user.click(within(drawer).getByRole('button', { name: 'Show extra details' }))
     expect(within(drawer).getByText('not json {').tagName).toBe('PRE')
   })
 
   it('lists the claims and hypotheses that use it, each opening its drawer', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
-    const usedBy = within(drawer).getByRole('region', { name: 'Used by' })
+    const usedBy = within(drawer).getByRole('region', { name: 'Findings that use this source' })
     const items = within(usedBy).getAllByRole('button')
     expect(items.map((b) => b.textContent)).toEqual([
-      'C-002SupportsLog ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.',
-      'C-003ContradictsReplaced by C-002The increase comes from the August autoscaling change adding compute nodes.',
-      "C-004ContradictsThe payments team's own debug logs are most of the $96,400.",
-      'H-002ContradictsDisprovenData transfer from the region move doubled the network line.',
+      'C-002SupportsThe extra calls were about a bill. About the same number of people called to buy.',
+      'C-003ContradictsReplaced by C-002The extra calls were people calling to buy.',
+      'C-004ContradictsCallers waited too long and hung up before buying.',
+      'H-002ContradictsRuled outA new ad brought in more callers.',
     ])
     expect(items[1].querySelector('.used-by-statement')).toHaveClass('is-retired')
     expect(items[0].querySelector('.used-by-statement')).not.toHaveClass('is-retired')
@@ -216,13 +218,14 @@ describe('EvidenceDrawer actions', () => {
     const { user, drawer } = await openEvidence('E-003')
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Mark replaced' }))
-    let confirm = screen.getByRole('dialog', { name: 'Mark E-003 replaced?' })
-    expect(confirm).toHaveTextContent(supersedeEvidenceBody('E-003'))
+    let confirm = screen.getByRole('dialog', { name: 'Mark this source as replaced?' })
+    expect(confirm).toHaveTextContent(supersedeEvidenceBody)
+    expect(confirm).not.toHaveTextContent('E-003')
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }))
     expect(mocks.api.setEvidenceVerification).not.toHaveBeenCalled()
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
     await user.click(screen.getByRole('menuitem', { name: 'Mark replaced' }))
-    confirm = screen.getByRole('dialog', { name: 'Mark E-003 replaced?' })
+    confirm = screen.getByRole('dialog', { name: 'Mark this source as replaced?' })
     await user.click(within(confirm).getByRole('button', { name: 'Mark replaced' }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'superseded')
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
@@ -234,7 +237,7 @@ describe('EvidenceDrawer actions', () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
     await user.click(within(drawer).getByRole('button', { name: 'Edit source' }))
-    expect(screen.getByRole('dialog', { name: 'Edit source E-003' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Edit source' })).toBeInTheDocument()
     expect(mocks.api.getEvidence).toHaveBeenCalledWith('INV-0001', 'E-003', { include_raw_detail: true })
   })
 })

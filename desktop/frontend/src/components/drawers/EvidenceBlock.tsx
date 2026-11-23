@@ -49,7 +49,7 @@ export function EvidenceBlock({ evidence: e, onOpen, actions }: EvidenceBlockPro
         )}
         {captured && (
           <p className="evidence-block-captured tabular">
-            <span className="evidence-block-captured-label">Captured</span> {captured}
+            <span className="evidence-block-captured-label">As of</span> {captured}
           </p>
         )}
       </div>

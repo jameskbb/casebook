@@ -76,6 +76,15 @@ export interface InvestigationSummary {
   archived: boolean
   is_active: boolean
   counts: RecordCounts
+  // Newer backends send the four below. Read them through lib/questions.ts,
+  // which defaults them when an older backend leaves them out.
+  /** The answer text, "" when none. */
+  conclusion?: string
+  /** Sources that have not been replaced. */
+  sources_total?: number
+  sources_checked_by_you?: number
+  /** Findings where sources disagree. */
+  findings_disagree?: number
 }
 
 export interface RecordLink {

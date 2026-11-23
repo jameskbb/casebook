@@ -1,14 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { claims, detail, evidence, hypotheses, questions } from '../../test/fixtures'
+import { claims, evidence, hypotheses, questions } from '../../test/fixtures'
 import { claimWith } from '../../test/fixtures.detail'
 import { evidenceWith, question } from '../../test/fixtures.records'
 import { IMPORTED_TITLE } from './ImportedTag'
 import { EvidenceRow } from '../detail/EvidenceRow'
 import { QuestionRow } from '../detail/QuestionRow'
 import { RecordRow } from '../detail/RecordRow'
-import { EvidenceChip } from './EvidenceChip'
 import { kindRuleClass } from './KindRule'
 import { RecordStatusLabel } from './StatusLabel'
 import { VerificationBadge } from './VerificationBadge'
@@ -71,8 +70,8 @@ describe('RecordStatusLabel', () => {
       [{ kind: 'hypothesis', status: 'disproven' }, 'Ruled out'],
       [{ kind: 'hypothesis', status: 'superseded', supersededBy: 'H-004' }, 'Replaced by H-004'],
       [{ kind: 'question', status: 'open' }, null],
-      [{ kind: 'question', status: 'resolved' }, 'Resolved'],
-      [{ kind: 'question', status: 'deferred' }, 'Deferred'],
+      [{ kind: 'question', status: 'resolved' }, 'Answered'],
+      [{ kind: 'question', status: 'deferred' }, 'Set aside'],
     ]
     for (const [props, text] of cases) {
       const { container, unmount } = render(<RecordStatusLabel {...props} />)
@@ -83,55 +82,43 @@ describe('RecordStatusLabel', () => {
   })
 })
 
-describe('EvidenceChip', () => {
-  it('names a supporting evidence chip on a claim row', () => {
-    render(<EvidenceChip target="E-001" relation="supports" linkKind="claim" text="Service chart default log level set to debug" />)
-    const chip = screen.getByLabelText('E-001 supports this: Service chart default log level set to debug')
-    expect(chip).toHaveAttribute('title', 'E-001 supports this: Service chart default log level set to debug')
-    expect(chip.tagName).toBe('SPAN')
-    expect(chip.className).toContain('chip-supports')
-  })
-
-  it('marks a contradicting chip with Minus', () => {
-    render(<EvidenceChip target="E-003" relation="contradicts" linkKind="claim" text="214 services" />)
-    const chip = screen.getByLabelText('E-003 contradicts this: 214 services')
-    expect(chip.className).toContain('chip-contradicts')
-    expect(chip.querySelector('.lucide-minus')).not.toBeNull()
-  })
-
-  it('uses the dashed hypothesis outline for hypothesis links', () => {
-    render(<EvidenceChip target="E-002" relation="supports" linkKind="hypothesis" text="Docs" />)
-    expect(screen.getByLabelText('E-002 supports this: Docs').className).toContain('chip-hypothesis')
-  })
-
-  it('reads from the evidence side on evidence rows', () => {
-    render(
-      <EvidenceChip target="H-002" relation="contradicts" linkKind="hypothesis" placement="evidence" text="Data transfer" />,
-    )
-    expect(screen.getByLabelText('Contradicts H-002: Data transfer')).toBeInTheDocument()
-  })
-
-  it('is a button that opens its ref only when onOpen is passed', async () => {
-    const onOpen = vi.fn()
-    const user = userEvent.setup()
-    render(<EvidenceChip target="E-001" relation="supports" linkKind="claim" text="Gate" onOpen={onOpen} />)
-    await user.click(screen.getByRole('button', { name: 'E-001 supports this: Gate' }))
-    expect(onOpen).toHaveBeenCalledWith('E-001')
-  })
-})
-
 describe('RecordRow', () => {
-  it('shows a claim with its badge, statement and chips, and no confidence', () => {
+  it('shows a finding with its badge, statement and nested sources, and no confidence', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} />)
     const row = container.querySelector('[data-ref="C-001"]')!
     expect(row).not.toBeNull()
     expect(row.className).toContain('kind-rule-claim')
     expect(within(row as HTMLElement).getByText('You checked this')).toBeInTheDocument()
     expect(within(row as HTMLElement).queryByText(/confidence/i)).toBeNull()
-    expect(
-      within(row as HTMLElement).getByLabelText('E-001 supports this: Service chart default log level set to debug'),
-    ).toBeInTheDocument()
+    const sources = within(within(row as HTMLElement).getByRole('list', { name: 'Sources for this finding' })).getAllByRole('listitem')
+    expect(sources).toHaveLength(2)
+    expect(sources[0]).toHaveTextContent('Supports this: E-001 Notice dated October 4: 1,900 customers were charged twice')
+    // Without the question's sources to look up, a nested source shows its title only.
+    expect(sources[0].querySelector('.badge')).toBeNull()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('shows each nested source with where it came from and its own check label, and a minus when it contradicts', () => {
+    const sources = new Map(evidence.map((e) => [e.ref, e]))
+    const { container } = render(
+      <>
+        <RecordRow kind="claim" record={byRef(claims, 'C-001')} sources={sources} />
+        <RecordRow kind="claim" record={byRef(claims, 'C-004')} sources={sources} />
+        <RecordRow kind="hypothesis" record={{ ...byRef(hypotheses, 'H-003'), ref: 'H-030' }} sources={new Map([['E-002', { ...byRef(evidence, 'E-002'), source_label: '' }]])} />
+      </>,
+    )
+    const c1 = container.querySelector('[data-ref="C-001"]') as HTMLElement
+    const [e1, e4] = within(c1).getAllByRole('listitem')
+    expect(e1).toHaveTextContent('Email from the billing team')
+    expect(within(e1).getByText('Not checked')).toBeInTheDocument()
+    expect(within(e4).getByText('You checked this')).toBeInTheDocument()
+    expect(e1.querySelector('.lucide-plus')).not.toBeNull()
+    const against = (container.querySelector('[data-ref="C-004"]') as HTMLElement).querySelector('.finding-source') as HTMLElement
+    expect(against).toHaveClass('is-against')
+    expect(against.querySelector('.lucide-minus')).not.toBeNull()
+    expect(against).toHaveTextContent('Contradicts this:')
+    // With no "where it came from", the kind of source stands in.
+    expect(container.querySelector('[data-ref="H-030"] .finding-source-from')).toHaveTextContent('Document')
   })
 
   it('shows a disputed claim with the word Disputed and the hatched rule', () => {
@@ -168,7 +155,8 @@ describe('RecordRow', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-003')} />)
     const row = container.querySelector('[data-ref="C-003"]')!
     expect(row.className).toContain('kind-rule-retired')
-    expect(within(row as HTMLElement).getByText('Replaced by C-002')).toBeInTheDocument()
+    expect(row.querySelector('.record-status')).toHaveTextContent('Replaced by C-002')
+    expect(within(row as HTMLElement).getByText('by C-002')).toHaveClass('record-id')
     expect(row.querySelector('.record-statement')?.className).toContain('is-retired')
   })
 
@@ -188,18 +176,18 @@ describe('RecordRow', () => {
     expect(row.querySelector('.lucide-circle-check')).not.toBeNull()
   })
 
-  it('explains a ruled-out hypothesis with its contradicting evidence instead of a confidence', () => {
+  it('shows a ruled-out finding with the source that contradicts it nested under it, and no confidence', () => {
     const h = byRef(hypotheses, 'H-002')
     const title = h.links[0].evidence_title
     const { container } = render(<RecordRow kind="hypothesis" record={h} />)
     const row = container.querySelector('[data-ref="H-002"]') as HTMLElement
-    expect(row.querySelector('.record-ruled-out-by')).toHaveTextContent(`Ruled out by E-003: ${title}`)
+    expect(within(row).getByRole('listitem')).toHaveTextContent(`Contradicts this: E-003 ${title}`)
     expect(within(row).queryByText('Low confidence')).toBeNull()
     expect(within(row).getByText('Ruled out')).toBeInTheDocument()
     expect(row.querySelector('.record-statement')!.className).toContain('is-retired')
   })
 
-  it('names the first contradicting source on a rejected claim, and shows no foot without links', () => {
+  it('lists both kinds of source on a ruled-out finding, and no list without sources', () => {
     const contra = byRef(hypotheses, 'H-002').links[0]
     const support = byRef(hypotheses, 'H-003').links[0]
     const { container } = render(
@@ -209,57 +197,43 @@ describe('RecordRow', () => {
       </>,
     )
     const rejected = container.querySelector('[data-ref="C-020"]') as HTMLElement
-    expect(rejected.querySelector('.record-ruled-out-by')).toHaveTextContent(`Ruled out by ${contra.evidence_ref}: ${contra.evidence_title}`)
+    expect(within(rejected).getAllByRole('listitem').map((li) => li.querySelector('.finding-source')?.classList.contains('is-against'))).toEqual([false, true])
     expect(within(rejected).queryByText('High confidence')).toBeNull()
     const bare = container.querySelector('[data-ref="H-020"]') as HTMLElement
-    expect(bare.querySelector('.record-ruled-out-by')).toBeNull()
-    expect(bare.querySelector('.record-foot')).toBeNull()
+    expect(within(bare).queryByRole('list')).toBeNull()
   })
 
-  it('does not explain a replaced claim as ruled out', () => {
-    const { container } = render(<RecordRow kind="claim" record={claimWith({ ref: 'C-021', status: 'superseded', confidence: 'medium', links: [byRef(hypotheses, 'H-002').links[0]] })} />)
-    expect(container.querySelector('.record-ruled-out-by')).toBeNull()
-    expect(screen.queryByText(/confidence/i)).toBeNull()
-  })
-
-  it('opens the record and its chips when onOpen is passed', async () => {
+  it('opens the finding and each nested source when onOpen is passed', async () => {
     const onOpen = vi.fn()
     const user = userEvent.setup()
     render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} onOpen={onOpen} />)
     await user.click(screen.getByRole('button', { name: /^Open finding C-001/ }))
     expect(onOpen).toHaveBeenLastCalledWith('C-001')
-    await user.click(screen.getByRole('button', { name: 'E-004 supports this: Head of platform: debug was requested for payments only' }))
+    await user.click(screen.getByRole('button', { name: 'Supports this: E-004 Head of billing: the mistake was on October 3 only' }))
     expect(onOpen).toHaveBeenLastCalledWith('E-004')
   })
 })
 
 describe('EvidenceRow', () => {
-  it('shows title, clamped summary, source meta and what it supports and contradicts', () => {
+  it('shows the title, clamped summary, kind of source and where it came from', () => {
     const e3 = byRef(evidence, 'E-003')
-    const { container } = render(<EvidenceRow evidence={e3} detail={detail} />)
+    const { container } = render(<EvidenceRow evidence={e3} />)
     const row = container.querySelector('[data-ref="E-003"]') as HTMLElement
     expect(row.className).toContain('kind-rule-evidence')
-    expect(within(row).getByText('Log ingestion is 71% of the September increase')).toBeInTheDocument()
+    expect(within(row).getByText('Calls about a bill: 400 in September, 1,070 in October')).toBeInTheDocument()
     expect(row.querySelector('.evidence-summary')?.className).toContain('is-clamped')
-    expect(within(row).getByText('SQL query')).toBeInTheDocument()
-    expect(within(row).getByText('Billing export query')).toBeInTheDocument()
-    expect(within(row).getByText('Supports')).toBeInTheDocument()
-    expect(within(row).getByText('Contradicts')).toBeInTheDocument()
-    expect(
-      within(row).getByLabelText('Supports C-002: Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.'),
-    ).toBeInTheDocument()
-    expect(
-      within(row).getByLabelText('Contradicts H-002: Data transfer from the region move doubled the network line.'),
-    ).toBeInTheDocument()
+    expect(within(row).getByText('Data query')).toBeInTheDocument()
+    expect(within(row).getByText('Call log')).toBeInTheDocument()
+    // The row has one control at most (none here): it never lists findings.
+    expect(within(row).queryByRole('button')).toBeNull()
   })
 
   it('omits an empty source label', () => {
     const e = { ...byRef(evidence, 'E-001'), source_label: '', claim_links: [], hypothesis_links: [] }
-    const { container } = render(<EvidenceRow evidence={e} detail={detail} />)
+    const { container } = render(<EvidenceRow evidence={e} />)
     const meta = container.querySelector('.evidence-meta') as HTMLElement
     expect(meta.children).toHaveLength(1)
-    expect(meta).toHaveTextContent('Code')
-    expect(screen.queryByText('Supports')).not.toBeInTheDocument()
+    expect(meta).toHaveTextContent('File')
   })
 })
 
@@ -270,32 +244,32 @@ describe('QuestionRow', () => {
     expect(row).toHaveAttribute('tabindex', '-1')
     expect(row.className).toContain('kind-rule-question')
     expect(
-      within(row).getByText('Can every service except payments go back to info level today?'),
+      within(row).getByText('Have the customers who were charged twice been paid back?'),
     ).toBeInTheDocument()
   })
 
-  it('shows a resolved question with Resolved and its resolution', () => {
+  it('shows an answered follow-up question with Answered and its answer', () => {
     const { container } = render(<QuestionRow question={byRef(questions, 'Q-002')} />)
     const row = container.querySelector('[data-ref="Q-002"]') as HTMLElement
     expect(row.className).toContain('kind-rule-retired')
-    expect(within(row).getByText('Resolved')).toBeInTheDocument()
+    expect(within(row).getByText('Answered')).toBeInTheDocument()
     expect(
-      within(row).getByText('Platform shared services (CC-4100), so no product team saw the jump in its own showback (see E-003).'),
+      within(row).getByText('Yes. Both go to the sales line, which is why the total went up (see E-003).'),
     ).toBeInTheDocument()
     expect(row.querySelector('.lucide-circle-check')).not.toBeNull()
   })
 
-  it('shows a deferred question with Deferred and its note', () => {
+  it('shows a follow-up question set aside with Set aside and its note', () => {
     const { container } = render(<QuestionRow question={byRef(questions, 'Q-003')} />)
     const row = container.querySelector('[data-ref="Q-003"]') as HTMLElement
-    expect(within(row).getByText('Deferred')).toBeInTheDocument()
-    expect(within(row).getByText('Waiting for the quarter close on October 10.')).toBeInTheDocument()
+    expect(within(row).getByText('Set aside')).toBeInTheDocument()
+    expect(within(row).getByText('Waiting for the refund list on November 10.')).toBeInTheDocument()
     expect(row.querySelector('.lucide-circle-pause')).not.toBeNull()
   })
 
   it('renders an actions slot when given', () => {
-    render(<QuestionRow question={byRef(questions, 'Q-001')} actions={<button type="button">Resolve</button>} />)
-    expect(screen.getByRole('button', { name: 'Resolve' })).toBeInTheDocument()
+    render(<QuestionRow question={byRef(questions, 'Q-001')} actions={<button type="button">Answer</button>} />)
+    expect(screen.getByRole('button', { name: 'Answer' })).toBeInTheDocument()
   })
 })
 
@@ -305,14 +279,14 @@ describe('Imported marker', () => {
       <>
         <RecordRow kind="claim" record={claimWith({ ref: 'C-020', imported: true })} />
         <RecordRow kind="claim" record={claimWith({ ref: 'C-021' })} />
-        <EvidenceRow evidence={{ ...evidenceWith('E-001', { imported: true }), ref: 'E-020' }} detail={detail} />
+        <EvidenceRow evidence={{ ...evidenceWith('E-001', { imported: true }), ref: 'E-020' }} />
         <QuestionRow question={question({ ref: 'Q-020', imported: true })} />
       </>,
     )
     for (const ref of ['C-020', 'E-020', 'Q-020']) {
       const row = container.querySelector(`[data-ref="${ref}"]`) as HTMLElement
-      expect(within(row).getByText('Imported')).toHaveAttribute('title', IMPORTED_TITLE)
+      expect(within(row).getByText('From a file')).toHaveAttribute('title', IMPORTED_TITLE)
     }
-    expect(within(container.querySelector('[data-ref="C-021"]') as HTMLElement).queryByText('Imported')).toBeNull()
+    expect(within(container.querySelector('[data-ref="C-021"]') as HTMLElement).queryByText('From a file')).toBeNull()
   })
 })

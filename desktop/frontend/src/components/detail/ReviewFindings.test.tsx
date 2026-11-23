@@ -37,10 +37,10 @@ describe('focused human review', () => {
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref, {
       kind: 'claim', ref: reviewFinding.ref, basis: reviewFinding.basis, verification: 'human_verified', settle_dispute: false,
     })
-    expect(await screen.findByText(`You checked ${reviewFinding.ref}.`)).toBeInTheDocument()
+    expect(await screen.findByText('You checked this finding.')).toBeInTheDocument()
     expect(screen.getByText(reviewFinding.statement)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByText('No more findings in this filter')).toBeInTheDocument()
+    expect(screen.getByText('No more findings in this list')).toBeInTheDocument()
   })
   it('skips without writing and source checked findings can be checked by a person', async () => {
     const user = userEvent.setup()
@@ -93,7 +93,7 @@ describe('focused human review', () => {
     mount()
     expect(await screen.findByText('The case could not be loaded')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reload findings' })).toBeInTheDocument()
-    expect(screen.queryByText('No more findings in this filter')).not.toBeInTheDocument()
+    expect(screen.queryByText('No more findings in this list')).not.toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Review findings' })).queryByRole('button', { name: 'I checked this' })).not.toBeInTheDocument()
   })
   it('names each filter after the label it selects and explains Sources need attention', async () => {
@@ -121,6 +121,6 @@ describe('focused human review', () => {
     mount()
     expect(await screen.findByRole('heading', { name: 'Nothing to review yet' })).toBeInTheDocument()
     expect(screen.getByText('Findings your AI saves, and ones you add, appear here for you to check against their sources.')).toBeInTheDocument()
-    expect(screen.queryByText('No more findings in this filter')).not.toBeInTheDocument()
+    expect(screen.queryByText('No more findings in this list')).not.toBeInTheDocument()
   })
 })

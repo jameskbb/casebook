@@ -1,16 +1,16 @@
-// Plain-language History. A row
-// reads "{actor} {verb phrase}", for example "Claude Code (AI) added evidence
-// E-005". Client names are engine data from any surface (an MCP client picks
-// its own), so they are only ever rendered as text; the raw kind and client
-// stay inspectable in the actor tooltip.
+// How we got here, in plain words. A row reads "{actor} {verb phrase}", for
+// example "Claude Code added the source E-005" (the screen shows the source's
+// title in place of its code). The names AI tools give themselves are engine
+// data, so they are only ever rendered as text; the stored kind and name stay
+// in the actor tooltip.
 import type { Activity, Actor, ClaimStatus, HypothesisStatus, Verification } from '../api/types'
 import { actorKindLabels, claimStatusLabels, hypothesisStatusLabels, verificationLabels } from './labels'
 
-const ANY_AI_CLIENT = 'An AI client (AI)'
+const ANY_AI = 'Your AI'
 
 const FRIENDLY_CLIENT: Record<string, string> = {
   'casebook-ui': 'Casebook',
-  'casebook-cli': 'Casebook CLI',
+  'casebook-cli': 'Casebook command line',
   'claude-code': 'Claude Code',
   codex: 'Codex',
 }
@@ -19,23 +19,22 @@ function friendlyClient(client: string): string {
   return FRIENDLY_CLIENT[client] ?? client
 }
 
-/** "You (Casebook)", "Claude Code (AI)", "Codex (AI)", ... */
+/** "You", "Claude Code", "Codex", "Your AI", ... */
 export function actorPhrase(actor: Actor): string {
   const { kind, client } = actor
   switch (kind) {
     case 'human':
-      if (client === 'casebook-ui') return 'You (Casebook)'
-      if (client === 'casebook-cli') return 'You (Casebook CLI)'
-      return client ? `You (${client})` : 'You'
+      if (client === 'casebook-ui' || !client) return 'You'
+      if (client === 'casebook-cli') return 'You (command line)'
+      return `You (${client})`
     case 'ai':
-      if (client === 'claude-code') return 'Claude Code (AI)'
-      if (client === 'codex') return 'Codex (AI)'
-      if (client === 'mcp-client' || !client) return ANY_AI_CLIENT
+      if (client === 'claude-code') return 'Claude Code'
+      if (client === 'codex') return 'Codex'
+      if (client === 'mcp-client' || !client) return ANY_AI
       return `${client} (AI)`
     case 'import':
-      return client ? `Import (${friendlyClient(client)})` : 'Import'
     case 'system':
-      return 'Casebook (system)'
+      return 'Casebook'
     default:
       return client ? `${client} (${kind})` : String(kind)
   }
@@ -47,38 +46,39 @@ export function actorTooltip(actor: Actor): string {
   return actor.client ? `${kind}, ${actor.client}` : kind
 }
 
-// One entry per activity verb. "{T}" is the target ref.
+// One entry per activity verb. "{T}" is the target's code. Each phrase still
+// reads as a sentence with the code hidden.
 const VERBS: Record<string, string> = {
   'investigation.create': 'created this question',
   'investigation.update': 'edited the question',
   'investigation.archive': 'archived this question',
   'investigation.unarchive': 'unarchived this question',
   'conclusion.update': 'updated the answer',
-  'evidence.add': 'added source {T}',
-  'evidence.update': 'updated source {T}',
-  'claim.add': 'added finding {T}',
-  'claim.update': 'updated finding {T}',
-  'claim.supersede': 'replaced finding {T}',
-  'hypothesis.add': 'added finding {T}',
-  'hypothesis.update': 'updated finding {T}',
-  'hypothesis.supersede': 'replaced finding {T}',
-  'link.add': 'linked a source to {T}',
-  'link.update': 'changed how a source relates to {T}',
-  'link.remove': 'unlinked a source from {T}',
-  'question.add': 'asked {T}',
-  'question.update': 'reworded {T}',
-  'question.resolve': 'resolved {T}',
-  'question.defer': 'deferred {T}',
-  'question.reopen': 'reopened {T}',
-  'investigation.delete': 'deleted question {T}',
-  'evidence.delete': 'deleted source {T}',
-  'claim.delete': 'deleted finding {T}',
-  'hypothesis.delete': 'deleted finding {T}',
-  'question.delete': 'deleted {T}',
+  'evidence.add': 'added the source {T}',
+  'evidence.update': 'updated the source {T}',
+  'claim.add': 'added the finding {T}',
+  'claim.update': 'updated the finding {T}',
+  'claim.supersede': 'replaced the finding {T}',
+  'hypothesis.add': 'added the finding {T}',
+  'hypothesis.update': 'updated the finding {T}',
+  'hypothesis.supersede': 'replaced the finding {T}',
+  'link.add': 'added a source to the finding {T}',
+  'link.update': 'changed whether a source supports the finding {T}',
+  'link.remove': 'removed a source from the finding {T}',
+  'question.add': 'asked a follow-up question {T}',
+  'question.update': 'reworded a follow-up question {T}',
+  'question.resolve': 'answered a follow-up question {T}',
+  'question.defer': 'set aside a follow-up question {T}',
+  'question.reopen': 'reopened a follow-up question {T}',
+  'investigation.delete': 'deleted a question {T}',
+  'evidence.delete': 'deleted a source {T}',
+  'claim.delete': 'deleted a finding {T}',
+  'hypothesis.delete': 'deleted a finding {T}',
+  'question.delete': 'deleted a follow-up question {T}',
   'active.set': "made this your AI's current question",
   'active.clear': "cleared your AI's current question",
-  checkpoint: 'saved a checkpoint',
-  import: 'imported this question',
+  checkpoint: 'saved its progress',
+  import: 'added this question from a file',
   restore: 'restored all data from a backup',
 }
 
@@ -92,37 +92,38 @@ function fill(tpl: string, targetRef: string): string {
   return targetRef ? tpl.replace('{T}', targetRef) : tpl.replace(/ ?\{T\}/, '')
 }
 
-/** "added source E-005", "resolved Q-001", "recorded x.y on T". */
+/** "added the source E-005", "answered a follow-up question Q-001", "recorded x.y on T". */
 export function verbPhrase(action: string, targetRef: string): string {
   return fill(template(action, targetRef), targetRef)
 }
 
-export type SentenceSegment = { text: string } | { ref: string }
+/** Text, a record a click opens (ref), or a code that is only shown when codes are on (id). */
+export type SentenceSegment = { text: string } | { ref: string } | { id: string }
 
 export interface ActivitySentence {
   actor: string
   tooltip: string
   /** The row came from an imported file: the actor is the file's, not someone here. */
   imported: boolean
-  /** The verb phrase; E, C and H refs are ref segments (they open drawers). */
+  /** The verb phrase; a source or finding that can be opened is a ref segment, any other code an id segment. */
   segments: SentenceSegment[]
 }
 
 const OPENABLE_REF = /^[ECH]-\d+$/
 
 /**
- * The actor of a History row copied from an imported file. Nobody here did
- * it, so a human is never "You": "james (person in the imported file)".
+ * The actor of a row that came from a file. Nobody here did it, so a person
+ * is never "You": "james (a person, the file says)".
  */
 export function importedActorPhrase(actor: Actor): string {
   const client = actor.client ? friendlyClient(actor.client) : ''
   switch (actor.kind) {
     case 'human':
-      return client ? `${client} (person, per the imported file)` : 'A person (per the imported file)'
+      return client ? `${client} (a person, the file says)` : 'A person (the file says)'
     case 'ai':
-      return `${client || 'An AI client'} (AI, per the imported file)`
+      return `${client || 'An AI'} (AI, the file says)`
     default:
-      return `${actorPhrase(actor)}, per the imported file`
+      return `${actorPhrase(actor)} (the file says)`
   }
 }
 
@@ -135,23 +136,25 @@ export function activitySentence(activity: Activity): ActivitySentence {
   if (target && !deleted && OPENABLE_REF.test(target) && tpl.includes('{T}')) {
     const [before, after] = tpl.split('{T}')
     segments = [...(before ? [{ text: before }] : []), { ref: target }, ...(after ? [{ text: after }] : [])]
+  } else if (target && tpl.endsWith(' {T}')) {
+    segments = [{ text: tpl.slice(0, -' {T}'.length) }, { id: target }]
   } else {
     segments = [{ text: fill(tpl, target) }]
   }
   const imported = activity.imported === true
   return {
     actor: imported ? importedActorPhrase(activity.actor) : actorPhrase(activity.actor),
-    tooltip: imported ? `${actorTooltip(activity.actor)} (from an imported file)` : actorTooltip(activity.actor),
+    tooltip: imported ? `${actorTooltip(activity.actor)} (from a file)` : actorTooltip(activity.actor),
     imported,
     segments,
   }
 }
 
-// The second line of a History row. The engine writes one summary for every
-// surface (CLI, MCP, report timeline), so it keeps its own wording; History
-// rewrites the shapes a person meets most often into plain sentences with no
-// enum values and no "investigation". Any other summary is shown as stored.
-// The raw summary stays in the row's title attribute.
+// The second line of a row. The engine writes one summary for every surface,
+// so it keeps its own wording; this rewrites the shapes a person meets most
+// often into plain sentences with no stored values and no engine nouns. Any
+// other summary is shown as stored. A line that only repeats the first one
+// comes back empty. The stored summary stays in the row's title attribute.
 
 const RESET_NOTE = /; verification reset to ai_generated after \w+ edit$/
 
@@ -168,13 +171,28 @@ function statusWord(rec: string, v: string): string {
 /** The engine's record noun, as a person reads it. */
 const RECORD_WORD: Record<string, string> = { claim: 'finding', hypothesis: 'finding', evidence: 'source' }
 
-/** "statement", "status rejected" -> "statement", "now Ruled out". */
+/** The engine's field names, as a person reads them. */
+const FIELD_WORD: Record<string, string> = {
+  statement: 'wording',
+  rationale: 'why',
+  confidence_rationale: 'why',
+  source_type: 'kind of source',
+  source_label: 'where it came from',
+  source_ref: 'where to find it',
+  captured_at: 'as of date',
+  raw_detail: 'source detail',
+  metadata: 'extra details',
+  superseded_by: 'replaced by',
+  problem_statement: 'background',
+}
+
+/** "statement", "status rejected" -> "wording", "now Ruled out". */
 function fieldWord(rec: string, item: string): string {
   const [field, value] = item.split(' ', 2)
-  if (value === undefined) return field.replace(/_/g, ' ')
+  if (value === undefined) return FIELD_WORD[field] ?? field.replace(/_/g, ' ')
   if (field === 'status') return `now ${statusWord(rec, value)}`
   if (field === 'verification') return `marked ${verificationWord(value)}`
-  return `${field.replace(/_/g, ' ')} ${value}`
+  return `${FIELD_WORD[field] ?? field.replace(/_/g, ' ')} ${value}`
 }
 
 /** The edited fields in plain words. Confidence is stored but never shown. */
@@ -182,7 +200,7 @@ function fieldWords(rec: string, items: string[]): string[] {
   return items.filter((f) => !f.startsWith('confidence')).map((f) => fieldWord(rec, f))
 }
 
-/** "Edited finding C-002 (statement)", or without the list when nothing shown changed. */
+/** "Edited finding C-002 (wording)", or without the list when nothing shown changed. */
 function editedSentence(rec: string, target: string, items: string[]): string {
   const fields = fieldWords(rec, items)
   const noun = RECORD_WORD[rec] ?? rec
@@ -235,18 +253,16 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     }
     return editedSentence(rec, target, items)
   }
-  m = /^Set active investigation to (\S+)$/.exec(sum)
-  if (m) return `Made ${m[1]} your AI's current question`
-  m = /^Made (\S+) the active investigation for (.+)$/.exec(sum)
-  if (m) return `Made ${m[1]} your AI's current question for ${m[2]}`
-  m = /^Cleared active investigation \(was (\S+)\)$/.exec(sum)
-  if (m) return `Cleared your AI's current question (was ${m[1]})`
+  // The first line already says it.
+  if (/^Set active investigation to \S+$/.test(sum) || /^Cleared active investigation \(was \S+\)$/.test(sum)) return ''
+  m = /^Made \S+ the active investigation for (.+)$/.exec(sum)
+  if (m) return `For work in ${m[1]}`
   m = /^Created investigation (\S+) /.exec(sum)
-  if (m) return m[1] === activity.investigation_ref ? 'Created this question' : `Created question ${m[1]}`
+  if (m) return m[1] === activity.investigation_ref ? '' : `Created question ${m[1]}`
   m = /^Updated conclusion of \S+ \(confidence [a-z]+\)$/.exec(sum)
   if (m && activity.action === 'conclusion.update') {
     const review = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
-    return review ? 'Recorded a review of the answer' : 'Updated the answer'
+    return review ? 'Reviewed the answer' : ''
   }
   return sum
 }

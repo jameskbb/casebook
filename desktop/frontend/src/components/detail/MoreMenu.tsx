@@ -1,8 +1,7 @@
-// The detail header's More menu: Edit question..., Copy case as
-// text (the context pack
-// without the AI data framing Copy for your AI adds, for notes and
-// documents; the readable write-up is Share summary in the header), Export
-// as JSON..., and Archive or Unarchive question. Export runs the native save
+// The header's More menu: Edit question..., Copy question as
+// text (what Copy for your AI copies, without the framing meant for an AI,
+// for notes and documents; the readable write-up is Share the answer),
+// Save as a file..., and Archive or Unarchive question. Saving runs the native save
 // dialog in Go; a cancelled dialog shows nothing. Archiving is reversible and deletes
 // nothing, so it has no confirmation, only a toast with Undo. An archived
 // investigation also offers Delete question..., which says
@@ -22,13 +21,15 @@ import { IconButton } from '../ui/IconButton'
 import { Menu, type MenuItem } from '../ui/Menu'
 import { useToast } from '../ui/Toaster'
 
-export const ARCHIVED_COPY = (ref: string) => `Archived ${ref}. It is hidden from the list and nothing was deleted.`
+export const ARCHIVED_COPY = 'Archived this question. It is hidden from the list and nothing was deleted.'
+
+export const UNARCHIVED_COPY = 'Unarchived this question. It is back in the list.'
 
 export const deleteInvestigationBody = (inv: Investigation, counts: RecordCounts | null) => {
   const what = counts
     ? `everything in it: ${countPhrase(counts.evidence, 'source', 'sources')}, ${countPhrase(counts.claims + counts.hypotheses, 'finding', 'findings')}, ${countPhrase(counts.questions, 'follow-up question', 'follow-up questions')} and its history`
     : 'everything in it and its history'
-  return `${inv.ref} "${inv.title}" will be removed with ${what}. Export it first if you might need it again.`
+  return `"${inv.title}" will be removed with ${what}. Save it as a file first if you might need it again.`
 }
 
 export function MoreMenu({ investigation: inv }: { investigation: Investigation }) {
@@ -47,7 +48,7 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
     try {
       const res = await api.exportInvestigation(ref)
       if (res.cancelled) return
-      toast.success(`Exported ${ref} to ${res.file_name}.`)
+      toast.success(`Saved this question as ${res.file_name}.`)
     } catch (e) {
       showError(e)
     }
@@ -56,7 +57,7 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
   const unarchive = async () => {
     try {
       const done = await write(() => api.unarchiveInvestigation(ref))
-      if (done) toast.success(`Unarchived ${ref}.`)
+      if (done) toast.success(UNARCHIVED_COPY)
     } catch (e) {
       showError(e)
     }
@@ -66,7 +67,7 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
     try {
       const done = await write(() => api.archiveInvestigation(ref))
       if (!done) return
-      toast.success(ARCHIVED_COPY(ref), {
+      toast.success(ARCHIVED_COPY, {
         label: 'Undo',
         onClick: () => {
           void write(() => api.unarchiveInvestigation(ref)).catch(showError)
@@ -80,7 +81,7 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
   const items: MenuItem[] = [
     { label: 'Edit question...', icon: Pencil, onSelect: () => setEditOpen(true) },
     { label: 'Copy question as text', icon: FileText, onSelect: () => void copy(ref, { plain: true }) },
-    { label: 'Export as JSON...', icon: Download, onSelect: () => void exportJson() },
+    { label: 'Save as a file...', icon: Download, onSelect: () => void exportJson() },
     archived
       ? { label: 'Unarchive question', icon: ArchiveRestore, onSelect: () => void unarchive() }
       : { label: 'Archive question', icon: Archive, onSelect: () => void archive() },
@@ -103,13 +104,13 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
       {editOpen && <EditInvestigationDialog investigation={inv} onClose={() => setEditOpen(false)} />}
       {deleteOpen && (
         <DeleteDialog
-          title={`Delete ${ref}?`}
+          title="Delete this question?"
           body={deleteInvestigationBody(inv, counts)}
           confirmLabel="Delete question"
           onConfirm={async () => {
             const done = await write(() => api.deleteInvestigation(ref).then(() => true), { rethrowConflict: true })
             if (done) {
-              toast.success(`Deleted ${ref}.`)
+              toast.success('Deleted the question.')
               select(null)
             }
             return Boolean(done)

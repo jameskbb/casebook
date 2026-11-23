@@ -89,9 +89,3 @@ export function DeleteDialog({ title, body, blocker, confirmLabel, onConfirm, on
     </Dialog>
   )
 }
-
-/** "C-001", "C-001 and C-002", "C-001, C-002 and H-001". */
-export function refList(refs: string[]): string {
-  if (refs.length <= 1) return refs.join('')
-  return `${refs.slice(0, -1).join(', ')} and ${refs[refs.length - 1]}`
-}

@@ -40,9 +40,10 @@ import { STATEMENT_VERIFICATIONS, statementMarks } from '../../lib/recordState'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { ImportedTag } from '../record/ImportedTag'
+import { RecordId } from '../record/RecordId'
 import { RecordStatusLabel } from '../record/StatusLabel'
 import { VerificationBadge } from '../record/VerificationBadge'
-import { DeleteDialog, refList } from '../dialogs/DeleteDialog'
+import { DeleteDialog } from '../dialogs/DeleteDialog'
 import { EvidenceDialog } from '../dialogs/EvidenceDialog'
 import { LinkEvidenceDialog } from '../dialogs/LinkEvidenceDialog'
 import { SupersedeDialog } from '../dialogs/SupersedeDialog'
@@ -66,7 +67,7 @@ export type StatementDrawerProps = {
 /** The one act a person records: they compared the finding with its sources. */
 export const CHECKED_ACTION = 'I checked this'
 export const SETTLE_ACTION = 'I checked this, settle it'
-export const SETTLE_COPY = 'Checking this finding settles the disagreement between its sources. Confirm only after reading the statement and its sources.'
+export const SETTLE_COPY = 'Checking this finding settles the disagreement between its sources. Confirm only after reading the finding and its sources.'
 export const SUPPORTING_TITLE = 'Sources that support it'
 export const CONTRADICTING_TITLE = 'Sources that contradict it'
 export const MORE_OPTIONS_LABEL = 'More options'
@@ -116,9 +117,8 @@ export function DrawerGroup({
 export function SupersededBy({ refText, onOpen }: { refText: string; onOpen: (ref: string) => void }) {
   return (
     <p className="superseded-by">
-      Replaced by{' '}
-      <button type="button" className="text-button tabular" title={`Open ${refText}`} onClick={() => onOpen(refText)}>
-        {refText}
+      <button type="button" className="text-button" onClick={() => onOpen(refText)}>
+        Open the finding that replaced it <RecordId>{refText}</RecordId>
       </button>
     </p>
   )
@@ -361,7 +361,7 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
             </p>
           )}
           <TextArea
-            label="Statement"
+            label="Finding"
             value={draft}
             onChange={setDraft}
             error={error}
@@ -373,7 +373,7 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
               Cancel
             </Button>
             <Button variant="primary" busy={busy} busyLabel="Saving..." onClick={() => void save()}>
-              Save statement
+              Save finding
             </Button>
           </div>
         </div>
@@ -382,7 +382,7 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
           <p className={['drawer-statement', retired ? 'is-retired' : ''].filter(Boolean).join(' ')}>{r.statement}</p>
           <div>
             <Button variant="ghost" icon={Pencil} className="drawer-edit-button" ref={buttonRef} onClick={begin}>
-              Edit statement
+              Edit finding
             </Button>
           </div>
         </>
@@ -526,7 +526,7 @@ const CLAIM_STATUSES: ClaimStatus[] = ['active', 'disputed', 'rejected']
 const HYPOTHESIS_STATUSES: HypothesisStatus[] = ['open', 'supported', 'disproven']
 
 export const SUPERSEDED_HINT =
-  'A replaced finding keeps its label. To change it, choose a status to bring this one back first.'
+  'A replaced finding keeps its label. To change it, bring it back first: choose More options, then a status.'
 
 function StatusGroup({
   kind,
@@ -681,14 +681,13 @@ function StatusGroup({
 /* Deleting: permanent, confirmed, and refused while another record
    names this one as its replacement. */
 
-export const deleteStatementBody = (r: StatementRecord) => {
-  const links = r.links.length
-  const linkText = links === 0 ? '' : ` and its ${links === 1 ? 'source link' : `${links} source links`}`
-  return `${r.ref} will be removed from this question${linkText}. The sources themselves stay. Use this for a finding entered by mistake; to retire one, change its status or replace it instead.`
-}
+export const deleteStatementBody = (r: StatementRecord) =>
+  `This finding will be removed from this question.${r.links.length > 0 ? ' Its sources stay.' : ''} Use this for a finding added by mistake. To keep it in the history, mark it Ruled out or replace it instead.`
 
-export const replacesBlocker = (ref: string, replaced: string[]) =>
-  `${ref} replaces ${refList(replaced)}. Bring ${replaced.length === 1 ? 'it' : 'them'} back with a status, or delete ${replaced.length === 1 ? 'it' : 'them'}, first.`
+export const replacesBlocker = (replaced: string[]) =>
+  replaced.length === 1
+    ? 'This finding replaced another finding. Bring that one back or delete it first. It is under Show replaced findings.'
+    : `This finding replaced ${replaced.length} other findings. Bring them back or delete them first. They are under Show replaced findings.`
 
 function DeleteStatement({
   kind,
@@ -715,15 +714,15 @@ function DeleteStatement({
       </Button>
       {open && (
         <DeleteDialog
-          title={`Delete ${noun} ${r.ref}?`}
+          title={`Delete this ${noun}?`}
           body={deleteStatementBody(r)}
-          blocker={replaced.length > 0 ? replacesBlocker(r.ref, replaced) : null}
+          blocker={replaced.length > 0 ? replacesBlocker(replaced) : null}
           confirmLabel={`Delete ${noun}`}
           onConfirm={async () => {
             const call = kind === 'claim' ? api.deleteClaim : api.deleteHypothesis
             const done = await write(() => call(invRef, r.ref).then(() => true), { rethrowConflict: true })
             if (done) {
-              toast.success(`Deleted ${noun} ${r.ref}.`)
+              toast.success(`Deleted the ${noun}.`)
               onDeleted?.()
             }
             return Boolean(done)
@@ -794,12 +793,11 @@ function EvidenceGroups({
   const unlink = async (evidenceRef: string, was: Relation) => {
     if (pending) return
     setPending(evidenceRef)
-    const recordRef = r.ref
     try {
       const saved = await write(() => calls.unlink(evidenceRef))
       if (saved) {
         linkButtonRef.current?.focus()
-        toast.success(`Unlinked ${evidenceRef} from ${recordRef}.`, {
+        toast.success('Removed the source from this finding.', {
           label: 'Undo',
           onClick: () => void write(() => calls.link(evidenceRef, was)).catch(() => {}),
         })
@@ -825,10 +823,10 @@ function EvidenceGroups({
                   disabled={pending === e.ref}
                   onClick={() => void flip(e.ref, relation === 'supports' ? 'contradicts' : 'supports')}
                 >
-                  {relation === 'supports' ? 'Mark as contradicting' : 'Mark as supporting'}
+                  {relation === 'supports' ? 'It contradicts this' : 'It supports this'}
                 </Button>
                 <Button variant="ghost" icon={Unlink} disabled={pending === e.ref} onClick={() => void unlink(e.ref, relation)}>
-                  Unlink
+                  Remove from this finding
                 </Button>
               </>
             }
@@ -844,7 +842,7 @@ function EvidenceGroups({
         {supporting.length > 0 ? (
           list(supporting, 'supports')
         ) : (
-          <p className="drawer-empty">{none ? 'No source is linked yet.' : 'Nothing supports this yet.'}</p>
+          <p className="drawer-empty">{none ? 'This finding has no sources yet.' : 'Nothing supports this yet.'}</p>
         )}
       </DrawerGroup>
       {!none && (
@@ -858,7 +856,7 @@ function EvidenceGroups({
       )}
       <div className="drawer-link-actions">
         <Button variant="secondary" icon={LinkIcon} ref={linkButtonRef} onClick={onLink}>
-          Link a source
+          Add a source to this finding
         </Button>
       </div>
     </div>

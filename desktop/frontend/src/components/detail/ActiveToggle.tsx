@@ -16,10 +16,9 @@ import { useToast } from '../ui/Toaster'
 import '../ui/Button.css'
 import './ActiveToggle.css'
 
-export const ACTIVE_TITLE_OFF = 'Click so your AI tools start from this question.'
-export const NOT_ACTIVE_COPY = (ref: string) =>
-  `${ref} was no longer your AI's current question, so nothing changed.`
-export const ACTIVE_TITLE_ON = 'Your AI tools start from this question. Click to stop.'
+export const ACTIVE_TITLE_OFF = 'Click so your AI starts from this question.'
+export const NOT_ACTIVE_COPY = "This was no longer your AI's current question, so nothing changed."
+export const ACTIVE_TITLE_ON = 'Your AI starts from this question. Click to stop.'
 
 export function ActiveToggle({ investigation: inv }: { investigation: Investigation }) {
   const write = useWrite()
@@ -34,10 +33,10 @@ export function ActiveToggle({ investigation: inv }: { investigation: Investigat
       if (on) {
         const cleared = await write(() => api.clearActiveInvestigation(inv.ref))
         if (cleared === true) toast.success("No question is your AI's current question now.")
-        else if (cleared === false) toast.success(NOT_ACTIVE_COPY(inv.ref))
+        else if (cleared === false) toast.success(NOT_ACTIVE_COPY)
       } else {
         const done = await write(() => api.setActiveInvestigation(inv.ref))
-        if (done) toast.success(`${inv.ref} is now your AI's current question.`)
+        if (done) toast.success("This is now your AI's current question.")
       }
     } catch (e) {
       toast.error(errorCopy(toApiError(e)).message)

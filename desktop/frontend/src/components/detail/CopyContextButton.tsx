@@ -14,7 +14,7 @@ export function CopyContextButton({ investigationRef }: { investigationRef: stri
       variant="secondary"
       icon={copied ? Check : ClipboardCopy}
       className="copy-context-btn"
-      title="Copies the question and its records the way your AI tools read it, to paste into a chat."
+      title="Copies this question with its findings and sources, written for an AI. Paste it into a chat."
       onClick={() => void copy(investigationRef)}
     >
       {copied ? 'Copied' : 'Copy for your AI'}

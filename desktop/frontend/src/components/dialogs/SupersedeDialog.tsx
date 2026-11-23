@@ -35,7 +35,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
   const [choiceError, setChoiceError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
   const firstRef = useRef<HTMLInputElement>(null)
-  const title = `Replace ${record.ref}`
+  const title = 'Replace this finding'
 
   if (candidates.length === 0) {
     return (
@@ -105,7 +105,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
       }
     >
       <p className="dialog-text">
-        {`Choose the ${noun} that replaces it. ${record.ref} stays in the history, marked as replaced.`}
+        {`Choose the ${noun} that replaces it. The old one stays in the history, marked as replaced.`}
       </p>
       <fieldset
         className={['choice-field', choiceError ? 'is-invalid' : ''].filter(Boolean).join(' ')}

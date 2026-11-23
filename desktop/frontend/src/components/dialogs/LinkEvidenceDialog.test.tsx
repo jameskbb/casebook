@@ -9,6 +9,7 @@ import { AppDataProvider } from '../../state/appData'
 import { claims, evidence, hypotheses } from '../../test/fixtures'
 import { claim } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
+import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { LinkEvidenceDialog } from './LinkEvidenceDialog'
 
@@ -17,7 +18,7 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 
 const providers = (ui: ReactNode) => (
   <ToastProvider>
-    <AppDataProvider>{ui}</AppDataProvider>
+    <AppDataProvider><OpenAtLaunch />{ui}</AppDataProvider>
   </ToastProvider>
 )
 
@@ -50,14 +51,14 @@ describe('LinkEvidenceDialog', () => {
 
   it('lists the evidence with already linked items disabled and labelled', () => {
     renderDialog(claims[0])
-    const dialog = screen.getByRole('dialog', { name: 'Link a source to C-001' })
+    const dialog = screen.getByRole('dialog', { name: 'Add a source to this finding' })
     const e1 = within(dialog).getByRole('radio', { name: /E-001/ })
     expect(e1).toBeDisabled()
-    expect(e1.closest('label')).toHaveTextContent('Already linked as supporting')
+    expect(e1.closest('label')).toHaveTextContent('Already supports this finding')
     expect(within(dialog).getByRole('radio', { name: /E-004/ })).toBeDisabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ })).toBeEnabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ }).closest('label')).toHaveTextContent(
-      'Logs are billed per GB ingested in the month',
+      'Sales were $510k in September and $512k in October',
     )
     expect(within(dialog).getByRole('radio', { name: 'Supports' })).toHaveAttribute('aria-checked', 'true')
   })
@@ -65,7 +66,7 @@ describe('LinkEvidenceDialog', () => {
   it('labels evidence linked as contradicting', () => {
     renderDialog(claims[3])
     expect(screen.getByRole('radio', { name: /E-003/ }).closest('label')).toHaveTextContent(
-      'Already linked as contradicting',
+      'Already contradicts this finding',
     )
   })
 
@@ -73,7 +74,7 @@ describe('LinkEvidenceDialog', () => {
     const user = userEvent.setup()
     const { onClose } = renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-002', 'supports')
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
@@ -81,28 +82,28 @@ describe('LinkEvidenceDialog', () => {
   it('links contradicting evidence to a hypothesis', async () => {
     const user = userEvent.setup()
     renderDialog(hypotheses[0])
-    expect(screen.getByRole('dialog', { name: 'Link a source to H-001' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Add a source to this finding' })).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /E-003/ }))
     await user.click(screen.getByRole('radio', { name: 'Contradicts' }))
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', 'E-003', 'contradicts')
   })
 
   it('asks for a choice before linking', async () => {
     const user = userEvent.setup()
     renderDialog(claims[0])
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
-    expect(screen.getByText('Choose the source to link.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
+    expect(screen.getByText('Choose a source.')).toBeInTheDocument()
     expect(mocks.api.linkEvidenceToClaim).not.toHaveBeenCalled()
   })
 
-  it('shows Linking... while the call runs', async () => {
+  it('shows Adding... while the call runs', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ linkEvidenceToClaim: () => new Promise<Claim>(() => {}) }))
     renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
-    expect(screen.getByRole('button', { name: 'Linking...' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
+    expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
 
   it('shows a conflict inside the dialog', async () => {
@@ -117,7 +118,7 @@ describe('LinkEvidenceDialog', () => {
     )
     renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link a source' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(await screen.findByText('Evidence E-002 belongs to another investigation')).toBeInTheDocument()
   })
 
@@ -132,8 +133,8 @@ describe('LinkEvidenceDialog', () => {
 
   it('says so when every piece of evidence is already linked', () => {
     renderDialog(claims[0], evidence.filter((e) => e.ref === 'E-001' || e.ref === 'E-004'))
-    expect(screen.getByText('Every source is already linked to C-001.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Link a source' })).toBeNull()
+    expect(screen.getByText('Every source in this question is already under this finding.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add a source to this finding' })).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2)
   })
 })
