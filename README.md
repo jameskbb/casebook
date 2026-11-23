@@ -58,7 +58,7 @@ Under the answer, Casebook shows **2 of 9 sources checked by you**. It does not 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/investigation-dark.png">
-  <img src="docs/screenshots/investigation.png" alt="What backs this up, for the call center answer: three findings, each with how many of its sources you checked and its sources listed under it. Each source is marked Not checked, AI checked the source or You checked this. Below them, Where sources disagree starts with a finding that has one source backing it, one going against it, and a Decide button." width="100%">
+  <img src="docs/screenshots/investigation.png" alt="What backs this up, for the call center answer: three findings, each with how many of its sources you checked and its sources listed under it as links. Each source is marked Not checked, AI checked the source or You checked this. Below them, Where sources disagree starts with a finding that has one source backing it, one going against it, and an outlined Decide button." width="100%">
 </picture>
 
 ## Check the sources
@@ -93,7 +93,7 @@ If your AI rewrites something you checked, the label goes back to Not checked an
 
 Choose **Share the answer** on a question. Pick **Short version** for the answer and the findings behind it, or **Everything** to add the full history. **Copy** puts the text on the clipboard for an email or a document. **Save as a file** writes a web page that opens in any browser.
 
-![The Share the answer window for the call center question with Short version picked under How much to share. Below it, the start of the answer as the reader will see it: the question, when it was asked, the background, and the answer with how many sources were checked and a line saying nobody has checked the answer yet. At the bottom, Close, Save as a file and Copy.](docs/screenshots/share-summary.png)
+![The Share the answer window for the call center question with Short version picked under How much to share. Below it, the start of the answer as the reader will see it: the question, when it was asked and last changed, the background, and the answer with how many sources were checked and a line saying nobody has checked the answer yet. At the bottom, Close, Save as a file and Copy.](docs/screenshots/share-summary.png)
 
 The reader does not need Casebook. The shared answer names each finding and source in its own words, says which ones a person checked, and always includes findings where sources disagree. The short version ends by saying what it left out. Casebook builds the text from what is saved and does not ask an AI to rewrite it.
 
