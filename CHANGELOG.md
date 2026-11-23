@@ -4,6 +4,39 @@ All notable changes to Casebook are recorded here. Versions follow [Semantic Ver
 
 ## Unreleased
 
+Casebook is rebuilt around one job: keeping how you reached an answer with AI, so you can check it and share it. It now uses four words: a **question** has an **answer**, the answer rests on **findings**, and each finding has **sources**. You **check** them. Your saved work is kept and needs no conversion.
+
+### Changed
+
+- New words everywhere a person reads: the app, shared answers, the command line, the guides and what your AI is told to say. The labels are **Not checked**, **AI checked the source**, **You checked this** and **Sources disagree**. A finding can also be **Not tested yet**, **Looks right so far**, **Ruled out** or **Replaced**.
+- The app opens on **Home**, which lists the questions that need you: a source you have not checked, or a finding where sources disagree. The list on the left groups questions under **No answer yet** and **Answered**, each with its count, for example "2 of 9 sources checked by you".
+- Checked counts take the place of High, Medium and Low confidence. Under an answer you see how many sources you checked, how many your AI checked and how many nobody has checked.
+- The status menu is gone. A question reads **No answer yet** or **Answered**, worked out from what is saved.
+- A question's page leads with the answer, then the findings. Each finding lists its sources under it, with a label on each one.
+- There is one way to check. **Check the next source** takes you to the next source you have not checked. **I checked this** marks a finding or a source, and **I checked this answer** marks the answer.
+- The answer editor has two fields: the answer, and why it holds.
+- **Still to find out** is one list of the findings not tested yet and the follow-up questions.
+- **Share the answer** is a simpler window: choose **Short version** or **Everything**, choose what to share, then **Copy** or **Save**. A shared answer has no codes. Findings and sources are named by their own words, dates are written out, and a finding you checked reads "A person checked this" because the reader is not you. **Save** now writes a web page (`.html`) named after the question, which opens in any browser.
+- The **Settings** menu replaces the Data menu: **Connect your AI...**, **Open a question someone sent you...**, **Save a backup...**, **Bring back a backup...**, **Look for updates...** and **Technical...**, which holds the version and where your questions are kept.
+- Codes such as `C-001` and `E-004` are hidden in the app. Turn on **Show the codes your AI uses** under **Technical...** to see them.
+- The first screen says what the app is in two sentences and how to use it in three steps: connect your AI, ask it a question, check the sources and share the answer.
+- Error messages and the history under **How we got here** say what happened in plain sentences.
+- The built-in example and the demo questions are everyday ones. The example is "Why did calls go up 30% in October when sales stayed the same?".
+- The README is rewritten for the new app, and its example of what your AI reads is the call center question.
+
+### For people using the CLI or MCP
+
+Unchanged: MCP tool and argument names, CLI commands and flags, JSON keys and stored values, record codes, the export file format and the database. Nothing needs to be set up again.
+
+Changed:
+
+- `casebook inv list --json` gained four fields on each question: `conclusion` (the answer text), `sources_total`, `sources_checked_by_you` and `findings_disagree`.
+- `casebook inv list` prints **Answered** or **No answer yet** and how many sources you checked ("2 of 9"), in place of the stored status. `casebook inv show` prints the question, its background and recent activity in the app's words.
+- The text of `casebook context`, `casebook report` and the matching MCP tools uses the new words and labels, so anything that reads those headings or labels as text needs updating. There, a record a person checked is labelled "A person checked this". The report and the short version no longer print record codes; the briefing an AI reads still does.
+- History lines written from now on, including the `summary` text in JSON output, use the new words ("Added finding C-002 with 2 sources").
+- Answers saved from the app's **Share the answer** window are `.html` files. `casebook report -o` still writes Markdown.
+- Command help, tool descriptions, the session start hint, the generated skill and `casebook doctor` use the new words. Tools still take and return the stored names (`investigation`, `claim`, `hypothesis`, `evidence`, `conclusion`).
+
 ## 0.8.2 (2026-11-17)
 
 ### Security

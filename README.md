@@ -1,172 +1,225 @@
 # Casebook
 
+Casebook keeps a record of how you reached an answer with AI. You ask your AI why a number moved. It saves the question, what it found, where each finding came from, and the answer. You check the sources yourself, then share the answer.
+
+It runs on your own computer. There is no account and nothing to host.
+
+## How it works
+
+1. **Connect your AI.** You do this once.
+2. **Ask your AI a question.** Tell it to save what it finds in Casebook.
+3. **Check the sources and share the answer.** Mark each source you have checked yourself.
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-title-casebook-dark.png">
-  <img src="docs/images/readme-title-casebook.png" alt="Casebook: Evidence your agents can't forget. Claims only you can verify. Beside it, the Northeast margin case: the conclusion at high confidence, one claim a person verified, one disputed, one explanation ruled out." width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/detail-dark.png">
+  <img src="docs/screenshots/main.png" alt="Casebook with the question &quot;Why did calls go up 30% in October when sales stayed the same?&quot; open. The answer is at the top with &quot;2 of 9 sources checked by you&quot;, a Check the next source button and a Share the answer button. The list on the left groups questions under No answer yet and Answered." width="100%">
 </picture>
 
 <p align="center">
   <a href="https://github.com/jameskbb/casebook/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/jameskbb/casebook/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
   <a href="https://github.com/jameskbb/casebook/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/jameskbb/casebook?sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=2e6b4e"></a>
-  <a href="go.mod"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/jameskbb/casebook?style=for-the-badge&logo=go&logoColor=white&label=Go&color=00ADD8"></a>
   <a href="docs/install.md"><img alt="Platforms" src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20CLI-23476b?style=for-the-badge"></a>
-  <a href="docs/mcp.md"><img alt="MCP" src="https://img.shields.io/badge/MCP-server-8A2BE2?style=for-the-badge&logo=modelcontextprotocol&logoColor=white"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/jameskbb/casebook?style=for-the-badge&label=License&color=blue"></a>
 </p>
 
-**Evidence your agents can't forget. Claims only you can verify.**
+## Install
 
-Casebook turns AI findings into a case you can explain and fact-check later. Investigate a margin decline, an outage or an audit question across sessions and AI clients. The evidence, claims, dead ends and current answer stay on your computer, labelled with who checked them. "My AI told me" becomes "here is the evidence".
+1. Download the app for Windows or Mac from the [Releases page](https://github.com/jameskbb/casebook/releases). [Installing Casebook](docs/install.md#desktop-app) says which file to take.
+2. Open it. Windows and macOS warn the first time, because the app is not signed yet. The install guide shows how to check your download and get past the warning.
+3. Choose **Connect your AI** on the first screen and pick the AI tool you use.
 
-For the general manager who has to explain why a number moved, and for the analyst who does the digging. One person, one computer, no account, nothing to host.
+Connecting means pasting one line into a terminal. If you have never done that, send the line to whoever set up your AI tool. To look around first, choose **Open the call center example**. The example is made up and nothing is added to your questions.
 
-## Get started
+There is no Linux app yet. On Linux, Casebook is a command line tool ([For people setting it up](#for-people-setting-it-up)).
 
-1. **Download the app** for Windows or Mac from the [Releases page](https://github.com/jameskbb/casebook/releases) ([which file, and the first-open warning](docs/install.md#desktop-app)).
-2. **Connect your AI.** Choose **Connect your AI** on the first screen, select your client, and follow its setup instructions. Claude Desktop, Cursor and others are in [every client](docs/mcp.md). To look around first, open the fictional margin case there; nothing is saved.
+## Ask your AI a question
 
-Ask your AI to use Casebook for a question that needs digging and save what it finds. A new case shows **Get your first finding**, which opens the setup. Open **Review findings** to inspect each statement beside its supporting and contradicting evidence. Choose **Verify myself** after checking a finding, then **Share summary** when someone needs the answer.
+Start with a message like this one, and change the question to your own:
 
-## An example: the Northeast margin
+> Help me find out why calls to our call center went up when sales stayed the same. First ask me which months and which reports to use. Save one finding in Casebook with the source it came from, and note what we still need to check.
 
-In this fictional example, Northeast gross margin fell from 41% to 35% in Q3 while revenue grew 4%. You need to explain why at Monday's regional review.
+Your AI saves the question, each finding and the source each finding came from. They appear in the app within a few seconds. The work is still there tomorrow, in a new chat or in a different AI tool.
 
-The regional numbers show delivery costs up 15%. The sales VP thinks the team cut prices too deeply to win the quarter's two biggest deals. Contractor costs and currency changes are other possibilities.
+## An example: calls went up, sales stayed the same
 
-The numbers rule out the easy answers. Discounts and contractor rates did not change, and currency explains only $40k. Most of the extra cost, $1.4M, comes from three accounts that started getting white-glove onboarding in July. A July 6 change to the sales playbook explains why: onboarding became free on every deal above $250k.
+This example is made up. It is the one built into the app.
 
-The work starts in Claude Code and continues in Codex, then Claude Code again. Each session can read the saved findings and the explanations already ruled out. You confirm with the regional sales-ops lead that free onboarding was never meant for every deal, check the finding against its sources, and review the conclusion before sharing the answer.
+Calls to the call center went from 2,400 in September to 3,120 in October. Sales stayed the same. Why?
+
+The AI looked at the call log. Calls to buy barely moved: 2,000 in September, 2,050 in October. Calls about a bill went from 400 to 1,070. A notice from the billing team says 1,900 customers were charged twice on October 3.
+
+Two other ideas were ruled out. No new ads ran in October, and prices did not change. The sales manager said the team was two people short, but the phone system report shows the same 40 second wait in both months. Those two sources disagree, and Casebook says so.
+
+You read the billing team's notice yourself and spoke to the billing team lead. You marked both as checked. The answer:
+
+> The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
+
+Under the answer, Casebook shows **2 of 9 sources checked by you**. It does not show a confidence score.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-hero-split-dark.png">
-  <img src="docs/images/readme-hero-split.png" alt="Illustrative Claude Code session comparing the July sales playbook versions beside Casebook, where the saved finding is marked AI generated and attributed to Claude Code in History." width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/investigation-dark.png">
+  <img src="docs/screenshots/investigation.png" alt="The findings behind the call center answer. Each finding has its sources listed under it, and every finding and source carries a label: Not checked, AI checked the source or You checked this. Below them, a finding where sources disagree." width="100%">
 </picture>
 
-*The new finding appears in Casebook as AI generated. The terminal is a mock-up using the fictional margin case and Casebook's output format; the app shows the built-in example case.*
+## Check the sources
 
-The next AI session receives the saved case, not the chat history. After the claim and conclusion have been reviewed, its briefing includes this excerpt:
+Open a question. The answer is at the top. Under it is each finding, with its sources listed below the finding.
 
-```text
-Current conclusion:
-White-glove onboarding, given away free on every deal above $250k since July, drove most of the margin drop.
+- Choose **Check the next source** to go to the next source you have not checked.
+- Read the source. Open the report or the email it points to and compare.
+- Choose **I checked this** when it holds up. Choose **Sources disagree** when a source says something different.
+- When you are happy with the answer, choose **I checked this answer**.
 
-Conclusion confidence:
-High
-
-Conclusion verification: Human verified
-Supporting claims: C-002 [AI generated], C-003 [Human verified]
-Contradicting claims: C-001 [Disputed]
-
-Disputed claims:
-C-001 [Low, Disputed] Deep discounts on the quarter's two biggest deals caused most of the margin drop.
-
-Known disproven hypotheses:
-H-001 July contractor hires raised the cost of each onboarding in the Northeast. [AI generated]
-Contradicted by: E-005 [AI generated]
-H-002 The weaker Canadian dollar inflated delivery cost on the Canadian accounts. [AI generated]
-Contradicted by: E-005 [AI generated]
-```
-
-The briefing keeps the ruled-out explanations and the evidence behind them. The disputed discounting claim stays visible, so the next session can distinguish it from the current answer.
+If something changes after you checked the answer, Casebook tells you to check it again.
 
 ## What the labels mean
 
-Confidence and verification are separate.
+Every finding and every source carries one label.
 
-- **Human verified**: a person checked this and vouched for it. Only a person can set it.
-- **Source verified**: marked as checked against its source, usually by your AI. Only Human verified means a person vouched for it.
-- **AI generated**: saved by an AI and not yet checked by a person in Casebook.
-- **Disputed**: evidence contradicts it. It stays on record until a person settles it.
-- **Superseded**: replaced by a newer statement, which is named.
-- **High, Medium, Low** confidence: how sure the author was when writing it. It does not change when something is verified. **Not assessed**: none was recorded.
+- **Not checked**: nobody has checked this yet.
+- **AI checked the source**: your AI compared this with its source. You have not checked it yourself.
+- **You checked this**: you checked this against its source. Only a person can set this label.
+- **Sources disagree**: a source says something different. It stays until you decide.
 
-## What makes it different
+A finding can also be **Not tested yet**, **Looks right so far**, **Ruled out** or **Replaced**. Findings that were ruled out stay on record, so nobody tests the same idea twice.
 
-- **Human review has its own label.** Your AI can save findings and mark them Source verified when it checks the source. Only a person can mark them Human verified. If an AI rewrites checked content, it goes back to AI generated and the AI is told to let you know, unless the AI explicitly rechecks it as Source verified.
-- **Changes have an author.** History records who changed a finding and when, including which AI client made the change.
-- **Replaced and disputed findings stay on record.** A claim can be disputed, replaced by a named successor, or rejected. Ruled-out explanations remain available to the next session.
-- **Summaries come from saved records.** Casebook builds the summary and the AI's briefing without asking a model to rewrite the case. The same records and options produce the same text.
-- **Local data, limited AI tools.** Cases live on your computer. Casebook has no account or telemetry and contacts GitHub only for an update check you start. Its MCP tools let AI clients add and revise records, but offer no delete operation. Your connected AI client handles what it sends to its model provider. [Privacy and local data](docs/privacy.md) explains that boundary.
+If your AI rewrites something you checked, the label goes back to Not checked and your AI is told to let you know.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/detail-dark.png">
-  <img src="docs/screenshots/main.png" alt="The fictional Northeast margin case open in Casebook, with saved findings, verification labels, the disputed discounting claim and two hypotheses.">
-</picture>
+## Share the answer
 
-**Share summary** prepares a leadership brief from the findings you choose, or the complete report with its history. The brief gives the question, the answer and the claims behind it, what is still in doubt or open, the evidence, and what each label means. It always includes disputed findings and contradicting evidence and names what it left out. Copy and Save use the exact preview you reviewed; **Refresh preview** brings in newer changes. Recipients can read it without Casebook. Copy or save it into your notes, or ask your AI client to save it to an app it is already connected to; the dialog shows an example request. Casebook itself connects to no other app ([how it works](docs/sharing.md#using-a-case-summary-in-other-apps)).
+Choose **Share the answer** on a question. Pick **Short version** for the answer and the findings behind it, or **Everything** to add the full history. **Copy** puts the text on the clipboard for an email or a document. **Save** writes a web page that opens in any browser.
 
-![The Share summary dialog for the Northeast margin case: the format choice, Refresh preview, the findings chooser, the brief's preview, the guidance for using the summary in other apps with its example request, and Copy and Save as file.](docs/screenshots/share-summary.png)
+![The Share the answer window for the call center question: the choice between Short version and Everything, Choose what to share, the answer as the reader will see it, and Copy and Save.](docs/screenshots/share-summary.png)
 
-<details>
-<summary>App settings</summary>
+The reader does not need Casebook. The shared answer names each finding and source in its own words, says which ones a person checked, and always includes findings where sources disagree. The short version ends by saying what it left out. Casebook builds the text from what is saved and does not ask an AI to rewrite it.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png">
-  <img src="docs/screenshots/settings.png" alt="Data menu: backups, AI setup, updates, version and maker credit.">
-</picture>
+Casebook does not connect to your notes or document app. You paste or attach the answer, or you ask your AI to save it there ([how that works](docs/sharing.md#using-a-shared-answer-in-other-apps)). [Share a question](docs/sharing.md) covers everything a shared answer holds.
 
-</details>
+## Your data
 
-## Install
+- Your questions are stored on your computer.
+- Casebook has no account and collects no usage data.
+- Casebook contacts the internet only when you choose **Look for updates...** in the **Settings** menu. It asks GitHub for the latest version and downloads nothing.
+- Your AI tool reads what is saved in Casebook and sends it to its own provider, as it does with anything else you give it. You choose which AI tools to connect.
+- Your AI can add and change findings and sources. It has no way to delete them.
 
-- **Desktop app:** Windows (portable zip or installer) and macOS from the [Releases page](https://github.com/jameskbb/casebook/releases), command line tool included.
-- **Command line tool only:** see [From the command line](#from-the-command-line). On Linux it is all there is today.
+[Privacy and local data](docs/privacy.md) has the details. **Settings** also has **Save a backup...** and **Bring back a backup...**.
 
-Builds are not signed yet, so Windows and macOS warn the first time you open the app. [Installing Casebook](docs/install.md) covers each option and that warning; [Updating Casebook](docs/updating.md) covers updates and backups.
+## Known limits
 
-## Connect your AI
+- The app is not signed yet, so Windows and macOS warn the first time you open it.
+- There is no Linux app. Checking individual findings and sources needs the app on Windows or Mac.
+- Casebook is for one person on one computer. To move a question to another computer, or to give someone a copy, save it as a file ([Share a question](docs/sharing.md#move-a-question-or-hand-over-a-copy)).
+- Updates are manual. Casebook looks for a newer version only when you ask.
 
-**Data > Connect AI clients...** shows setup for your selected client. Commands back up settings and change only Casebook's entries. Use `casebook setup claude --hooks --skill` or `casebook setup codex --skill`; the [Claude Code](docs/claude-code.md) and [Codex](docs/codex.md) guides cover options and removal.
-
-## Status
-
-Known limitations:
-
-- Release builds are not code signed yet, so Windows and macOS warn on first open.
-- There is no Linux desktop app; individual claim review needs the desktop.
-- For one person on one computer; a case moves to another machine as an exported file.
-- Updates are manual; Casebook checks for a newer version only when you ask.
-
-## Documentation
+## Guides
 
 - [Installing Casebook](docs/install.md): the app, the command line tool, the first-open warning.
-- [Claude Code guide](docs/claude-code.md) and [Codex guide](docs/codex.md): connecting each, every option, undoing it.
-- [Every client](docs/mcp.md): Claude Desktop, Cursor and other AI apps, and every tool Casebook gives your AI.
-- [Sharing a case](docs/sharing.md): what the brief holds, using it in other apps, and moving a case as a file.
-- [Capturing evidence](docs/evidence.md): preserve the source details needed to check a finding.
-- [Privacy and local data](docs/privacy.md): what is stored and what connected AI clients can read.
-- [Updating Casebook](docs/updating.md): updating, and going back with the backup.
-- For developers: [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Development](docs/development.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md) (how often an agent uses Casebook unprompted, in engineering scenarios).
+- [Share a question](docs/sharing.md): what a shared answer holds, using it in other apps, and moving a question as a file.
+- [Capturing sources](docs/evidence.md): what to save about a source so someone can check it later.
+- [Privacy and local data](docs/privacy.md): what is stored and what a connected AI tool can read.
+- [Updating Casebook](docs/updating.md): updating, and going back with a backup.
 - [Changelog](CHANGELOG.md) and [Security](SECURITY.md).
 
-## From the command line
+## For people setting it up
 
-The `casebook` command uses the same cases and supports explicit conclusion review. It also runs the MCP server (Model Context Protocol, how AI clients reach Casebook) and Claude Code hooks.
+This part is for whoever connects the AI tool, uses a terminal or builds Casebook from source.
+
+Casebook is a desktop app and a command line tool named `casebook`. Both open the same questions. The command line tool also runs an MCP server (Model Context Protocol, the usual way AI tools connect to other apps). That server is how your AI reads and saves questions.
+
+Commands, tool names and file formats keep the names the engine stores. An investigation is a question, a conclusion is the answer, a claim or a hypothesis is a finding, and evidence is a source. Codes such as `INV-0002`, `C-003` and `E-007` name a question, a finding and a source. The app hides them unless you turn on **Show the codes your AI uses** under **Settings**, **Technical...**.
+
+### Connect an AI tool
+
+**Settings**, **Connect your AI...** in the app shows the line to run for your tool and whether the tool is connected. The same lines, from a terminal:
+
+```sh
+casebook setup claude --hooks --skill   # Claude Code: MCP server, session hooks, the /casebook command
+casebook setup codex --skill            # Codex: MCP server and the Casebook skill
+casebook setup mcp --client cursor      # any other tool: prints its settings (--list shows them all)
+```
+
+Setup for Claude Code and Codex backs up the settings file and changes only Casebook's entries. `--print` shows what would be written and changes nothing.
+
+- [Claude Code guide](docs/claude-code.md) and [Codex guide](docs/codex.md): every option, and how to undo it.
+- [MCP guide](docs/mcp.md): Claude Desktop, Cursor, VS Code, Windsurf, Gemini CLI and other tools, and every tool Casebook gives your AI.
+
+### What your AI reads
+
+A new AI session does not get your old chat. It gets a briefing built from what is saved. This is the start of the briefing for the call center example, as `casebook context --format compact` prints it:
+
+```text
+Question: INV-0002
+Title: Why did calls go up 30% in October when sales stayed the same?
+Status: Answered
+
+The question:
+Calls to the call center went from 2,400 in September to 3,120 in October. Sales stayed the same. Why?
+
+Answer so far:
+The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
+
+Answer marked: A person checked this
+Findings behind the answer: C-002 [Not checked], C-003 [A person checked this]
+Findings against the answer: C-001 [Sources disagree]
+Answer checked by a person: 2026-11-05 14:55 UTC
+What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
+
+Why this answer:
+The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
+
+Findings:
+C-002 [Not checked]
+About the same number of people called to buy.
+Why: The call log and the sales report agree.
+Sources: E-001 [AI checked the source], E-006 [Not checked]
+C-003 [A person checked this]
+A billing mistake on October 3 charged some customers twice.
+Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
+Sources: E-006 [Not checked], E-007 [A person checked this], E-008 [Not checked], E-009 [A person checked this]
+
+Findings where sources disagree:
+C-001 [Sources disagree] Callers waited too long and hung up before buying.
+Sources: E-002 [Not checked]
+Sources against: E-003 [Not checked]
+```
+
+The briefing goes on to list the findings still being tested, the follow-up questions, the findings that were ruled out, every source and the recent changes. `go run ./scripts/readme-example` prints all of it from the built-in example, and the block above is copied from that output.
+
+### Command line
+
+Install the command line tool on its own:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jameskbb/casebook/main/scripts/install.sh | sh   # Linux and macOS
-casebook setup claude --hooks --skill   # Claude Code: MCP server, session hooks, /casebook skill
-casebook setup codex --skill            # Codex: MCP server and the Casebook skill
-casebook setup mcp --client cursor      # any other client: prints its config (--list shows them all)
-casebook case create --activate --title "Northeast margin down 6 points in Q3" \
-  --problem "Why did gross margin in the Northeast fall from 41% to 35% in Q3 when revenue was up 4%?"
-casebook context --format compact                          # what a new session sees
-casebook report INV-0002 -o northeast-margin.md            # the complete report, as Markdown
-casebook report INV-0002 --brief                           # the leadership brief
-casebook export INV-0002 --out .casebook/INV-0002.json     # stable JSON, one file per case
-casebook import .casebook/INV-0002.json                    # a separate copy, marked AI generated
+go install github.com/jameskbb/casebook/cmd/casebook@latest                                   # any system with Go 1.27 or later
 ```
 
-`go install github.com/jameskbb/casebook/cmd/casebook@latest` builds the CLI from tagged source. To build a local checkout, use `go build ./cmd/casebook` (Go 1.27). In Claude Code, `/casebook <title>` opens a case too.
-
-## Development
-
-[Development](docs/development.md) covers building and testing a checkout.
+On Windows it comes with the app, or as its own zip on the Releases page ([Installing Casebook](docs/install.md#command-line-tool)).
 
 ```sh
+casebook inv create --activate --title "Why did calls go up 30% in October when sales stayed the same?"
+casebook inv list                                        # every question, with how many sources you checked
+casebook context --format compact                        # the briefing a new AI session reads
+casebook report INV-0002                                 # the answer with everything, as Markdown
+casebook report INV-0002 --brief -o answer.md            # the short version, saved to a file
+casebook export INV-0002 --out .casebook/INV-0002.json   # the whole question as one file
+casebook import .casebook/INV-0002.json                  # a separate copy, with every check cleared
+```
+
+`casebook inv conclude --review` records that you checked the answer. Checking individual findings and sources is done in the app.
+
+### Build from source
+
+[Development](docs/development.md) covers building and testing a checkout. It needs Go 1.27 or later and Node 24.
+
+```sh
+go build ./cmd/casebook
 go test ./...
 npm --prefix desktop/frontend ci && npm --prefix desktop/frontend test -- --run
 ```
+
+More for developers: [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md), which measures how often an AI uses Casebook without being asked, in engineering tasks.
 
 ## License
 
