@@ -49,7 +49,7 @@ type checkpointConclusion struct {
 	Verification        statementVerification `json:"verification,omitempty" jsonschema:"ai_generated, source_verified or disputed; only a person can human-verify"`
 	SupportingClaims    []string              `json:"supporting_claims,omitempty" jsonschema:"selected supporting claim refs; omit to preserve"`
 	ContradictingClaims []string              `json:"contradicting_claims,omitempty" jsonschema:"selected contradicting claim refs; omit to preserve"`
-	Conclusion          string                `json:"conclusion" jsonschema:"the conclusion; an empty string clears it"`
+	Conclusion          string                `json:"conclusion" jsonschema:"the answer in plain words with the numbers; an empty string clears it"`
 	Confidence          app.Confidence        `json:"confidence,omitempty" jsonschema:"confidence in the conclusion; omit for unknown"`
 	Rationale           string                `json:"rationale,omitempty" jsonschema:"why the conclusion holds, naming the supporting evidence and claims"`
 }
@@ -150,7 +150,7 @@ type checkpointOut struct {
 	Checkpoint         checkpointSummary       `json:"checkpoint"`
 }
 
-const checkpointDescription = `Save progress in one call: call it before your final reply in a session that worked on a case (an investigation record), before context compaction, or when a hook asks, batching every material discovery not yet recorded (new evidence, claims, hypotheses, questions, updates and the conclusion). ` +
+const checkpointDescription = `Save progress in one call: call it before your final reply in a session that worked on an investigation, before context compaction, or when a hook asks, batching every material discovery not yet recorded (new evidence, claims, hypotheses, questions, updates and the conclusion). ` +
 	`note (required, at most 1000 bytes) is a concise summary of what was learned; never paste a transcript or chain-of-thought. ` +
 	`Batches apply first, in order evidence, claims, claim_updates, hypotheses, hypothesis_updates, questions, question_updates, conclusion; link evidence by its key as #key from claims or hypotheses. At most 50 items. ` +
 	`All or nothing: on any error nothing is written and the error names the failing item (for example claims[1].links[0].evidence_ref), so fix it and resend the whole call. ` +
@@ -160,7 +160,7 @@ func init() {
 	registerTool("casebook_checkpoint", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_checkpoint",
-			Title:       "Checkpoint",
+			Title:       "Save progress",
 			Description: checkpointDescription,
 			InputSchema: checkpointSchema(),
 			Annotations: mutatingTool(false),

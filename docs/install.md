@@ -1,8 +1,8 @@
 # Installing Casebook
 
-Install the desktop app to read, review and edit your cases in a window. It includes the command line tool your AI client uses to work with Casebook.
+Install the desktop app to read, review and edit your questions in a window. It includes the command line tool your AI client uses to work with Casebook.
 
-For a terminal-only setup, install just the command line tool. Claude Code, Codex and other MCP clients can use it without the desktop app. Both programs open the same cases on your computer.
+For a terminal-only setup, install just the command line tool. Claude Code, Codex and other MCP clients can use it without the desktop app. Both programs open the same questions on your computer.
 
 ## Command line tool
 
@@ -29,7 +29,7 @@ casebook doctor
 
 The install script puts `casebook` in `~/.local/bin` after checking the download against the release's `SHA256SUMS.txt`; it never uses `sudo`. On Windows, download `casebook-cli-<version>-windows-amd64.zip` (or `-arm64`) from the Releases page, or install the desktop app, which includes the command line tool. [Updating Casebook](updating.md#command-line-only-linux-macos-windows) has the details for each method.
 
-On Linux the command line tool is the whole product: AI clients work through `casebook mcp`, and you read cases with `casebook context`, `casebook report` and `casebook search`. Individual evidence, claim and hypothesis review, and choosing which findings go into the leadership brief, need the desktop app today; export the case or a backup to a Mac or Windows machine for those. The CLI supports explicit conclusion review.
+On Linux the command line tool is the whole product: AI clients work through `casebook mcp`, and you read questions with `casebook context`, `casebook report` and `casebook search`. Checking individual sources and findings, and choosing which findings go into the leadership brief, need the desktop app today; export the question or a backup to a Mac or Windows machine for those. The CLI can record that you checked the answer.
 
 ## Desktop app
 

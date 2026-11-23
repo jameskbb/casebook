@@ -34,7 +34,7 @@ An existing destination is never overwritten.`,
 			if env.JSON {
 				return writeJSON(env.Stdout, info)
 			}
-			_, err = fmt.Fprintf(env.Stdout, "Backup written to %s (%d bytes, schema version %d, %d cases).\n",
+			_, err = fmt.Fprintf(env.Stdout, "Backup written to %s (%d bytes, schema version %d, %d questions).\n",
 				info.Path, info.SizeBytes, info.SchemaVersion, info.Counts.Investigations)
 			return err
 		},

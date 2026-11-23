@@ -108,9 +108,9 @@ func SkillPreview(path string) string {
 // into those files; the person pastes it where they want it.
 const InstructionsSnippet = `## Casebook
 
-This project keeps investigation memory in Casebook (the casebook_* MCP tools).
+This project keeps a record of how each answer was reached in Casebook (the casebook_* MCP tools). To me, call an investigation a question, its conclusion the answer, a claim or hypothesis a finding and evidence a source, in plain words.
 
-- When a question needs more than one look (why a number moved, which of several explanations holds, a failure whose cause is not obvious), or I say we will continue it later, offer to open a Casebook case, and open it once I agree.
-- When I refer to earlier investigation work, read it with casebook_get_context before exploring, and do not re-test hypotheses it marks disproven.
-- While a case is open, record evidence with its source (path:line or the command), hypotheses (mark the ones you rule out disproven), open questions and the conclusion, and call casebook_checkpoint before your final reply.
+- When a question needs more than one look (why a number moved, which of several explanations holds, a failure whose cause is not obvious), or I say we will continue it later, offer to keep it in Casebook, and open it once I agree.
+- When I refer to earlier work on a question, read it with casebook_get_context before exploring, and do not re-test hypotheses it marks disproven.
+- While one is open, record evidence with its source (the report or file, path:line or the command), hypotheses (mark the ones you rule out disproven), open questions and the conclusion, and call casebook_checkpoint before your final reply.
 `

@@ -274,8 +274,8 @@ type addClaimInput struct {
 	claimFields
 }
 
-const addClaimDescription = `Record a claim: something you believe is true about the problem, backed by evidence. ` +
-	`Link evidence in the same call with links [{evidence_ref, relation}] where relation is supports or contradicts; the evidence must be in the same case (an investigation record). ` +
+const addClaimDescription = `Record a claim (the app calls it a finding): something you believe is true about the problem, backed by evidence, stated in plain words with the numbers. ` +
+	`Link evidence in the same call with links [{evidence_ref, relation}] where relation is supports or contradicts; the evidence must be in the same investigation. ` +
 	`status defaults to active and confidence to unknown (low, medium, high); rationale says why that confidence. Verification follows the caller: AI writes are ai_generated. ` +
 	`To replace a claim later, add the new one and call casebook_update_claim on the old one with superseded_by. ` +
 	`Returns the new C ref (C-001 style) and a compact record with status, confidence, verification and linked evidence refs; the statement is not echoed.`
@@ -284,7 +284,7 @@ func init() {
 	registerTool("casebook_add_claim", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_add_claim",
-			Title:       "Add claim",
+			Title:       "Add a finding",
 			Description: addClaimDescription,
 			Annotations: mutatingTool(false),
 		}, h.addClaim)
@@ -459,7 +459,7 @@ type updateClaimInput struct {
 const updateClaimDescription = `Revise a claim as understanding changes: statement, confidence (unknown, low, medium, high), rationale (the claim's confidence rationale), status (active, disputed, rejected) or verification (ai_generated, source_verified, disputed; only a person sets human_verified, but you may dispute it). A new statement resets a verified claim to ai_generated unless you pass source_verified. ` +
 	`Status and verification stay in step: disputed on either one disputes the claim, and verifying a disputed claim makes it active again. ` +
 	`Patch semantics: an omitted or null field is unchanged; pass at least one. ` +
-	`To replace a claim, add the new one, then set superseded_by to its ref (C-002 style) from the same case (an investigation record): this one becomes superseded and leaves the context pack. ` +
+	`To replace a claim, add the new one, then set superseded_by to its ref (C-002 style) from the same investigation: this one becomes superseded and leaves the context pack. ` +
 	`` +
 	`Returns action updated, superseded or unchanged with the changed field names and a compact record; text is not echoed.`
 
@@ -473,7 +473,7 @@ type updateHypothesisInput struct {
 
 const updateHypothesisDescription = `Record what testing a hypothesis showed: set status supported or disproven (or back to open), or change statement, confidence (unknown, low, medium, high), rationale or verification. ` +
 	`Patch semantics: an omitted or null field is unchanged; pass at least one. Disproven hypotheses stay in the context pack as one-liners naming the evidence linked as contradicting them, so nobody re-tests them: link that evidence with relation contradicts. ` +
-	`To replace a hypothesis, add the new one, then set superseded_by to its ref (H-002 style) from the same case (an investigation record). ` +
+	`To replace a hypothesis, add the new one, then set superseded_by to its ref (H-002 style) from the same investigation. ` +
 	`` +
 	`Returns action updated, superseded or unchanged with the changed field names and a compact record.`
 
@@ -498,7 +498,7 @@ type linkHypothesisInput struct {
 func linkDescription(noun string) string {
 	return `Tie one piece of evidence to a ` + noun + `: pass relation supports or contradicts to link, or unlink: true to remove the link (exactly one of the two). ` +
 		`One call per evidence and ` + noun + ` pair; linking again with the other relation updates it, and the same relation again changes nothing. ` +
-		`Both must be in the same case (an investigation record). ` +
+		`Both must be in the same investigation. ` +
 		`Returns action linked, relinked, unchanged or unlinked and a compact record listing the supporting and contradicting evidence refs.`
 }
 
@@ -509,8 +509,8 @@ type addHypothesisInput struct {
 	hypothesisFields
 }
 
-const addHypothesisDescription = `Record a hypothesis: a candidate explanation that is still being tested. Record each one when you start testing it, including ones you expect to rule out, so the next session knows it was considered. ` +
-	`Status defaults to open and confidence to unknown (low, medium, high); link evidence in the same call with links [{evidence_ref, relation}] where relation is supports or contradicts; the evidence must be in the same case (an investigation record). ` +
+const addHypothesisDescription = `Record a hypothesis (the app shows it as a finding marked Not tested yet): a candidate explanation that is still being tested, in plain words. Record each one when you start testing it, including ones you expect to rule out, so the next session knows it was considered. ` +
+	`Status defaults to open and confidence to unknown (low, medium, high); link evidence in the same call with links [{evidence_ref, relation}] where relation is supports or contradicts; the evidence must be in the same investigation. ` +
 	`Mark it supported or disproven later with casebook_update_hypothesis; disproven hypotheses stay in the context pack as one-liners so they are not re-tried. ` +
 	`Returns the new H ref (H-001 style) and a compact record with linked evidence refs; the statement is not echoed.`
 
@@ -518,7 +518,7 @@ func init() {
 	registerTool("casebook_update_claim", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_update_claim",
-			Title:       "Update claim",
+			Title:       "Update a finding",
 			Description: updateClaimDescription,
 			Annotations: mutatingTool(true),
 		}, h.updateClaim)
@@ -526,7 +526,7 @@ func init() {
 	registerTool("casebook_link_evidence_to_claim", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_link_evidence_to_claim",
-			Title:       "Link evidence to claim",
+			Title:       "Link a source to a finding",
 			Description: linkDescription("claim"),
 			Annotations: mutatingTool(true),
 		}, h.linkEvidenceToClaim)
@@ -534,7 +534,7 @@ func init() {
 	registerTool("casebook_add_hypothesis", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_add_hypothesis",
-			Title:       "Add hypothesis",
+			Title:       "Add a finding to test",
 			Description: addHypothesisDescription,
 			Annotations: mutatingTool(false),
 		}, h.addHypothesis)
@@ -542,7 +542,7 @@ func init() {
 	registerTool("casebook_update_hypothesis", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_update_hypothesis",
-			Title:       "Update hypothesis",
+			Title:       "Update a finding being tested",
 			Description: updateHypothesisDescription,
 			Annotations: mutatingTool(true),
 		}, h.updateHypothesis)
@@ -550,7 +550,7 @@ func init() {
 	registerTool("casebook_link_evidence_to_hypothesis", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_link_evidence_to_hypothesis",
-			Title:       "Link evidence to hypothesis",
+			Title:       "Link a source to a finding being tested",
 			Description: linkDescription("hypothesis"),
 			Annotations: mutatingTool(true),
 		}, h.linkEvidenceToHypothesis)

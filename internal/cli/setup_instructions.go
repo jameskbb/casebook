@@ -17,8 +17,8 @@ func newSetupInstructionsCommand(env *Env) *cobra.Command {
 		Short: "Print a CLAUDE.md or AGENTS.md section that tells AI clients when to use Casebook",
 		Long: `Print a short Markdown section for a project's CLAUDE.md (Claude Code) or
 AGENTS.md (Codex and other clients) that tells the AI when to use Casebook:
-offer to open a case when a task turns into an investigation and open it once
-you agree, read the case before resuming earlier work, and record findings
+offer to keep a question in Casebook when it needs more than one look and open it once
+you agree, read what is saved before resuming earlier work, and record findings
 as it goes. Nothing is written; paste it where you want it, for example:
 
   casebook setup instructions >> AGENTS.md

@@ -29,14 +29,14 @@ func registerResources(s *mcp.Server, h *handlers) {
 	s.AddResource(&mcp.Resource{
 		URI:         activeContextURI,
 		Name:        "active-context",
-		Title:       "Active investigation context",
+		Title:       "Briefing for the active question",
 		Description: "Compact Markdown context pack of the active investigation (header, conclusion, claims, hypotheses, questions, evidence index); says so when no investigation is active.",
 		MIMEType:    "text/markdown",
 	}, h.readActiveContext)
 	s.AddResourceTemplate(&mcp.ResourceTemplate{
 		URITemplate: investigationContextTemplate,
 		Name:        "investigation-context",
-		Title:       "Investigation context",
+		Title:       "Briefing for a question",
 		Description: "Compact Markdown context pack of one investigation; ref is an investigation ref such as INV-0001 (case-insensitive).",
 		MIMEType:    "text/markdown",
 	}, h.readInvestigationContext)

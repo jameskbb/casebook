@@ -53,7 +53,7 @@ const (
 		"If this session continues it, build on the pack below instead of starting over (do not re-test disproven hypotheses), " +
 		"record new findings with the casebook_* MCP tools and call casebook_checkpoint before your final reply; if the task is unrelated, ignore it."
 	noActiveHint = "Casebook: no active investigation. If this session turns into working out why something happened " +
-		"(a number that moved, a failure being root-caused, work likely to continue later), offer to open a Casebook case; " +
+		"(a number that moved, a failure being root-caused, work likely to continue later), offer to keep the question in Casebook; " +
 		"to continue an earlier one, find it with casebook_search_investigations or casebook_list_investigations."
 	truncatedSuffix = "\n(Casebook context truncated)"
 )
@@ -261,8 +261,8 @@ func CheckpointReminder(invRef string) string {
 // the user only and gives PreCompact no way to add model context.
 func PreCompactMessage(invRef string) string {
 	return "Casebook: this conversation is being compacted. If it found anything for " + invRef +
-		" that is not saved yet, ask Claude to record it with casebook_checkpoint; " +
-		"the investigation's context is reloaded after compaction."
+		" that is not saved yet, ask Claude to save it to Casebook now (casebook_checkpoint); " +
+		"what is saved is loaded again afterwards."
 }
 
 // hookSpecificOutput is the event-specific part of a hook's JSON output.

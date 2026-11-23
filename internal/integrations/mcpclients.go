@@ -144,7 +144,7 @@ func MCPSnippetFor(o MCPSnippetOptions) (MCPSnippet, error) {
 	case "claude-desktop":
 		s.Location = loc.claudeDesktop()
 		s.Snippet = mcpServersJSON(s.Command, s.Args)
-		s.Note = "Claude Desktop starts servers outside any project, so it uses the case your AI uses everywhere (not a per-folder one). Restart Claude Desktop after editing the file."
+		s.Note = "Claude Desktop starts servers outside any project, so it uses the question your AI uses everywhere (not a per-folder one). Restart Claude Desktop after editing the file."
 	case "cursor":
 		s.Location = loc.path(".cursor", "mcp.json") + " (all projects) or .cursor/mcp.json in a project"
 		s.Snippet = mcpServersJSON(s.Command, s.Args)

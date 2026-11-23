@@ -15,15 +15,15 @@ func TestSearch(t *testing.T) {
 	r := runCLI(t, "", "--db", db, "search", "debug")
 	wantCode(t, r, 0)
 	lines := strings.Split(strings.TrimRight(r.Stdout, "\n"), "\n")
-	wantContains(t, lines[0], "CASE", "TYPE", "REF", "MATCH")
+	wantContains(t, lines[0], "QUESTION", "TYPE", "REF", "MATCH")
 	found := false
 	for _, l := range lines[1:] {
-		if strings.Contains(l, "INV-0001") && strings.Contains(l, "claim") && strings.Contains(l, "C-001") {
+		if strings.Contains(l, "INV-0001") && strings.Contains(l, "finding") && strings.Contains(l, "C-001") {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("no row for INV-0001 claim C-001:\n%s", r.Stdout)
+		t.Errorf("no row for INV-0001 finding C-001:\n%s", r.Stdout)
 	}
 
 	r = runCLI(t, "", "--db", db, "--json", "search", "debug")

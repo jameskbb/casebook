@@ -25,5 +25,5 @@ func TestConclusionCLIReviewToken(t *testing.T) {
 	}
 	r = runCLI(t, "", "--db", db, "investigation", "show")
 	wantCode(t, r, 0)
-	wantContains(t, r.Stdout, "Human verified", "C-001", "C-003", "Checked the billing export.")
+	wantContains(t, r.Stdout, "You checked this", "C-001", "C-003", "Checked the billing export.")
 }

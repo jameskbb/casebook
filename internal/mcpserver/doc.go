@@ -58,7 +58,7 @@ func RenderToolDoc(ctx context.Context) ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString(`# Casebook MCP tools
 
-The app and the guides call an investigation a case; the API keeps the name investigation.
+The app shows people four words: question, answer, finding and source. The API keeps the engine's names: an investigation is a question, its conclusion is the answer, a claim or a hypothesis is a finding, and evidence is a source.
 
 This file is generated from the live tool list; do not edit it by hand.
 Regenerate it with ` + "`go run ./internal/mcpserver/gendoc`" + ` from the module root;

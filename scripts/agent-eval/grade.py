@@ -37,7 +37,7 @@ def read_jsonl(path):
 
 
 # An offer to open a case, in the agent's own words.
-OFFER_RE = re.compile(r"\b(open|start|creat|record|track|sav|log)\w*\b[^.?!\n]{0,60}\b(case|investigation|casebook)\b|"
+OFFER_RE = re.compile(r"\b(open|start|creat|record|track|sav|log|keep)\w*\b[^.?!\n]{0,60}\b(case|investigation|casebook)\b|"
                       r"\bcasebook\b[^.?!\n]{0,80}\b(open|start|creat)\w*", re.I)
 
 

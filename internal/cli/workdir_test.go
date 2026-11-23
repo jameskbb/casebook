@@ -59,7 +59,7 @@ func TestActivateHere(t *testing.T) {
 
 	r := runCLIIn(t, sub, "--db", db, "investigation", "activate", "INV-0002", "--here")
 	wantCode(t, r, 0)
-	if want := "Active case for " + repo + ": INV-0002 TestCheckoutTotals flakes in CI\n"; r.Stdout != want {
+	if want := "Active question for " + repo + ": INV-0002 TestCheckoutTotals flakes in CI\n"; r.Stdout != want {
 		t.Fatalf("activate --here stdout = %q, want %q", r.Stdout, want)
 	}
 
@@ -74,14 +74,14 @@ func TestActivateHere(t *testing.T) {
 	}
 
 	r = runCLIIn(t, sub, "--db", db, "status")
-	if !strings.Contains(r.Stdout, "INV-0002 TestCheckoutTotals flakes in CI (your AI's current case, for "+repo+")") {
+	if !strings.Contains(r.Stdout, "INV-0002 TestCheckoutTotals flakes in CI (your AI's current question, for "+repo+")") {
 		t.Fatalf("status inside the repo = %q", r.Stdout)
 	}
 
 	// A global change inside the repo is noted: the binding still wins.
 	r = runCLIIn(t, sub, "--db", db, "investigation", "activate", "INV-0001", "--global")
 	wantCode(t, r, 0)
-	if !strings.Contains(r.Stderr, "INV-0002 is the active case for "+repo) {
+	if !strings.Contains(r.Stderr, "INV-0002 is the active question for "+repo) {
 		t.Fatalf("activate --global stderr = %q, want the binding note", r.Stderr)
 	}
 
@@ -95,7 +95,7 @@ func TestActivateHere(t *testing.T) {
 
 	r = runCLIIn(t, sub, "--db", db, "investigation", "activate", "--clear", "--here")
 	wantCode(t, r, 0)
-	if r.Stdout != "Removed the active case for "+repo+".\n" {
+	if r.Stdout != "Removed the active question for "+repo+".\n" {
 		t.Fatalf("clear --here = %q", r.Stdout)
 	}
 	r = runCLIIn(t, sub, "--db", db, "investigation", "active")

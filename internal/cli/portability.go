@@ -25,19 +25,19 @@ func newExportCommand(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "export [ref]",
-		Short: "Export a case as casebook.investigation JSON (default: the active one)",
-		Long: `Export a case, including raw evidence detail, as versioned
-casebook.investigation JSON. With no ref it exports the active case.
+		Short: "Export a question as casebook.investigation JSON (default: the active one)",
+		Long: `Export a question with its answer, findings and sources (including the full source text), as versioned
+casebook.investigation JSON. With no ref it exports the active question.
 The JSON goes to stdout unless -o (or --out) names a file; -o creates an
 owner-only file and never overwrites an existing one unless --force is given.
 With --force the file is replaced atomically (a failed write leaves the old
 file intact), and the live database is never a valid -o target.
 
-The output is stable, so a case can be committed to a repository and moved
+The output is stable, so a question can be committed to a repository and moved
 to another machine or handed to someone as a copy: exporting an unchanged
-case again gives the same bytes. exported_at is the time of the newest change
-in the file, and which case was active on this machine is left out. On the
-other machine, casebook import adds the file; verification marks come in as
+question again gives the same bytes. exported_at is the time of the newest change
+in the file, and which question was active on this machine is left out. On the
+other machine, casebook import adds the file; checks come in as
 ai_generated.`,
 		Example: `  casebook export INV-0001 -o inv-0001.json
   casebook export INV-0002 --out .casebook/INV-0002.json --force
@@ -176,16 +176,16 @@ func replaceFile(path string, data []byte) (err error) {
 func newImportCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "import <file|->",
-		Short: "Import a case from casebook.investigation JSON (- reads stdin)",
-		Long: `Import a case exported by casebook export or the desktop app. The
+		Short: "Import a question from casebook.investigation JSON (- reads stdin)",
+		Long: `Import a question exported by casebook export or the desktop app. The
 file is validated completely before anything is written. Record refs are
-kept; the case keeps its ref when it is free and otherwise gets the next
-one. The active case does not change. Verification from the
-file is not trusted: human_verified and source_verified records come in as
-ai_generated, for someone to verify here.
+kept; the question keeps its ref when it is free and otherwise gets the next
+one. The active question does not change. Checks recorded in the
+file are not trusted: human_verified and source_verified records come in as
+ai_generated (Not checked), for someone to check here.
 
 Import always adds a separate copy; it never merges into or replaces a
-case. When the same case is already in this database (the
+question. When the same question is already in this database (the
 original, or an earlier import of the file), the output names it, so you can
 archive and delete the older copy in the desktop app.`,
 		Example: `  casebook import inv-0001.json
@@ -212,12 +212,12 @@ archive and delete the older copy in the desktop app.`,
 				ref = res.OriginalRef + " as " + res.InvestigationRef
 			}
 			c := res.Counts
-			if _, err := fmt.Fprintf(env.Stdout, "Imported %s (%d evidence, %d claims, %d hypotheses, %d questions).\n",
+			if _, err := fmt.Fprintf(env.Stdout, "Imported %s (%d sources, %d findings, %d findings being tested, %d follow-up questions).\n",
 				ref, c.Evidence, c.Claims, c.Hypotheses, c.Questions); err != nil {
 				return err
 			}
 			if len(res.SameCaseRefs) > 0 {
-				_, err = fmt.Fprintf(env.Stdout, "The same case is already here as %s; %s is a separate copy. "+
+				_, err = fmt.Fprintf(env.Stdout, "The same question is already here as %s; %s is a separate copy. "+
 					"To keep one, archive and delete the other in the desktop app (Casebook never merges copies).\n",
 					strings.Join(res.SameCaseRefs, ", "), res.InvestigationRef)
 			}

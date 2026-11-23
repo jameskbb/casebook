@@ -41,7 +41,7 @@ func TestBackup(t *testing.T) {
 	dest := filepath.Join(t.TempDir(), "b.db")
 	r := runCLI(t, "", "--db", db, "backup", dest)
 	wantCode(t, r, 0)
-	wantContains(t, r.Stdout, "Backup written to "+dest, "bytes", "schema version", "1 cases")
+	wantContains(t, r.Stdout, "Backup written to "+dest, "bytes", "schema version", "1 questions")
 	if _, err := os.Stat(dest); err != nil {
 		t.Fatal(err)
 	}

@@ -44,7 +44,7 @@ func TestFormatError(t *testing.T) {
 		{"validation", app.NewValidationError("limit", "must be between 0 and 100"),
 			"casebook: invalid limit: must be between 0 and 100"},
 		{"no active", app.ErrNoActiveInvestigation,
-			"casebook: " + app.ErrNoActiveInvestigation.Error() + `; run "casebook case activate INV-0001" or pass a ref`},
+			"casebook: " + app.ErrNoActiveInvestigation.Error() + `; run "casebook inv activate INV-0001" or pass a ref`},
 		{"internal", app.ErrInternal, "casebook: internal storage error"},
 		{"integrity keeps one prefix",
 			&app.IntegrityError{Problems: []string{"integrity_check: damaged database pages"}, Total: 1},

@@ -20,7 +20,7 @@ func TestNoArgs(t *testing.T) {
 			t.Errorf("stdout does not contain %q:\n%s", want, r.Stdout)
 		}
 	}
-	if !strings.Contains(r.Stdout, "Exit codes: 0 success; 1 runtime failure; 2 usage or invalid input; 3 not found or no active case.") {
+	if !strings.Contains(r.Stdout, "Exit codes: 0 success; 1 runtime failure; 2 usage or invalid input; 3 not found or no active question.") {
 		t.Error("help does not document the exit codes")
 	}
 	if r.Stderr != "" {
@@ -94,7 +94,7 @@ func TestStatus(t *testing.T) {
 		r := runCLI(t, "", "status", "--db", db)
 		wantCode(t, r, 0)
 		for _, want := range []string{"Database:", db, "Data dir:", filepath.Dir(db), "Schema:", "Active:",
-			"INV-0001 September cloud bill up 38% (your AI's current case)", "Records:", "1 cases, 4 evidence, 3 claims, 2 hypotheses, 1 questions"} {
+			"INV-0001 September cloud bill up 38% (your AI's current question)", "Records:", "1 questions, 4 sources, 3 findings, 2 findings being tested, 1 follow-up questions"} {
 			if !strings.Contains(r.Stdout, want) {
 				t.Errorf("stdout does not contain %q:\n%s", want, r.Stdout)
 			}
@@ -126,7 +126,7 @@ func TestStatus(t *testing.T) {
 		a.Close()
 		r := runCLI(t, "", "status", "--db", empty)
 		wantCode(t, r, 0)
-		if !strings.Contains(r.Stdout, `none (your AI has no current case; run "casebook case activate <ref>")`) {
+		if !strings.Contains(r.Stdout, `none (your AI has no current question; run "casebook inv activate <ref>")`) {
 			t.Errorf("stdout:\n%s", r.Stdout)
 		}
 	})

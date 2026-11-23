@@ -1,6 +1,6 @@
 # Codex integration
 
-Connect Codex to read and save your Casebook cases. For the available tools, see the [MCP guide](mcp.md).
+Connect Codex to read and save your Casebook questions. For the available tools, see the [MCP guide](mcp.md).
 
 You need Casebook installed (see [Installing Casebook](install.md)), Codex installed with the `codex` command available, and the path of the `casebook` CLI:
 
@@ -56,10 +56,10 @@ Codex starts MCP servers when a session starts, so start a new Codex session aft
 
 Codex loads MCP tools on demand and, in our tests with Codex 0.156, does not show the model the Casebook server's instructions. With only the MCP entry, Codex never reached for Casebook on its own: in the agent eval (`scripts/agent-eval`) it debugged a flaky test across two sessions with zero Casebook calls, and the second session redid the first one's work from scratch. Codex needs one of these to know when Casebook applies:
 
-- **The skill** (`casebook setup codex --skill`). Setup writes `~/.codex/skills/casebook/SKILL.md` (`$CODEX_HOME/skills/casebook/SKILL.md` when that is set). Codex lists every skill's one-line description to the model, so it loads this one when you mention earlier investigation work or agree to open a case, and it then follows the routine: find the case, read its context, record evidence, hypotheses and questions as it goes, checkpoint before its final reply. The file carries a `casebook-managed` line: a rerun replaces it (with a backup), `--remove` deletes it, and a `SKILL.md` without that line is yours and is never touched.
-- **An AGENTS.md section.** `casebook setup instructions` prints a short section that tells Codex to offer a Casebook case when a question needs more than one look (why a number moved, which explanation holds, a failure whose cause is not obvious) or will continue later, to read the case before resuming, and to record findings as it goes. Setup never edits `AGENTS.md`; append it yourself (`casebook setup instructions >> AGENTS.md`) or paste it into `~/.codex/AGENTS.md` for every project.
+- **The skill** (`casebook setup codex --skill`). Setup writes `~/.codex/skills/casebook/SKILL.md` (`$CODEX_HOME/skills/casebook/SKILL.md` when that is set). Codex lists every skill's one-line description to the model, so it loads this one when you mention earlier work on a question or agree to keep one, and it then follows the routine: find the question, read what is saved, record sources, findings and follow-up questions as it goes, checkpoint before its final reply. The file carries a `casebook-managed` line: a rerun replaces it (with a backup), `--remove` deletes it, and a `SKILL.md` without that line is yours and is never touched.
+- **An AGENTS.md section.** `casebook setup instructions` prints a short section that tells Codex to offer to keep a question in Casebook when it needs more than one look (why a number moved, which explanation holds, a failure whose cause is not obvious) or will continue later, to read what is saved before resuming, and to record findings as it goes. Setup never edits `AGENTS.md`; append it yourself (`casebook setup instructions >> AGENTS.md`) or paste it into `~/.codex/AGENTS.md` for every project.
 
-To have Codex save a case summary in a notes or document app, connect Codex to that app as well, then ask it to save the brief or the report there; [Using a case summary in other apps](sharing.md#using-a-case-summary-in-other-apps) explains what to ask for and what to check.
+To have Codex save a question summary in a notes or document app, connect Codex to that app as well, then ask it to save the brief or the report there; [Using a question summary in other apps](sharing.md#using-a-question-summary-in-other-apps) explains what to ask for and what to check.
 
 Codex asks before running a tool that writes unless you approve the server's tools up front, which the smoke test below does with `-c 'mcp_servers.casebook.default_tools_approval_mode="approve"'`.
 
@@ -105,7 +105,7 @@ codex mcp add casebook -- '/mnt/c/Users/Jo Doe/AppData/Local/Programs/Casebook/b
 
 The **Connect AI clients...** panel in the desktop app shows this command for your computer under **Or in WSL (bash)**, with a Copy button. WSL runs `casebook.exe` as a Windows program, so it opens the same per-user database as the desktop app. If you pass `--db`, put it after `mcp` and keep the database path in its Windows form. The commands assume WSL's default `/mnt` mount root.
 
-## Verify
+## Check that it works
 
 ```sh
 codex mcp list
@@ -134,15 +134,15 @@ The Auth column reads `Unsupported` because a local stdio server like Casebook n
 2. Ask Codex to call a Casebook tool without opening an interactive session:
 
    ```sh
-   codex exec "Call the casebook_get_active_investigation tool. Reply with the case ref and title, or say that no case is active."
+   codex exec "Call the casebook_get_active_investigation tool. Reply with the ref and title of the active question, or say that none is active."
    ```
 
-   Expected result: Codex calls the tool and replies with the active case, for example `INV-0001 September cloud bill up 38%`, or says that none is set. Each case has a ref such as INV-0001 (every case ref starts with INV). Either answer proves Codex can see and use Casebook. If Codex says it has no such tool, check `codex mcp list` and the path in your configuration.
+   Expected result: Codex calls the tool and replies with the active question, for example `INV-0001 Why did calls go up 30% in October when sales stayed the same?`, or says that none is set. Each question has a ref such as INV-0001 (every question ref starts with INV). Either answer proves Codex can see and use Casebook. If Codex says it has no such tool, check `codex mcp list` and the path in your configuration.
 
    `codex exec` has nobody to approve tool calls. If Codex reports that the call was declined or needs approval, pre-approve only Casebook's tools for that run, the way Casebook's own opt-in test does (it never uses Codex's bypass flag):
 
    ```sh
-   codex exec --skip-git-repo-check -s read-only -c 'mcp_servers.casebook.default_tools_approval_mode="approve"' "Call the casebook_get_active_investigation tool. Reply with the case ref and title, or say that no case is active."
+   codex exec --skip-git-repo-check -s read-only -c 'mcp_servers.casebook.default_tools_approval_mode="approve"' "Call the casebook_get_active_investigation tool. Reply with the ref and title of the active question, or say that none is active."
    ```
 
 Casebook's automated tests also check that a real `codex mcp list` and `codex mcp get casebook --json` read the configuration `casebook setup codex` writes, in a throwaway `CODEX_HOME`.

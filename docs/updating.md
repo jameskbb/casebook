@@ -14,7 +14,7 @@ To see which version you have:
 
 ## Checking for a newer version
 
-Casebook can ask GitHub whether a newer release exists. It does this only when you ask, never at startup or on a timer, and it never downloads or installs anything. The check is one request to GitHub's public releases API; it sends no version, no identifier and nothing from your cases, and GitHub sees your IP address as for any web page.
+Casebook can ask GitHub whether a newer release exists. It does this only when you ask, never at startup or on a timer, and it never downloads or installs anything. The check is one request to GitHub's public releases API; it sends no version, no identifier and nothing from your questions, and GitHub sees your IP address as for any web page.
 
 - **Desktop app:** open the **Data** menu at the bottom of the sidebar and choose **Check for updates...**. A small dialog explains what will be sent; nothing is sent until you choose **Check now**. The result shows the latest version and whether it is newer than yours, and offers **Open release page** and **Copy download link**.
 - **Command line:** run `casebook update`. When a newer release exists it prints, for example:
@@ -63,7 +63,7 @@ Check the download against `SHA256SUMS.txt` before you run anything:
 
 ## Command line only (Linux, macOS, Windows)
 
-The `casebook` command line tool is a single file. It holds everything an AI client needs (it serves MCP with `casebook mcp`) and uses the same data folder as the desktop app. On Linux it is the whole product: there is no Linux desktop app, so AI clients work through MCP and you read cases with `casebook context`, `casebook search` and `casebook case`. Marking a record as verified by a person happens in the desktop app today; `casebook export` or a backup carries a case to a Mac or Windows machine for that.
+The `casebook` command line tool is a single file. It holds everything an AI client needs (it serves MCP with `casebook mcp`) and uses the same data folder as the desktop app. On Linux it is the whole product: there is no Linux desktop app, so AI clients work through MCP and you read questions with `casebook context`, `casebook search` and `casebook inv`. Marking a record as checked by a person happens in the desktop app today; `casebook export` or a backup carries a question to a Mac or Windows machine for that.
 
 Install it one of three ways. None needs administrator rights.
 
