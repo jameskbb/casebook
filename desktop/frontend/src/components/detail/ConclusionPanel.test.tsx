@@ -12,7 +12,7 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, NOT_CHECKED_ANSWER, SHARE_THE_ANSWER, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
+import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, DECIDE_ACTION, JUST_WROTE_ANSWER, NOT_CHECKED_ANSWER, SHARE_THE_ANSWER, UNDO_ANSWER_CHECK, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
 import { ANSWER_COPIED } from './ShareSummaryDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -265,12 +265,47 @@ describe('Check the next source, I checked this answer and Share the answer', ()
 
   const button = (name: string) => within(panel()).queryByRole('button', { name })
 
-  it('leads with Check the next source while a source is left, and it opens the check', async () => {
+  it('offers Decide, and not I checked this answer, while only findings where sources disagree are left', async () => {
+    const user = userEvent.setup()
+    const onCheckSources = vi.fn()
+    const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
+    render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} evidence={checked} onCheckSources={onCheckSources} share />))
+    expect(button(CHECK_NEXT_SOURCE)).toBeNull()
+    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
+    expect(button(DECIDE_ACTION)).toHaveClass('btn-primary')
+    await user.click(button(DECIDE_ACTION)!)
+    expect(onCheckSources).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows how many findings back the answer and how many of them sources disagree about, never that one goes against it', () => {
+    render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} evidence={detail.evidence} />))
+    // C-001, C-002 and C-004 stand; sources disagree about C-004; C-003 was replaced.
+    expect(within(panel()).getByText('3 findings back it')).toBeInTheDocument()
+    expect(within(panel()).getByText('1 where sources disagree')).toBeInTheDocument()
+    expect(within(panel()).queryByText(/against it/)).toBeNull()
+  })
+
+  it('says the answer is not checked after Undo my check, even right after the person wrote it', async () => {
+    const user = userEvent.setup()
+    const view = render(providers(<ConclusionPanel investigation={investigation} />))
+    await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
+    await user.type(within(panel()).getByLabelText('Answer'), ' More.')
+    await user.click(within(panel()).getByRole('button', { name: 'Save answer' }))
+    expect(await within(panel()).findByText(JUST_WROTE_ANSWER)).toBeInTheDocument()
+    view.rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion_reviewed_at: '2026-11-08T12:00:00.000Z', conclusion_needs_review: false }} />))
+    await user.click(within(panel()).getByRole('button', { name: UNDO_ANSWER_CHECK }))
+    await waitFor(() => expect(mocks.api.updateConclusion).toHaveBeenCalledTimes(2))
+    view.rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion_reviewed_at: '' }} />))
+    expect(within(panel()).getByText(NOT_CHECKED_ANSWER)).toBeInTheDocument()
+    expect(within(panel()).queryByText(JUST_WROTE_ANSWER)).toBeNull()
+  })
+
+  it('leads with Check the next source while a source is left, never offers I checked this answer then, and it opens the check', async () => {
     const user = userEvent.setup()
     const onCheckSources = vi.fn()
     render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onCheckSources={onCheckSources} share />))
     expect(button(CHECK_NEXT_SOURCE)).toHaveClass('btn-primary')
-    expect(button(CHECKED_ANSWER_ACTION)).toHaveClass('btn-secondary')
+    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
     expect(button(SHARE_THE_ANSWER)).toHaveClass('btn-secondary')
     await user.click(button(CHECK_NEXT_SOURCE)!)
     expect(onCheckSources).toHaveBeenCalledTimes(1)
@@ -325,12 +360,12 @@ describe('The findings an answer is saved with', () => {
     return vi.mocked(mocks.api.updateConclusion).mock.calls[0][1]
   }
 
-  it('sends the findings that stand as supporting and the ones where sources disagree as contradicting', async () => {
+  it('sends every current finding as supporting, those where sources disagree too, and none as contradicting', async () => {
     // C-001 and C-002 stand, C-003 was replaced, C-004 has sources that disagree, C-005 is ruled out.
     const ruledOut: Claim = { ...detail.claims[1], id: 5, ref: 'C-005', status: 'rejected' }
     const sent = await edit(investigation, [...detail.claims, ruledOut])
-    expect(sent.supporting_claims).toEqual(['C-001', 'C-002'])
-    expect(sent.contradicting_claims).toEqual(['C-004'])
+    expect(sent.supporting_claims).toEqual(['C-001', 'C-002', 'C-004'])
+    expect(sent.contradicting_claims).toEqual([])
     expect(sent.confidence).toBe(investigation.conclusion_confidence)
   })
 

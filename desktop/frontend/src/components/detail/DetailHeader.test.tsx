@@ -12,9 +12,9 @@ import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { DetailHeader } from './DetailHeader'
 import { DataOpsProvider } from '../sidebar/DataOps'
-import { SAVE_QUESTION_LABEL, SAVE_QUESTION_NONE, SETTINGS_LABEL, SidebarFooter } from '../sidebar/SidebarFooter'
+import { SETTINGS_LABEL, SidebarFooter } from '../sidebar/SidebarFooter'
 import { clientConnections } from '../../test/fixtures.clients'
-import { AI_OFF_COPY, AI_OFF_LABEL, AI_ON_COPY, AI_ON_LABEL, ARCHIVED_COPY, BACK_IN_LIST_COPY, COPY_FOR_AI_LABEL, PUT_BACK_LABEL } from './MoreMenu'
+import { AI_OFF_COPY, AI_OFF_LABEL, AI_ON_COPY, AI_ON_LABEL, ARCHIVED_COPY, BACK_IN_LIST_COPY, COPY_FOR_AI_LABEL, PUT_BACK_LABEL, SAVE_COPY_LABEL } from './MoreMenu'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -46,16 +46,11 @@ async function openMore(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole('menu', { name: 'More' })
 }
 
-/** Settings, Technical, with the fixture question open. */
-async function openTechnical(user: ReturnType<typeof userEvent.setup>) {
-  render(<ToastProvider><AppDataProvider><OpenAtLaunch /><DataOpsProvider><SidebarFooter /></DataOpsProvider></AppDataProvider></ToastProvider>)
-  await waitFor(() => expect(mocks.api.getInvestigationDetail).toHaveBeenCalled())
-  await user.click(screen.getByRole('button', { name: SETTINGS_LABEL }))
-  await user.click(await screen.findByRole('menuitem', { name: 'Technical...' }))
-  const dialog = await screen.findByRole('dialog', { name: 'Technical' })
-  expect(await within(dialog).findByText(`The question open now: ${investigation.title}`)).toBeInTheDocument()
-  expect(within(dialog).getByText(SAVE_QUESTION_LABEL)).toBeInTheDocument()
-  return dialog
+/** More, Save a copy to move it to another computer..., on the fixture question. */
+async function saveCopy(user: ReturnType<typeof userEvent.setup>) {
+  renderHeader(investigation)
+  const menu = await openMore(user)
+  await user.click(within(menu).getByRole('menuitem', { name: SAVE_COPY_LABEL }))
 }
 
 describe('DetailHeader actions', () => {
@@ -128,6 +123,7 @@ describe('DetailHeader actions', () => {
       'Edit question...',
       AI_ON_LABEL,
       COPY_FOR_AI_LABEL,
+      SAVE_COPY_LABEL,
       'Archive question',
     ])
     expect(within(menu).queryByRole('menuitem', { name: /check/i })).not.toBeInTheDocument()
@@ -140,6 +136,7 @@ describe('DetailHeader actions', () => {
     expect(within(menu).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
       'Edit question...',
       COPY_FOR_AI_LABEL,
+      SAVE_COPY_LABEL,
       PUT_BACK_LABEL,
       'Delete question...',
     ])
@@ -163,10 +160,9 @@ describe('DetailHeader actions', () => {
     expect(await screen.findByText(COPIED_FOR_AI)).toBeInTheDocument()
   })
 
-  it('saves a copy of the open question from Settings, Technical, and names the file', async () => {
+  it('saves a copy of the question from More, and names the file', async () => {
     const user = userEvent.setup()
-    await openTechnical(user)
-    await user.click(await screen.findByRole('button', { name: 'Save as a file...' }))
+    await saveCopy(user)
     expect(mocks.api.exportInvestigation).toHaveBeenCalledWith('INV-0001')
     expect(await screen.findByText('Saved a copy as INV-0001-why-did-calls-go-up.json.')).toBeInTheDocument()
   })
@@ -174,8 +170,7 @@ describe('DetailHeader actions', () => {
   it('shows nothing when the export dialog is cancelled', async () => {
     Object.assign(mocks.api, mockApi({ exportInvestigation: async () => ({ cancelled: true, path: '', file_name: '' }) }))
     const user = userEvent.setup()
-    await openTechnical(user)
-    await user.click(await screen.findByRole('button', { name: 'Save as a file...' }))
+    await saveCopy(user)
     await waitFor(() => expect(mocks.api.exportInvestigation).toHaveBeenCalled())
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByText(/Saved a copy/)).not.toBeInTheDocument()
@@ -192,19 +187,17 @@ describe('DetailHeader actions', () => {
       }),
     )
     const user = userEvent.setup()
-    await openTechnical(user)
-    await user.click(await screen.findByRole('button', { name: 'Save as a file...' }))
+    await saveCopy(user)
     expect(await screen.findByRole('alert')).toHaveTextContent(DIALOG_COPY)
   })
 
-  it('offers no save in Technical while no question is open', async () => {
+  it('keeps saving a question out of Settings, Technical', async () => {
     const user = userEvent.setup()
     render(<ToastProvider><AppDataProvider><DataOpsProvider><SidebarFooter /></DataOpsProvider></AppDataProvider></ToastProvider>)
     await user.click(screen.getByRole('button', { name: SETTINGS_LABEL }))
     await user.click(await screen.findByRole('menuitem', { name: 'Technical...' }))
     const dialog = await screen.findByRole('dialog', { name: 'Technical' })
-    expect(within(dialog).getByText(SAVE_QUESTION_NONE)).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: 'Save as a file...' })).toBeDisabled()
+    expect(within(dialog).queryByRole('button', { name: /Save/ })).not.toBeInTheDocument()
   })
 
   it('archives with Undo', async () => {

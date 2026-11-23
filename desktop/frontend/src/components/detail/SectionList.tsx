@@ -53,13 +53,13 @@ export interface SectionListProps<T> extends Rows<T> {
   /** Rows behind a Collapsed line under the others. */
   collapsed?: T[]
   collapsedNoun?: [string, string]
-  /** Rendered after the rows (the history's Show all). */
+  /** Rendered after the rows (the history's Show all, Show N left for later). */
   footer?: ReactNode
 }
 
 export function SectionList<T>({ id, icon: Icon, kind, heading, items, collapsed = [], collapsedNoun, itemKey, renderItem, footer }: SectionListProps<T>) {
   const headingId = `section-${id}`
-  if (items.length === 0 && collapsed.length === 0) return null
+  if (items.length === 0 && collapsed.length === 0 && !footer) return null
   return (
     <section className={`section section-${kind}`} aria-labelledby={headingId}>
       <div className="section-head">

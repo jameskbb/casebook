@@ -1,12 +1,13 @@
 // The header's More menu: Edit question..., Have my AI work on this (or
 // Stop my AI working on this, both only while an AI tool is connected), Copy
-// to paste into your AI, and Archive question or Put back in the list.
-// Saving a question as a file is under Settings, Technical. Archiving can be undone and deletes nothing,
+// to paste into your AI, Save a copy to move it to another computer..., and
+// Archive question or Put back in the list. Saving runs the native save
+// window in Go; a cancelled one shows nothing. Archiving can be undone and deletes nothing,
 // so it has no confirmation, only a toast with Undo. An archived question
 // also offers Delete question..., which says what it removes and cannot be
 // undone.
 import { useState } from 'react'
-import { Archive, ArchiveRestore, ClipboardCopy, Ellipsis, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ClipboardCopy, Download, Ellipsis, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { Investigation, InvestigationDetail, RecordCounts } from '../../api/types'
@@ -15,7 +16,6 @@ import { useAppData } from '../../state/appData'
 import { useCopyContext } from '../../state/copyContext'
 import { useWrite } from '../../state/useWrite'
 import { DeleteDialog } from '../dialogs/DeleteDialog'
-import { SAVE_QUESTION_LABEL } from '../sidebar/SidebarFooter'
 import { EditInvestigationDialog } from '../dialogs/EditInvestigationDialog'
 import { IconButton } from '../ui/IconButton'
 import { Menu, type MenuItem } from '../ui/Menu'
@@ -30,12 +30,13 @@ export const AI_ON_LABEL = 'Have my AI work on this'
 export const AI_OFF_LABEL = 'Stop my AI working on this'
 export const AI_ON_COPY = 'Your AI will save what it finds here.'
 export const AI_OFF_COPY = 'Your AI is no longer working on this question.'
+export const SAVE_COPY_LABEL = 'Save a copy to move it to another computer...'
 
 export const deleteInvestigationBody = (inv: Investigation, counts: RecordCounts | null) => {
   const what = counts
     ? `everything in it: ${countPhrase(counts.evidence, 'source', 'sources')}, ${countPhrase(counts.claims + counts.hypotheses, 'finding', 'findings')}, ${countPhrase(counts.questions, 'thing to find out', 'things to find out')} and its history`
     : 'everything in it and its history'
-  return `"${inv.title}" will be removed with ${what}. To keep a copy, first choose Settings, then Technical, then ${SAVE_QUESTION_LABEL}.`
+  return `"${inv.title}" will be removed with ${what}. To keep a copy, first choose More, then Save a copy to move it to another computer.`
 }
 
 export function MoreMenu({ investigation: inv }: { investigation: Investigation }) {
@@ -69,6 +70,15 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
     }
   }
 
+  const saveCopy = async () => {
+    try {
+      const res = await api.exportInvestigation(ref)
+      if (!res.cancelled) toast.success(`Saved a copy as ${res.file_name}.`)
+    } catch (e) {
+      showError(e)
+    }
+  }
+
   const archive = async () => {
     try {
       const done = await write(() => api.archiveInvestigation(ref))
@@ -94,6 +104,7 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
           ? []
           : [{ label: AI_ON_LABEL, icon: Pin, onSelect: () => void setAi(true) }]),
     { label: COPY_FOR_AI_LABEL, icon: ClipboardCopy, onSelect: () => void copy(ref) },
+    { label: SAVE_COPY_LABEL, icon: Download, onSelect: () => void saveCopy() },
     archived
       ? { label: PUT_BACK_LABEL, icon: ArchiveRestore, onSelect: () => void putBack() }
       : { label: 'Archive question', icon: Archive, onSelect: () => void archive() },

@@ -120,13 +120,15 @@ export function groupFindings(claims: Claim[], hypotheses: Hypothesis[], sources
 }
 
 /**
- * The findings an answer is saved with, taken from the page: the ones under
- * What backs this up and the ones under Where sources disagree. The engine
- * accepts claims only, so findings not tested yet are left out.
+ * The findings an answer is saved with, taken from the page: every current
+ * one, under What backs this up or Where sources disagree. None is saved as
+ * going against the answer: sources disagreeing about a finding says nothing
+ * about whether the finding agrees with the answer. The engine accepts
+ * claims only, so findings not tested yet are left out.
  */
 export function answerFindings(claims: Claim[], sources: Sources): { supporting_claims: string[]; contradicting_claims: string[] } {
   const g = groupFindings(claims, [], sources)
-  return { supporting_claims: g.backing.map((f) => f.record.ref), contradicting_claims: g.disagree.map((f) => f.record.ref) }
+  return { supporting_claims: [...g.backing, ...g.disagree].map((f) => f.record.ref), contradicting_claims: [] }
 }
 
 /** How many of a question's sources each party has checked. Replaced sources are not counted. */

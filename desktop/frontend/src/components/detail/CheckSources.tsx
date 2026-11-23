@@ -6,7 +6,8 @@
 // ways: It still holds, Rule this out or Skip. Last the answer, when there is
 // one the person has not checked, so a decision never undoes a check made a
 // minute before. The end says so, and offers Write the answer when there is
-// none.
+// none. Opened from a finding's Decide button, the pass starts on that
+// finding and then goes on in the same order.
 //
 // The window reads the latest detail on every render, so a source an AI adds
 // meanwhile joins the end and one checked elsewhere drops out. Focus stays on
@@ -22,7 +23,7 @@ import { relationTags } from '../../lib/labels'
 import { countOf, plural } from '../../lib/plural'
 import { evidenceByRef, groupFindings, isReplaced, isRuledOut, sourcesToCheck, usedBy, type Finding } from '../../lib/records'
 import { useWrite } from '../../state/useWrite'
-import { RULE_OUT_ACTION, STILL_HOLDS_ACTION } from '../drawers/StatementDrawer'
+import { RULE_OUT_ACTION, STILL_HOLDS_ACTION, STILL_HOLDS_QUESTION } from '../drawers/StatementDrawer'
 import { VerificationBadge } from '../record/VerificationBadge'
 import { BreakablePath } from '../ui/BreakablePath'
 import { Button } from '../ui/Button'
@@ -72,12 +73,14 @@ export function checkStep(evidence: Evidence[], skipped: string[], checked: numb
 
 export interface CheckSourcesProps {
   detail: InvestigationDetail
+  /** A finding where sources disagree to show first. */
+  startAt?: string
   onClose: () => void
   /** Closes the window and opens the answer editor. */
   onWriteAnswer?: () => void
 }
 
-export function CheckSources({ detail, onClose, onWriteAnswer }: CheckSourcesProps) {
+export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckSourcesProps) {
   const write = useWrite()
   const inv = detail.investigation
   const [skipped, setSkipped] = useState<string[]>([])
@@ -91,8 +94,11 @@ export function CheckSources({ detail, onClose, onWriteAnswer }: CheckSourcesPro
   const answerRef = useRef<HTMLDivElement>(null)
 
   const sources = checkStep(detail.evidence, skipped, checked)
-  const findings = walkStep(groupFindings(detail.claims, detail.hypotheses, evidenceByRef(detail)).disagree.map((f) => ({ ref: f.record.ref, f })), skipped, decided)
-  const source = sources.current
+  const disagree = groupFindings(detail.claims, detail.hypotheses, evidenceByRef(detail)).disagree.map((f) => ({ ref: f.record.ref, f }))
+  // The finding the person chose goes first until they decide or skip it.
+  const first = startAt && !skipped.includes(startAt) ? disagree.find((x) => x.ref === startAt) : undefined
+  const findings = walkStep(first ? [first, ...disagree.filter((x) => x !== first)] : disagree, skipped, decided)
+  const source = first ? undefined : sources.current
   const finding = source ? undefined : findings.current?.f
   const left = sources.left + findings.left
   const hasAnswer = inv.conclusion.trim() !== ''
@@ -290,7 +296,7 @@ function Disagreement({ finding: { record: r }, detail, progress }: { finding: F
           ),
         )}
       </dl>
-      <p>Read the sources. Does the finding still hold?</p>
+      <p>{STILL_HOLDS_QUESTION}</p>
     </div>
   )
 }

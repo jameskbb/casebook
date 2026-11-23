@@ -16,20 +16,23 @@
 // matching detail is loaded: a search hit's record opens its drawer or
 // focuses its row; Home's buttons open the check (Decide opens it too: its
 // sources are all checked, so it starts on the findings where sources
-// disagree), the answer editor or the answer check. When the check closes,
-// focus goes back to the answer's first button.
+// disagree), the answer editor or the answer check. A finding where sources
+// disagree has its own Decide button, which opens the check on it. When the
+// check closes, focus goes back to the answer's first button.
 //
 // Still to find out holds findings not tested yet and the things a person
 // or an AI still wants to find out, in one list. A finding not tested yet
-// offers This turned out right and Rule this out on its row; something to
-// find out offers Answer and Later. Answered ones collapse under Show N
-// answered. Focus moves to a new row.
+// offers This turned out right, Rule this out and Later on its row (Later
+// only puts it under Show N left for later in this window, lib/later);
+// something to find out offers Answer and Later. Answered ones collapse
+// under Show N answered. Focus moves to a new row.
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleQuestionMark, FileText, Pencil, Plus, Quote, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { plainError, toApiError } from '../../api/errors'
 import type { Evidence, Hypothesis, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
+import { getLater, setLater } from '../../lib/later'
 import { evidenceByRef, groupFindings, partitionQuestions, type Finding } from '../../lib/records'
 import { useAppData } from '../../state/appData'
 import { useWrite } from '../../state/useWrite'
@@ -50,7 +53,7 @@ import { useToast } from '../ui/Toaster'
 import { ActivityList } from './ActivityList'
 import { ArchivedBanner } from './ArchivedBanner'
 import { CheckSources } from './CheckSources'
-import { ConclusionPanel } from './ConclusionPanel'
+import { ConclusionPanel, DECIDE_ACTION } from './ConclusionPanel'
 import { DetailHeader } from './DetailHeader'
 import { RecordId } from '../record/RecordId'
 import { EvidenceRow } from './EvidenceRow'
@@ -114,7 +117,8 @@ function Page({ detail }: { detail: InvestigationDetail }) {
   const { open } = useDrawers()
   const { pendingOpen, clearPendingOpen, selectedRef } = useAppData()
   const inv = detail.investigation
-  const [checking, setChecking] = useState(false)
+  // The check is open; startAt is the finding a Decide button opened it on.
+  const [checking, setChecking] = useState<{ startAt?: string } | null>(null)
   const [answerIntent, setAnswerIntent] = useState<AnswerIntent | null>(null)
   const [focusAnswer, setFocusAnswer] = useState(false)
 
@@ -132,7 +136,7 @@ function Page({ detail }: { detail: InvestigationDetail }) {
   useEffect(() => {
     if (!pendingOpen || inv.ref !== selectedRef) return
     if (pendingOpen === 'check-sources' || pendingOpen === 'decide') {
-      setChecking(true)
+      setChecking({})
     } else if (pendingOpen === 'write-answer' || pendingOpen === 'check-answer') {
       setAnswerIntent(pendingOpen)
     } else if (drawerKind(pendingOpen)) {
@@ -156,22 +160,24 @@ function Page({ detail }: { detail: InvestigationDetail }) {
         investigation={inv}
         claims={detail.claims}
         evidence={detail.evidence}
-        onCheckSources={() => setChecking(true)}
+        hypotheses={detail.hypotheses}
+        onCheckSources={() => setChecking({})}
         share
         bare={caseHasNoRecords(detail)}
         intent={answerIntent}
         onIntentDone={() => setAnswerIntent(null)}
       />
-      <ReadingSections detail={detail} />
+      <ReadingSections detail={detail} onDecide={(startAt) => setChecking({ startAt })} />
       {checking && (
         <CheckSources
           detail={detail}
+          startAt={checking.startAt}
           onClose={() => {
-            setChecking(false)
+            setChecking(null)
             setFocusAnswer(true)
           }}
           onWriteAnswer={() => {
-            setChecking(false)
+            setChecking(null)
             setAnswerIntent('write-answer')
           }}
         />
@@ -224,7 +230,7 @@ type RecordDialog =
  * (or changes state) focus moves to its row; one that moved behind its Show
  * line leaves focus on that line.
  */
-function ReadingSections({ detail }: { detail: InvestigationDetail }) {
+function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; onDecide: (ref: string) => void }) {
   const { open } = useDrawers()
   const write = useWrite()
   const toast = useToast()
@@ -234,6 +240,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   const [reopening, setReopening] = useState<string | null>(null)
   const [legendOpen, setLegendOpen] = useState(false)
   const [testing, setTesting] = useState<string | null>(null)
+  const [later, setLaterState] = useState(() => getLater(invRef))
   const sectionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -280,6 +287,18 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
     <>
       <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'supported')}>{TURNED_OUT_RIGHT_ACTION}</Button>
       <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'disproven')}>{RULE_OUT_ACTION}</Button>
+      {!later.includes(h.ref) && (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            const next = [...later, h.ref]
+            setLater(invRef, next)
+            setLaterState(next)
+          }}
+        >
+          Later
+        </Button>
+      )}
     </>
   )
 
@@ -327,7 +346,12 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   const close = () => setDialog(null)
   const findingRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} />
   const findingKey = (f: Finding) => f.record.ref
-  const toFind: ToFind[] = [...findings.notTested.map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
+  const leftForLater = findings.notTested.filter((f) => later.includes(f.record.ref))
+  const toFind: ToFind[] = [...findings.notTested.filter((f) => !later.includes(f.record.ref)).map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
+  const toFindRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} actions={f.kind === 'hypothesis' && testActions(f.record)} />
+  const decideButton = (f: Finding) => (
+    <Button variant="ghost" aria-label={`${DECIDE_ACTION}: ${f.record.statement}`} onClick={() => onDecide(f.record.ref)}>{DECIDE_ACTION}</Button>
+  )
   return (
     <div className="reading-sections" ref={sectionsRef}>
       {caseHasNoRecords(detail) ? (
@@ -343,7 +367,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
         </div>
       )}
       <SectionList<Finding> id="findings" icon={Quote} kind="claim" heading="What backs this up" items={findings.backing} itemKey={findingKey} renderItem={findingRow} />
-      <SectionList<Finding> id="disagree" icon={CircleAlert} kind="claim" heading="Where sources disagree" items={findings.disagree} itemKey={findingKey} renderItem={findingRow} />
+      <SectionList<Finding> id="disagree" icon={CircleAlert} kind="claim" heading="Where sources disagree" items={findings.disagree} itemKey={findingKey} renderItem={(f) => <RecordRow {...f} sources={sources} onOpen={open} actions={decideButton(f)} />} />
       <Collapsed items={findings.ruledOut} noun={['ruled out finding', 'ruled out findings']} itemKey={findingKey} renderItem={findingRow} />
       <Collapsed items={findings.replaced} noun={['replaced finding', 'replaced findings']} itemKey={findingKey} renderItem={findingRow} />
       <SectionList<ToFind>
@@ -357,11 +381,12 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
         itemKey={(x) => ('finding' in x ? findingKey(x.finding) : x.question.ref)}
         renderItem={(x) =>
           'finding' in x ? (
-            <RecordRow {...x.finding} sources={sources} onOpen={open} actions={x.finding.kind === 'hypothesis' && testActions(x.finding.record)} />
+            toFindRow(x.finding)
           ) : (
             <QuestionRow question={x.question} actions={questionActions(x.question)} />
           )
         }
+        footer={leftForLater.length > 0 && <Collapsed items={leftForLater} noun={['left for later', 'left for later']} itemKey={findingKey} renderItem={toFindRow} />}
       />
       <SectionList<Evidence>
         id="evidence"

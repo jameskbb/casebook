@@ -3,7 +3,8 @@
 //      so, and "Edit finding", which opens both in an inline editor;
 //   2. what a person can decide about it. A finding has no check of its own:
 //      its label comes from its sources. Where sources disagree: It still
-//      holds (after a confirmation) or Rule this out. Any finding on the
+//      holds (no second question: the line above it asks, as in the check)
+//      or Rule this out. Any finding on the
 //      page: Rule this out and Replace with a newer finding. One not tested
 //      yet: also This turned out right. A replaced or ruled out finding:
 //      Bring this back;
@@ -63,8 +64,7 @@ export type StatementDrawerProps = {
 } & ({ kind: 'claim'; record: Claim } | { kind: 'hypothesis'; record: Hypothesis })
 
 export const STILL_HOLDS_ACTION = 'It still holds'
-export const SETTLE_ACTION = 'Yes, it still holds'
-export const SETTLE_COPY = 'The sources disagree about this finding. Choose this only if you read them and the finding still holds.'
+export const STILL_HOLDS_QUESTION = 'Read the sources. Does the finding still hold?'
 export const TURNED_OUT_RIGHT_ACTION = 'This turned out right'
 export const RULE_OUT_ACTION = 'Rule this out'
 export const REPLACE_ACTION = 'Replace with a newer finding'
@@ -427,7 +427,6 @@ function DecideGroup({
   const write = useWrite()
   const [busy, setBusy] = useState(false)
   const [summary, setSummary] = useState<string | undefined>()
-  const [confirming, setConfirming] = useState(false)
 
   const run = async (fn: () => Promise<unknown>) => {
     if (busy) return
@@ -446,6 +445,11 @@ function DecideGroup({
   const retired = isReplaced(r) || isRuledOut(r)
   const notTested = kind === 'hypothesis' && r.status === 'open'
   const turnedOutRight = () => calls.update({ status: 'supported' })
+  const holds = async () => {
+    await calls.decideHolds()
+    // One the person decided holds is no longer waiting to be tested.
+    if (notTested) await turnedOutRight()
+  }
   const title = isReplaced(r)
     ? DECIDE_TITLES.replaced
     : retired
@@ -459,6 +463,7 @@ function DecideGroup({
   return (
     <DrawerGroup title={title}>
       {isReplaced(r) && r.superseded_by && <SupersededBy refText={r.superseded_by} onOpen={onOpenRef} />}
+      {disagree && !retired && <p className="drawer-text">{STILL_HOLDS_QUESTION}</p>}
       <div className="drawer-actions">
         {retired ? (
           // It comes back with its label worked out from its sources again.
@@ -472,7 +477,7 @@ function DecideGroup({
         ) : (
           <>
             {disagree && (
-              <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => setConfirming(true)}>
+              <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void run(holds)}>
                 {STILL_HOLDS_ACTION}
               </Button>
             )}
@@ -490,22 +495,6 @@ function DecideGroup({
           </>
         )}
       </div>
-      {confirming && disagree && !retired && <Banner tone="warning" className="banner-stacked" action={<div className="banner-actions">
-        <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
-        <Button
-          variant="secondary"
-          disabled={busy || reviewChanged}
-          onClick={() =>
-            void run(async () => {
-              await calls.decideHolds()
-              // One the person decided holds is no longer waiting to be tested.
-              if (notTested) await turnedOutRight()
-            })
-          }
-        >
-          {SETTLE_ACTION}
-        </Button>
-      </div>}>{SETTLE_COPY}</Banner>}
       {summary && (
         <p className="drawer-summary" role="alert">
           {summary}

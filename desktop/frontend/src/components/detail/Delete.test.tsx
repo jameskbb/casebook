@@ -178,7 +178,7 @@ describe('deleting records', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Delete question...' }))
     const dialog = screen.getByRole('dialog', { name: 'Delete this question?' })
     expect(dialog).toHaveTextContent(/will be removed with everything in it: \d+ sources?/)
-    expect(dialog).toHaveTextContent('To keep a copy, first choose Settings, then Technical, then Save a question as a file to move it.')
+    expect(dialog).toHaveTextContent('To keep a copy, first choose More, then Save a copy to move it to another computer.')
     expect(dialog).not.toHaveTextContent('INV-0003')
     await user.click(within(dialog).getByRole('button', { name: 'Delete question' }))
     expect(mocks.api.deleteInvestigation).toHaveBeenCalledWith('INV-0003')

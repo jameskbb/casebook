@@ -22,8 +22,7 @@ import {
   MOVE_TO_BACKS,
   REPLACE_ACTION,
   RULE_OUT_ACTION,
-  SETTLE_ACTION,
-  SETTLE_COPY,
+  STILL_HOLDS_QUESTION,
   StatementDrawer,
   STILL_HOLDS_ACTION,
   SUPPORTING_TITLE,
@@ -86,7 +85,6 @@ describe('StatementDrawer statement', () => {
     await user.click(screen.getByRole('button', { name: SHOW_NEW_VERSION }))
     expect(screen.queryByText(FINDING_CHANGED_COPY)).toBeNull()
     await user.click(screen.getByRole('button', { name: STILL_HOLDS_ACTION }))
-    await user.click(screen.getByRole('button', { name: SETTLE_ACTION }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref,
       expect.objectContaining({ basis: 'sources-changed', verification: 'human_verified', settle_dispute: true }))
   })
@@ -251,17 +249,16 @@ describe('StatementDrawer deciding about a finding', () => {
     expect(buttonNames(decide())).toEqual([RULE_OUT_ACTION, REPLACE_ACTION])
   })
 
-  it('where sources disagree, It still holds first asks, and Yes, it still holds settles it', async () => {
+  it('where sources disagree, the line above asks and It still holds settles it in one press', async () => {
     const user = userEvent.setup()
     renderDrawer(C004)
     expect(decide()).toHaveAccessibleName(DECIDE_TITLES.disagree)
     expect(buttonNames(decide())).toEqual([STILL_HOLDS_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
-    expect(screen.queryByText(SETTLE_COPY)).toBeNull()
+    const question = within(decide()).getByText(STILL_HOLDS_QUESTION)
+    expect(question.compareDocumentPosition(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
-    expect(within(decide()).getByText(SETTLE_COPY)).toBeInTheDocument()
-    await user.click(within(decide()).getByRole('button', { name: SETTLE_ACTION }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: true })
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
     expect(screen.getAllByText(SOURCES_DISAGREE)).toHaveLength(1)
   })
 
@@ -280,20 +277,10 @@ describe('StatementDrawer deciding about a finding', () => {
     renderDrawer(hypothesis({ ref: 'H-009', status: 'open', verification: 'disputed' }))
     expect(buttonNames(decide())).toEqual([STILL_HOLDS_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
     await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    await user.click(within(decide()).getByRole('button', { name: SETTLE_ACTION }))
     await waitFor(() => expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-009', { status: 'supported' }))
     expect(vi.mocked(mocks.api.reviewStatement).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(mocks.api.updateHypothesis).mock.invocationCallOrder[0],
     )
-  })
-
-  it('Cancel takes the question about disagreeing sources away without a call', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C004)
-    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    await user.click(within(decide()).getByRole('button', { name: 'Cancel' }))
-    expect(within(decide()).queryByText(SETTLE_COPY)).toBeNull()
-    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
   })
 
   it('Rule this out sends status rejected for a claim', async () => {
@@ -379,14 +366,6 @@ describe('StatementDrawer deciding about a finding', () => {
     await waitFor(() => expect(onOpenRef).toHaveBeenCalledWith('C-001'))
   })
 
-  it('puts the It still holds question on its own line above its buttons', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C004)
-    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    const banner = within(decide()).getByText(SETTLE_COPY).closest('.banner')!
-    expect(banner).toHaveClass('banner-stacked')
-    expect(banner.querySelector('.banner-actions')).toHaveTextContent(/^Cancel.*Yes, it still holds$/)
-  })
 })
 
 describe('StatementDrawer links', () => {

@@ -1,11 +1,14 @@
 // The answer: the one bold element on the screen. View mode shows the answer
 // in Literata 20, how many of the question's sources a person has checked,
 // one line saying whether they checked the answer, one row of buttons (Check
-// the next source while one is left, I checked this answer, Share the
-// answer; the first one that applies is the main button) and how the person
-// knows; the findings that back it or go against it, counted from the page
-// as it is now (ruled out and replaced ones are not counted). Once the person
-// checked the answer, Undo my check sets it back to not checked. Edit mode is inline in the same panel:
+// the next source while one is left, then Decide while only findings where
+// sources disagree are left, then I checked this answer, then Share the
+// answer; the first one that applies is the main button, and I checked this
+// answer waits until nothing else is left) and how the person knows; the
+// findings that back it, and how many of them sources disagree about,
+// counted from the page as it is now (ruled out and replaced ones are not
+// counted). Once the person checked the answer, Undo my check sets it back to
+// not checked. Edit mode is inline in the same panel:
 // the answer and how you know, saved together through UpdateConclusion with
 // the findings on the page behind it (lib/records answerFindings). Confidence
 // is stored and passed through unchanged, never shown. Clearing asks first.
@@ -19,13 +22,13 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Pencil, ScrollText } from 'lucide-react'
 import { api } from '../../api/api'
 import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
-import type { Claim, ConclusionInput, Confidence, Evidence, Investigation } from '../../api/types'
+import type { Claim, ConclusionInput, Confidence, Evidence, Hypothesis, Investigation } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { formatDate } from '../../lib/relativeTime'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { confidenceOptions } from '../../lib/labels'
 import { countOf, plural } from '../../lib/plural'
-import { answerFindings, evidenceByRef, sourceChecks, sourcesToCheck } from '../../lib/records'
+import { answerFindings, evidenceByRef, groupFindings, sourceChecks, sourcesToCheck } from '../../lib/records'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { CodedText } from '../record/RecordId'
@@ -58,7 +61,9 @@ export interface ConclusionPanelProps {
   claims?: Claim[]
   /** The question's sources, for the count of how many a person has checked. */
   evidence?: Evidence[]
-  /** Starts the source check; with it the panel offers Check the next source. */
+  /** The question's hypotheses: one where sources disagree waits for Decide too. */
+  hypotheses?: Hypothesis[]
+  /** Starts the source check; with it the panel offers Check the next source, or Decide. */
   onCheckSources?: () => void
   /** Offer Share the answer once there is an answer. */
   share?: boolean
@@ -70,6 +75,7 @@ export interface ConclusionPanelProps {
 }
 
 export const CHECK_NEXT_SOURCE = 'Check the next source'
+export const DECIDE_ACTION = 'Decide'
 export const SHARE_THE_ANSWER = 'Share the answer'
 export const CHECKED_ANSWER_ACTION = 'I checked this answer'
 export const NOT_CHECKED_ANSWER = 'You have not checked this answer yet.'
@@ -107,7 +113,7 @@ export function SourcesChecked({ evidence }: { evidence: Evidence[] }) {
   )
 }
 
-export function ConclusionPanel({ investigation: inv, claims = [], evidence = [], onCheckSources, share = false, bare = false, intent, onIntentDone }: ConclusionPanelProps) {
+export function ConclusionPanel({ investigation: inv, claims = [], evidence = [], hypotheses = [], onCheckSources, share = false, bare = false, intent, onIntentDone }: ConclusionPanelProps) {
   const write = useWrite()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => draftOf(inv))
@@ -232,7 +238,10 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
       const saved = await write(() =>
         api.updateConclusion(inv.ref, { conclusion: inv.conclusion, confidence: storedConfidence(inv), rationale: inv.conclusion_rationale, verification: 'ai_generated' }),
       )
-      if (saved) setFocusTarget('checkButton')
+      if (saved) {
+        setJustWrote(false)
+        setFocusTarget('checkButton')
+      }
     } catch (e) {
       showErrors(e)
     } finally {
@@ -270,20 +279,25 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
   const findingText = (ref: string) => claims.find((c) => c.ref === ref)?.statement ?? 'A finding that is no longer here'
 
   // The findings on the page now, so one ruled out or replaced since the save is not counted.
-  const { supporting_claims: backing, contradicting_claims: against } = answerFindings(claims, evidenceByRef({ evidence }))
+  const sources = evidenceByRef({ evidence })
+  const backing = answerFindings(claims, sources).supporting_claims
+  const disagreeing = groupFindings(claims, [], sources).disagree.map((f) => f.record.ref)
   const checkedAt = inv.conclusion_reviewed_at
   const upToDate = answerChecked(inv)
   const checkStale = checking !== null && checking.conclusion_review_token !== inv.conclusion_review_token
 
   // One row of buttons, in the order a person does them: check the sources,
-  // check the answer, share it. The first one left is the main button, so
-  // Share the answer is never the main one before the checking is done.
-  const next = Boolean(onCheckSources) && sourcesToCheck(evidence).length > 0
-  const canCheck = has && !upToDate
+  // decide where they disagree, check the answer, share it. The first one
+  // left is the main button, so Share the answer is never the main one before
+  // the checking is done, and the answer cannot be checked before its sources.
+  const sourcesLeft = sourcesToCheck(evidence).length > 0
+  const decideLeft = groupFindings(claims, hypotheses, sources).disagree.length > 0
+  const next = Boolean(onCheckSources) && (sourcesLeft || decideLeft)
+  const canCheck = has && !upToDate && !sourcesLeft && !decideLeft
   const canShare = share && has
   const actions = (next || canShare || canCheck) && !checking && (
     <div className="conclusion-next">
-      {next && <Button variant="primary" onClick={onCheckSources}>{CHECK_NEXT_SOURCE}</Button>}
+      {next && <Button variant="primary" onClick={onCheckSources}>{sourcesLeft ? CHECK_NEXT_SOURCE : DECIDE_ACTION}</Button>}
       {canCheck && <Button variant={next ? 'secondary' : 'primary'} ref={checkButtonRef} onClick={beginCheck}>{CHECKED_ANSWER_ACTION}</Button>}
       {canShare && <Button variant={next || canCheck ? 'secondary' : 'primary'} icon={ScrollText} onClick={() => setSharing(true)}>{SHARE_THE_ANSWER}</Button>}
     </div>
@@ -400,7 +414,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           )}
           {inv.conclusion_verification === 'disputed' && <Banner>Sources disagree about this answer. Read them before you use it.</Banner>}
           {backing.length > 0 && <details className="conclusion-basis"><summary>{countOf(backing.length, 'finding backs it', 'findings back it')}</summary><ul>{backing.map((ref) => <li key={ref}>{findingText(ref)}</li>)}</ul></details>}
-          {against.length > 0 && <details className="conclusion-basis"><summary>{countOf(against.length, 'finding goes against it', 'findings go against it')}</summary><ul>{against.map((ref) => <li key={ref}>{findingText(ref)}</li>)}</ul></details>}
+          {disagreeing.length > 0 && <details className="conclusion-basis"><summary>{`${disagreeing.length} where sources disagree`}</summary><ul>{disagreeing.map((ref) => <li key={ref}>{findingText(ref)}</li>)}</ul></details>}
           {inv.conclusion_rationale.trim() !== '' && <p className="conclusion-rationale"><span className="conclusion-why">How you know:</span> <CodedText text={inv.conclusion_rationale} /></p>}
           {upToDate && inv.conclusion_review_basis && <p className="conclusion-rationale"><span className="conclusion-why">What you checked:</span> <CodedText text={inv.conclusion_review_basis} /></p>}
         </div>
