@@ -1,13 +1,13 @@
-// Add a finding (a claim, or a hypothesis to test): the statement, why, and
-// one row per source with None, Supports or Contradicts, so the record and
-// its links land in one call. An error on links[i] shows on the row of the
-// i-th linked source.
+// Add a finding: what was found, why you think so, and one row per source
+// with None, Backs it up or Goes against it, so the finding and its sources
+// land in one call. An error on links[i] shows on the row of the i-th source.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
-import { toApiError } from '../../api/errors'
-import type { Claim, Evidence, EvidenceLinkInput, Hypothesis, Relation } from '../../api/types'
+import { plainError, toApiError } from '../../api/errors'
+import type { Evidence, EvidenceLinkInput, Relation } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
+import { relationLabels } from '../../lib/labels'
 import { useWrite } from '../../state/useWrite'
 import { Dialog } from '../ui/Dialog'
 import { SegmentedControl } from '../ui/SegmentedControl'
@@ -18,23 +18,22 @@ type Choice = 'none' | Relation
 
 const CHOICES: { value: Choice; label: string }[] = [
   { value: 'none', label: 'None' },
-  { value: 'supports', label: 'Supports' },
-  { value: 'contradicts', label: 'Contradicts' },
+  { value: 'supports', label: relationLabels.supports },
+  { value: 'contradicts', label: relationLabels.contradicts },
 ]
 
 const LINK_FIELD = /^links\[(\d+)\]\./
 
 export interface StatementDialogProps {
-  kind: 'claim' | 'hypothesis'
   invRef: string
-  /** Every piece of evidence in the investigation, by ref. */
+  /** The question's sources. */
   evidence: Evidence[]
   onClose: () => void
-  /** Called with the new record's ref before the dialog closes. */
+  /** Called with the new finding's code before the dialog closes. */
   onCreated?: (ref: string) => void
 }
 
-export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: StatementDialogProps) {
+export function StatementDialog({ invRef, evidence, onClose, onCreated }: StatementDialogProps) {
   const write = useWrite()
   const [statement, setStatement] = useState('')
 
@@ -44,10 +43,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
-  const rationaleField = kind === 'claim' ? 'confidence_rationale' : 'rationale'
-  const noun = kind === 'claim' ? 'finding' : 'finding to test'
-  // Confidence is stored but never shown: a new record carries none.
-  const confidence = 'unknown' as const
+  const rationaleField = 'confidence_rationale'
 
   const links: EvidenceLinkInput[] = evidence
     .filter((e) => (choices[e.ref] ?? 'none') !== 'none')
@@ -65,13 +61,10 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
     setRowErrors({})
     setSummary(undefined)
     try {
-      const saved = await write<Claim | Hypothesis>(
-        () =>
-          kind === 'claim'
-            ? api.addClaim(invRef, { statement, confidence, confidence_rationale: rationale, links: sent })
-            : api.addHypothesis(invRef, { statement, confidence, rationale, links: sent }),
-        { onRetry: () => void submitRef.current() },
-      )
+      // Confidence is stored but never shown: a new finding carries none.
+      const saved = await write(() => api.addClaim(invRef, { statement, confidence: 'unknown', confidence_rationale: rationale, links: sent }), {
+        onRetry: () => void submitRef.current(),
+      })
       if (saved) {
         onCreated?.(saved.ref)
         onClose()
@@ -81,7 +74,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
       const m = err.kind === 'validation' && err.field ? LINK_FIELD.exec(err.field) : null
       const row = m ? sent[Number(m[1])] : undefined
       if (row) {
-        setRowErrors({ [row.evidence_ref]: err.message })
+        setRowErrors({ [row.evidence_ref]: plainError(err) })
       } else {
         const split = splitFieldErrors(err, ['statement', rationaleField])
         setFieldErrors(split.fieldErrors)
@@ -96,10 +89,10 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
 
   return (
     <Dialog
-      title={`Add ${noun}`}
+      title="Add finding"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel={`Add ${noun}`}
+      submitLabel="Add finding"
       busyLabel="Adding..."
       busy={busy}
       dirty={dirty}
@@ -114,7 +107,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
       <div className="dialog-fields">
         <TextArea
           label="Finding"
-          hint={kind === 'claim' ? 'What did you find? One clear sentence.' : 'What might explain it? One clear sentence.'}
+          hint="What did you find? One clear sentence."
           value={statement}
           onChange={setStatement}
           error={fieldErrors.statement}
@@ -123,7 +116,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
           spellCheck
         />
         <TextArea
-          label="Why (optional)"
+          label="Why you think so (optional)"
           value={rationale}
           onChange={setRationale}
           error={fieldErrors[rationaleField]}

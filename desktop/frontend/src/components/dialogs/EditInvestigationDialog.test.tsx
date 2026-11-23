@@ -2,14 +2,14 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, REQUIRED_COPY } from '../../api/errors'
 import type { Investigation } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { CHANGED_ELSEWHERE_COPY } from '../ui/ChangedElsewhereBanner'
+import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { EditInvestigationDialog } from './EditInvestigationDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -90,7 +90,8 @@ describe('EditInvestigationDialog', () => {
     await user.clear(within(dialog).getByLabelText('Question'))
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
     const title = within(dialog).getByLabelText('Question')
-    expect(await within(dialog).findByText('is required')).toBeInTheDocument()
+    expect(await within(dialog).findByText(REQUIRED_COPY)).toBeInTheDocument()
+    expect(dialog).not.toHaveTextContent('is required')
     expect(title).toHaveAttribute('aria-invalid', 'true')
     await waitFor(() => expect(title).toHaveFocus())
   })
@@ -109,7 +110,7 @@ describe('EditInvestigationDialog changed elsewhere', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('keeps the input, says the title changed in another app, and Show latest loads it', async () => {
+  it('keeps the input, says it changed while open, and Show the new version loads it', async () => {
     const user = userEvent.setup()
     const ui = (inv: Investigation) => (
       <ToastProvider>
@@ -125,7 +126,7 @@ describe('EditInvestigationDialog changed elsewhere', () => {
     rerender(ui({ ...investigation, title: 'Renamed by Codex' }))
     expect(within(dialog).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
     expect(within(dialog).getByLabelText('Question')).toHaveValue('Why did calls go up 30% in October when sales stayed the same? (mine)')
-    await user.click(within(dialog).getByRole('button', { name: 'Show latest' }))
+    await user.click(within(dialog).getByRole('button', { name: SHOW_NEW_VERSION }))
     expect(within(dialog).getByLabelText('Question')).toHaveValue('Renamed by Codex')
     expect(within(dialog).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })

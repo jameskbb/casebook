@@ -1,8 +1,7 @@
-// Supersede: choose the claim or hypothesis that replaces this
-// one. Only other records that are not superseded themselves can replace it
-// (the engine refuses anything else). No extra confirmation: choosing the
-// replacement is the confirmation, and the record stays visible in its
-// ruled-out group and in History.
+// Replace a finding: choose the newer finding that takes its place. Only
+// another finding that was not itself replaced can (the engine refuses
+// anything else). No extra confirmation: choosing the newer one is the
+// confirmation, and the old one stays under Show replaced findings.
 import { useId, useRef, useState } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { api } from '../../api/api'
@@ -35,7 +34,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
   const [choiceError, setChoiceError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
   const firstRef = useRef<HTMLInputElement>(null)
-  const title = 'Replace this finding'
+  const title = 'Replace with a newer finding'
 
   if (candidates.length === 0) {
     return (
@@ -105,13 +104,13 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
       }
     >
       <p className="dialog-text">
-        {`Choose the ${noun} that replaces it. The old one stays in the history, marked as replaced.`}
+        {`Choose the ${noun} that replaces it. The old one stays here, crossed out.`}
       </p>
       <fieldset
         className={['choice-field', choiceError ? 'is-invalid' : ''].filter(Boolean).join(' ')}
         aria-describedby={choiceError ? errorId : undefined}
       >
-        <legend className="sr-only">Replacement finding</legend>
+        <legend className="sr-only">The newer finding</legend>
         <div className="choice-list">
           {candidates.map((c, i) => (
             <label key={c.ref} className={['choice', chosen === c.ref ? 'is-selected' : ''].filter(Boolean).join(' ')}>

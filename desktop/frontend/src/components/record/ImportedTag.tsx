@@ -1,12 +1,12 @@
-// The quiet "Imported" marker: a record or History row copied from
-// an imported file. Its author, label and history are what the file
-// said; Casebook did not see them happen, so the marker sits next to the
-// verification badge and the actor wherever they are shown.
+// The quiet "From a file" marker: a finding, source or history row that
+// came in with a question someone sent. Casebook shows what the file says
+// and did not see it happen, so the marker sits next to the check label and
+// the name wherever they are shown.
 import { FileInput } from 'lucide-react'
 import './ImportedTag.css'
 
 export const IMPORTED_TITLE =
-  'This came from a file. Who wrote it, its label and its history are what the file says. Casebook did not see them happen.'
+  'This came from a file someone sent. Casebook shows what the file says.'
 
 export function ImportedTag() {
   return (

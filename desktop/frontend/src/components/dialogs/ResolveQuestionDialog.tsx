@@ -1,7 +1,8 @@
-// Resolve a question: the
-// resolution is required, so an empty one is caught here before any call.
+// Answer a follow-up question. The answer is required, so an empty one is
+// caught here before any call.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
+import { REQUIRED_COPY } from '../../api/errors'
 import type { Question } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
@@ -28,7 +29,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
   const submit = async () => {
     if (busy) return
     if (text.trim() === '') {
-      setError('Write the answer first.')
+      setError(REQUIRED_COPY)
       return
     }
     setBusy(true)
@@ -71,7 +72,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
       <p className="dialog-text dialog-quote">{question.question}</p>
       <TextArea
         label="Answer"
-        hint="What is the answer, and how do we know?"
+        hint="What is the answer, and how do you know?"
         value={text}
         onChange={(v) => {
           setText(v)

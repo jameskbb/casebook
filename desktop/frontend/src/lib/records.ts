@@ -23,8 +23,8 @@ function split<T>(list: T[], ruledOut: (x: T) => boolean): Partition<T> {
 }
 
 /**
- * Open questions show, then deferred ones (each in ref order): a deferred
- * question is still unanswered. Only resolved questions collapse.
+ * Open questions show, then the ones left for later (each in the order they
+ * arrived): one left for later is still unanswered. Only answered ones collapse.
  */
 export function partitionQuestions(questions: Question[]): Partition<Question> {
   const p = split(questions, (q) => q.status === 'resolved')
@@ -70,6 +70,16 @@ export function groupFindings(claims: Claim[], hypotheses: Hypothesis[]): Findin
     group.push({ kind: 'hypothesis', record })
   }
   return g
+}
+
+/**
+ * The findings an answer is saved with, taken from the page: the ones under
+ * What backs this up and the ones under Where sources disagree. The engine
+ * accepts claims only, so findings still being tested are left out.
+ */
+export function answerFindings(claims: Claim[]): { supporting_claims: string[]; contradicting_claims: string[] } {
+  const g = groupFindings(claims, [])
+  return { supporting_claims: g.backing.map((f) => f.record.ref), contradicting_claims: g.disagree.map((f) => f.record.ref) }
 }
 
 /** How many of a question's sources each party has checked. Replaced sources are not counted. */

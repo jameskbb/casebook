@@ -1,5 +1,5 @@
-// One question in the sidebar list: the title (2 lines); the "Your AI's
-// current question" marker on its own line; then one muted line, "1 of 3 sources checked by
+// One question in the sidebar list: the title (2 lines); the "Your AI is
+// working on this" marker on its own line; then one muted line, "1 of 3 sources checked by
 // you" when it has sources, otherwise when it was last worked on, with the
 // Archived tag. Its code shows only when codes are on. The list gives each
 // row its roving tabindex props, so the whole list is one Tab stop.
@@ -46,15 +46,15 @@ export function InvestigationRow({ investigation: inv, selected, onSelect, now, 
   )
 }
 
-/** The question your AI tools start from: an 8px accent dot and the words "Your AI's current question". */
+/** The question your AI saves its findings under: an 8px accent dot and the words "Your AI is working on this". */
 export function ActiveMarker({ className }: { className?: string }) {
   return (
     <span
       className={['active-marker', className ?? ''].filter(Boolean).join(' ')}
-      title="Your AI starts from this question."
+      title="Your AI saves what it finds under this question."
     >
       <span className="active-dot" aria-hidden="true" />
-      Your AI's current question
+      Your AI is working on this
     </span>
   )
 }

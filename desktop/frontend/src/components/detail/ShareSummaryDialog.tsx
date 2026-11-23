@@ -1,6 +1,8 @@
-// Review one deterministic snapshot before copying or saving its pinned bytes.
+// Share the answer: the person reads exactly what Copy and Save will send.
+// Each choice (how much to share, which findings) loads its own version, so
+// what is on the sheet is always what goes out.
 import { useEffect, useRef, useState } from 'react'
-import { ClipboardCopy, Download, RefreshCw } from 'lucide-react'
+import { ClipboardCopy, Download } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { ShareCandidate, ShareOptions, SharePreview } from '../../api/types'
@@ -8,30 +10,31 @@ import type { NoteNode } from '../../lib/noteTree'
 import { parseReportHtml } from '../../lib/reportView'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
+import { SegmentedControl } from '../ui/SegmentedControl'
 import { useToast } from '../ui/Toaster'
 import { NotePaper } from './NotePaper'
 import './ShareSummaryDialog.css'
 
-export const SUMMARY_COPIED = 'Copied the summary. Paste it into an email or a document.'
-export const SUMMARY_SAVED = (name: string) => `Saved the summary as ${name}.`
-export const EXAMPLE_COPIED = 'Copied the example request. Paste it into a chat with your AI.'
-export const ELSEWHERE_SUMMARY = 'Use this summary in another app'
-export const ELSEWHERE_COPY = 'Use this summary in the tools you already use. Copy it into a note or document, save it as a file, or ask your AI to save it to an app it is already connected to. This works only if your AI can already create or change notes or documents in that app.'
-export const ELSEWHERE_NOTE = 'Your AI asks Casebook for the summary, then puts it in that app itself. Casebook does not send anything. Your AI gets its own copy with the usual choice of findings, so it matches this preview only if the question has not changed and you did not change what to include.'
+export const ANSWER_COPIED = 'Copied the answer. Paste it into an email or a document.'
+export const ANSWER_SAVED = (name: string) => `Saved the answer as ${name}.`
+export const SHARE_LEDE = 'Share the answer with the findings and sources behind it. Read it before you send it.'
+export const SHARE_READY = 'Copy and Save use what you see below.'
+export const SHARE_CHANGED = 'The answer changed. This is how it reads now.'
+export const SHARE_LOADING = 'Getting the answer ready...'
 
-/** The request to paste into a chat with an AI, for the chosen format and the open question. It names the question by its code, which an AI needs. */
-export function exampleRequest(mode: ShareOptions['mode'], invRef: string, title: string): string {
-  const what = mode === 'report' ? 'the complete report' : 'the leadership brief'
-  return `Save ${what} for ${invRef} in my connected notes app as a new note titled "${title}". Keep its labels, its sources and its notes on what is not checked.`
-}
-
+type Mode = ShareOptions['mode']
 type SelectionKey = 'claim_refs' | 'hypothesis_refs' | 'question_refs' | 'ruled_out_refs'
 
-// The selection groups in the order the brief prints them, with the option
-// each one fills and the legend the sender reads.
+const MODES: { value: Mode; label: string }[] = [
+  { value: 'brief', label: 'Short version' },
+  { value: 'report', label: 'Everything' },
+]
+
+// The groups in the order the shared answer prints them, with the option
+// each one fills and the heading the sender reads.
 const GROUPS: { group: ShareCandidate['group']; key: SelectionKey; legend: string }[] = [
   { group: 'claims', key: 'claim_refs', legend: 'Findings' },
-  { group: 'hypotheses', key: 'hypothesis_refs', legend: 'Findings not tested yet or supported' },
+  { group: 'hypotheses', key: 'hypothesis_refs', legend: 'Findings not tested yet' },
   { group: 'questions', key: 'question_refs', legend: 'Follow-up questions' },
   { group: 'ruled_out', key: 'ruled_out_refs', legend: 'Ruled out' },
 ]
@@ -42,20 +45,21 @@ function selection(preview: SharePreview): ShareOptions {
   return { mode: preview.mode, claim_refs: refs('claims'), hypothesis_refs: refs('hypotheses'), question_refs: refs('questions'), ruled_out_refs: refs('ruled_out') }
 }
 
-export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string; title: string; onClose: () => void }) {
+export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClose: () => void }) {
   const toast = useToast()
   const [preview, setPreview] = useState<SharePreview | null>(null)
   const [nodes, setNodes] = useState<NoteNode[] | null>(null)
   const [draft, setDraft] = useState<ShareOptions>({ mode: 'brief' })
-  const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(true)
   const [sharing, setSharing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const request = useRef(0)
 
+  // Every choice loads its own version; only the newest request lands.
   const load = async (options: ShareOptions) => {
     const current = ++request.current
+    setDraft(options)
     setBusy(true)
     setError(null)
     setCopied(false)
@@ -65,7 +69,6 @@ export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string;
       setPreview(p)
       setNodes(parseReportHtml(p.html))
       setDraft(selection(p))
-      setDirty(false)
     } catch (e) {
       if (current === request.current) setError(errorCopy(toApiError(e)).message)
     } finally {
@@ -76,91 +79,75 @@ export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string;
   useEffect(() => {
     setPreview(null)
     setNodes(null)
-    setDraft({ mode: 'brief' })
-    setDirty(false)
     void load({ mode: 'brief' })
     return () => { request.current += 1 }
-    // Changing cases always starts with that case's default selection.
+    // Another question always starts with its own usual choice of findings.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invRef])
 
   const toggle = (c: ShareCandidate) => {
     const key = keyOf(c.group)
-    setDraft(prev => {
-      const selected = prev[key] ?? []
-      return { ...prev, [key]: selected.includes(c.ref) ? selected.filter(ref => ref !== c.ref) : [...selected, c.ref] }
-    })
-    setDirty(true)
-    setCopied(false)
+    const chosen = draft[key] ?? []
+    void load({ ...draft, [key]: chosen.includes(c.ref) ? chosen.filter(ref => ref !== c.ref) : [...chosen, c.ref] })
   }
+  // The answer changed since the sheet was loaded: show how it reads now
+  // rather than send the older one.
+  const failed = (e: unknown) => {
+    const err = toApiError(e)
+    if (err.kind !== 'conflict') return toast.error(errorCopy(err).message)
+    toast.error(SHARE_CHANGED)
+    void load(draft)
+  }
+  // Copy and Save send the version on the sheet, never one still loading.
+  const disabled = !preview || busy || !!error || sharing
   const copy = async () => {
-    if (!preview || busy || dirty || error || sharing) return
+    if (!preview || disabled) return
     setSharing(true)
     try {
       await api.copySharePreview(preview.snapshot_id)
       setCopied(true)
-      toast.success(SUMMARY_COPIED)
-    } catch (e) { toast.error(errorCopy(toApiError(e)).message) }
+      toast.success(ANSWER_COPIED)
+    } catch (e) { failed(e) }
     finally { setSharing(false) }
   }
   const save = async () => {
-    if (!preview || busy || dirty || error || sharing) return
+    if (!preview || disabled) return
     setSharing(true)
     try {
       const res = await api.saveSharePreview(preview.snapshot_id)
-      if (!res.cancelled) toast.success(SUMMARY_SAVED(res.file_name))
-    } catch (e) { toast.error(errorCopy(toApiError(e)).message) }
+      if (!res.cancelled) toast.success(ANSWER_SAVED(res.file_name))
+    } catch (e) { failed(e) }
     finally { setSharing(false) }
-  }
-  const disabled = !preview || busy || dirty || !!error || sharing
-  const example = exampleRequest(draft.mode, invRef, title)
-  // Copies text only; the person pastes it into their AI client.
-  const copyExample = async () => {
-    try {
-      await api.copyText(example)
-      toast.success(EXAMPLE_COPIED)
-    } catch (e) { toast.error(errorCopy(toApiError(e)).message) }
   }
 
   return (
     <Dialog title="Share the answer" size="form" className="share-summary-dialog" onClose={onClose} busy={sharing}
       footer={<>
         <Button onClick={onClose} disabled={sharing}>Close</Button>
-        <Button icon={Download} disabled={disabled} onClick={() => void save()}>Save as file...</Button>
+        <Button icon={Download} disabled={disabled} onClick={() => void save()}>Save as a file...</Button>
         <Button variant="primary" icon={ClipboardCopy} disabled={disabled} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
       </>}
     >
-      <p className="share-summary-lede">Share the answer with the findings and sources behind it, who checked what, and what is still in doubt. A leadership brief uses the findings you choose; the complete report includes everything and the history.</p>
-      <div className="share-summary-toolbar">
-        <label>Format <select value={draft.mode} disabled={busy || sharing} onChange={e => { const mode = e.target.value as ShareOptions['mode']; setDraft({ mode }); void load({ mode }) }}>
-          <option value="brief">Leadership brief</option>
-          <option value="report">Complete report</option>
-        </select></label>
-        <Button icon={RefreshCw} disabled={busy || sharing} onClick={() => void load(draft)}>{dirty ? 'Update preview' : 'Refresh preview'}</Button>
-      </div>
+      <p className="share-summary-lede">{SHARE_LEDE}</p>
+      <SegmentedControl<Mode> label="How much to share" options={MODES} value={draft.mode} disabled={sharing} onChange={(mode) => void load({ mode })} />
       {preview && draft.mode === 'brief' && preview.candidates.length > 0 && <details className="share-summary-selection">
-        <summary>Choose what to include</summary>
-        <p>Findings where sources disagree, contradicting sources and the findings behind the answer are always included. Choose the other findings, follow-up questions and ruled-out items here.</p>
+        <summary>Choose what to share</summary>
+        <p>Findings where sources disagree are always shared. Choose what else to share.</p>
         <div className="share-summary-choices">
-          {GROUPS.map(({ group, key, legend }) => <fieldset key={group}>
+          {GROUPS.map(({ group, key, legend }) => preview.candidates.some(c => c.group === group) && <fieldset key={group}>
             <legend>{legend}</legend>
             {preview.candidates.filter(c => c.group === group).map(c =>
-              <label key={c.ref} className="share-summary-choice"><input type="checkbox" checked={draft[key]?.includes(c.ref) ?? false} disabled={c.required || busy || sharing} onChange={() => toggle(c)} /><span><strong className="record-id">{c.ref}</strong> {c.text}<small>{c.label}{c.required ? '; always included' : ''}</small></span></label>
+              <label key={c.ref} className="share-summary-choice"><input type="checkbox" checked={draft[key]?.includes(c.ref) ?? false} disabled={c.required || sharing} onChange={() => toggle(c)} /><span><strong className="record-id">{c.ref}</strong> {c.text}<small>{c.label}{c.required ? '; always shared' : ''}</small></span></label>
             )}
           </fieldset>)}
         </div>
       </details>}
-      <p className="share-summary-snapshot" role="status">{busy ? 'Preparing preview...' : dirty ? 'You changed what to include. Update the preview before sharing.' : preview ? 'This preview stays unchanged until you refresh. Copy and Save use exactly what is shown.' : 'Preview unavailable. Refresh to try again.'}</p>
-      {error ? <p role="alert" className="share-summary-error">{error}</p> : <NotePaper nodes={nodes} text={preview?.markdown ?? ''} label="Summary" />}
-      <details className="share-summary-elsewhere">
-        <summary>{ELSEWHERE_SUMMARY}</summary>
-        <p>{ELSEWHERE_COPY}</p>
-        <div className="share-summary-example">
-          <blockquote className="share-summary-example-text">{example}</blockquote>
-          <Button icon={ClipboardCopy} onClick={() => void copyExample()}>Copy example request</Button>
-        </div>
-        <p className="share-summary-elsewhere-note">{ELSEWHERE_NOTE}</p>
-      </details>
+      {error
+        ? <p role="alert" className="share-summary-error">{error} <Button variant="ghost" onClick={() => void load(draft)}>Try again</Button></p>
+        : <>
+          <p className="share-summary-snapshot" role="status">{busy ? SHARE_LOADING : SHARE_READY}</p>
+          <NotePaper nodes={nodes} text={preview?.markdown ?? ''} label="The answer" />
+        </>}
     </Dialog>
   )
 }

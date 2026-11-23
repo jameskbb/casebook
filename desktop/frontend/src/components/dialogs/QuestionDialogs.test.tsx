@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, REQUIRED_COPY } from '../../api/errors'
 import type { Question } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
-import { questions } from '../../test/fixtures'
+import { hypotheses, questions } from '../../test/fixtures'
 import { question } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { DeferQuestionDialog } from './DeferQuestionDialog'
-import { QuestionDialog } from './QuestionDialog'
+import { ADD_TO_FIND_OUT, QuestionDialog } from './QuestionDialog'
 import { ResolveQuestionDialog } from './ResolveQuestionDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -31,26 +31,46 @@ describe('QuestionDialog', () => {
     Object.assign(mocks.api, mockApi({ addQuestion: async () => question({ ref: 'Q-004', question: 'New?' }) }))
   })
 
-  it('adds a question and reports the new ref', async () => {
+  it('adds a question by default and reports the new ref', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const onCreated = vi.fn()
     render(providers(<QuestionDialog invRef="INV-0001" onClose={onClose} onCreated={onCreated} />))
-    expect(screen.getByRole('dialog', { name: 'Add follow-up question' })).toBeInTheDocument()
-    expect(screen.getByText('What still needs an answer?')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Follow-up question'), 'Who signs off a refund over $100?')
-    await user.click(screen.getByRole('button', { name: 'Add follow-up question' }))
+    expect(screen.getByRole('dialog', { name: ADD_TO_FIND_OUT })).toBeInTheDocument()
+    const kind = screen.getByRole('radiogroup', { name: 'Is this a guess to test or a question to answer?' })
+    expect(within(kind).getByRole('radio', { name: 'A question to answer' })).toHaveAttribute('aria-checked', 'true')
+    await user.type(screen.getByLabelText('What do you still need to find out?'), 'Who signs off a refund over $100?')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(mocks.api.addQuestion).toHaveBeenCalledWith('INV-0001', { question: 'Who signs off a refund over $100?' })
+    expect(mocks.api.addHypothesis).not.toHaveBeenCalled()
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('Q-004'))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('adds a guess to test as a finding with no confidence and no sources', async () => {
+    const user = userEvent.setup()
+    const onCreated = vi.fn()
+    Object.assign(mocks.api, mockApi({ addHypothesis: async () => ({ ...hypotheses[0], ref: 'H-004' }) }))
+    render(providers(<QuestionDialog invRef="INV-0001" onClose={() => {}} onCreated={onCreated} />))
+    await user.type(screen.getByLabelText('What do you still need to find out?'), 'The refunds went out late.')
+    await user.click(screen.getByRole('radio', { name: 'A guess to test' }))
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(mocks.api.addHypothesis).toHaveBeenCalledWith('INV-0001', {
+      statement: 'The refunds went out late.',
+      confidence: 'unknown',
+      rationale: '',
+      links: [],
+    })
+    expect(mocks.api.addQuestion).not.toHaveBeenCalled()
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('H-004'))
   })
 
   it('shows Adding... while the call runs', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ addQuestion: () => new Promise<Question>(() => {}) }))
     render(providers(<QuestionDialog invRef="INV-0001" onClose={() => {}} />))
-    await user.type(screen.getByLabelText('Follow-up question'), 'Q')
-    await user.click(screen.getByRole('button', { name: 'Add follow-up question' }))
+    await user.type(screen.getByLabelText('What do you still need to find out?'), 'Q')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
 
@@ -59,6 +79,7 @@ describe('QuestionDialog', () => {
     const onClose = vi.fn()
     render(providers(<QuestionDialog invRef="INV-0001" question={Q001} onClose={onClose} />))
     expect(screen.getByRole('dialog', { name: 'Edit follow-up question' })).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup')).toBeNull()
     const box = screen.getByLabelText('Follow-up question')
     expect(box).toHaveValue(Q001.question)
     await user.clear(box)
@@ -68,7 +89,7 @@ describe('QuestionDialog', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('shows a question error under the field', async () => {
+  it('shows a question error under the field in plain words', async () => {
     const user = userEvent.setup()
     Object.assign(
       mocks.api,
@@ -79,9 +100,10 @@ describe('QuestionDialog', () => {
       }),
     )
     render(providers(<QuestionDialog invRef="INV-0001" onClose={() => {}} />))
-    await user.click(screen.getByRole('button', { name: 'Add follow-up question' }))
-    expect(await screen.findByText('is required')).toBeInTheDocument()
-    expect(screen.getByLabelText('Follow-up question')).toHaveAttribute('aria-invalid', 'true')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(await screen.findByText(REQUIRED_COPY)).toBeInTheDocument()
+    expect(screen.queryByText('is required')).toBeNull()
+    expect(screen.getByLabelText('What do you still need to find out?')).toHaveAttribute('aria-invalid', 'true')
   })
 })
 
@@ -90,16 +112,16 @@ describe('ResolveQuestionDialog', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('requires an answer, then saves it', async () => {
+  it('refuses an empty answer, then saves it', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(providers(<ResolveQuestionDialog invRef="INV-0001" question={Q001} onClose={onClose} />))
     expect(screen.getByRole('dialog', { name: 'Answer this follow-up question' })).toBeInTheDocument()
-    expect(screen.getByText('What is the answer, and how do we know?')).toBeInTheDocument()
+    expect(screen.getByText('What is the answer, and how do you know?')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save answer' }))
     expect(mocks.api.resolveQuestion).not.toHaveBeenCalled()
     expect(screen.getByLabelText('Answer')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByText('Write the answer first.')).toBeInTheDocument()
+    expect(screen.getByText(REQUIRED_COPY)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Answer'), 'Yes, says the head of billing.')
     await user.click(screen.getByRole('button', { name: 'Save answer' }))
@@ -122,30 +144,29 @@ describe('DeferQuestionDialog', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('defers with an optional note', async () => {
+  it('leaves it for later with an optional note', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(providers(<DeferQuestionDialog invRef="INV-0001" question={Q001} onClose={onClose} />))
-    expect(screen.getByRole('dialog', { name: 'Set this follow-up question aside' })).toBeInTheDocument()
-    expect(screen.getByText('Why it can wait')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Note (optional)'), 'After the refund list is ready.')
-    await user.click(screen.getByRole('button', { name: 'Set aside' }))
+    expect(screen.getByRole('dialog', { name: 'Come back to this later' })).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Why it can wait (optional)'), 'After the refund list is ready.')
+    await user.click(screen.getByRole('button', { name: 'Later' }))
     expect(mocks.api.deferQuestion).toHaveBeenCalledWith('INV-0001', 'Q-001', 'After the refund list is ready.')
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('defers without a note', async () => {
+  it('leaves it for later without a note', async () => {
     const user = userEvent.setup()
     render(providers(<DeferQuestionDialog invRef="INV-0001" question={Q001} onClose={() => {}} />))
-    await user.click(screen.getByRole('button', { name: 'Set aside' }))
+    await user.click(screen.getByRole('button', { name: 'Later' }))
     expect(mocks.api.deferQuestion).toHaveBeenCalledWith('INV-0001', 'Q-001', '')
   })
 
-  it('shows Saving... while it is set aside', async () => {
+  it('shows Saving... while it is saved for later', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ deferQuestion: () => new Promise<Question>(() => {}) }))
     render(providers(<DeferQuestionDialog invRef="INV-0001" question={Q001} onClose={() => {}} />))
-    await user.click(screen.getByRole('button', { name: 'Set aside' }))
+    await user.click(screen.getByRole('button', { name: 'Later' }))
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled()
   })
 })

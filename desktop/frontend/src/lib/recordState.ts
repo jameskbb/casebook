@@ -43,5 +43,3 @@ export function statementMarks(
   }
 }
 
-/** Verification values a person can choose for a claim or hypothesis. */
-export const STATEMENT_VERIFICATIONS: Verification[] = ['ai_generated', 'human_verified', 'source_verified', 'disputed']

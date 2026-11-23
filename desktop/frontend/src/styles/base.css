@@ -132,7 +132,13 @@ button:disabled,
   .evidence-block-ref,
   .statement-link-ref,
   .choice-ref,
-  .sample-ref
+  .sample-ref,
+  .codes-only
 ) {
+  display: none;
+}
+
+/* Words that stand in for a hidden code ("a finding"); gone once codes show. */
+:root[data-show-ids] .codes-off {
   display: none;
 }

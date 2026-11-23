@@ -1,5 +1,7 @@
-// Decoding of the error JSON the Go bindings reject with, plus the
-// message cleanup the toasts need.
+// Decoding of the error JSON the Go bindings reject with, plus the plain
+// sentence each error becomes. The engine's own wording and field names never
+// reach the screen: plainError maps the messages a person can run into and
+// gives everything else one generic sentence.
 
 export type ErrorKind =
   | 'validation'
@@ -59,64 +61,72 @@ export function toApiError(e: unknown): ApiError {
   return new ApiError('other', text)
 }
 
-/**
- * Removes a leading "not found: " or "conflict: " from an engine message and
- * capitalizes the first letter ("not found: claim C-009" becomes
- * "Claim C-009").
- */
-export function cleanMessage(msg: string): string {
-  let m = msg.trim()
-  for (const prefix of ['not found: ', 'conflict: ']) {
-    if (m.toLowerCase().startsWith(prefix)) {
-      m = m.slice(prefix.length)
-      break
-    }
-  }
-  return m.charAt(0).toUpperCase() + m.slice(1)
-}
-
 export interface ErrorCopy {
   message: string
-  /** Retry repeats the failed call; Refresh reloads the list and detail. */
-  action?: 'retry' | 'refresh'
+  /** Retry repeats the failed call; reload fetches the list and the open question again. */
+  action?: 'retry' | 'reload'
 }
 
 export const BUSY_COPY = 'Casebook is busy with another change. Nothing was saved.'
 export const INTERNAL_COPY =
-  'Something went wrong and nothing was saved. Try again. If it keeps happening, back up your data and restart Casebook.'
-export const NO_ACTIVE_COPY = 'No question is selected. Choose one from the list.'
-export const CLIPBOARD_COPY = 'Could not copy to the clipboard. Try again.'
+  'Something went wrong and nothing was saved. Try again. If it keeps happening, save a backup and restart Casebook.'
+export const NO_ACTIVE_COPY = 'No question is open. Choose one from the list.'
+export const CLIPBOARD_COPY = 'Could not copy. Try again.'
 export const DIALOG_COPY = 'Could not open the window for choosing a file. Try again.'
+export const GONE_COPY = 'Casebook could not find that. Your AI may have changed it.'
+export const REQUIRED_COPY = 'Write something here first.'
+export const TOO_LONG_COPY = 'This is too long. Shorten it.'
+export const FILE_COPY = 'Casebook cannot read this file. It may not be a Casebook file, or it was saved by a newer version.'
+export const NEWER_FILE_COPY = 'This file was saved by a newer Casebook. Update Casebook to open it.'
+export const CHANGED_COPY = 'This changed while you had it open. Your AI may have updated it. Look at the new version, then try again.'
+export const NOT_SAVED_COPY = 'That did not save. Try again.'
+export const WENT_WRONG_COPY = 'Something went wrong. Try again.'
 
-/** cleanMessage plus a closing period when the message has none. */
-export function asSentence(msg: string): string {
-  const m = cleanMessage(msg)
-  return /[.!?]$/.test(m) ? m : `${m}.`
-}
+// The engine messages a person can run into, each with its plain sentence.
+// First match wins; the engine text itself is never shown.
+const RULES: [RegExp, string][] = [
+  [/Choose a backup file instead/i, 'That is the file Casebook could not open. Choose a backup instead.'],
+  [/saved by a newer Casebook/i, NEWER_FILE_COPY],
+  [/cannot read this file|not a Casebook question file/i, FILE_COPY],
+  [/byte offset|not valid JSON|unsupported (version|record)|unknown field|not a valid Casebook|not in this export|not in the file|duplicate key|wrong JSON type|not a usable file|regular file/i, FILE_COPY],
+  [/\bis required\b|explain what you checked|must not be empty/i, REQUIRED_COPY],
+  [/at most [\d,]+ (bytes|characters)|too long/i, TOO_LONG_COPY],
+  [/changed; (show|reload)/i, CHANGED_COPY],
+  [/was (itself )?replaced/i, 'This finding was replaced or ruled out. Bring it back first.'],
+  [/bring back or delete/i, 'This finding replaced another one. Bring that one back or delete it first.'],
+  [/part of the answer/i, 'The answer is based on this finding, so it was not deleted. Try again.'],
+  [/unlink it first/i, 'A finding uses this source. Remove it from that finding first.'],
+  [/is not archived/i, 'Archive this question before you delete it.'],
+  [/cannot replace itself|not itself/i, 'A finding cannot replace itself. Choose another one.'],
+  [/already exists/i, 'A file with that name already exists. Choose a new name.'],
+  [/even though its sources disagree/i, 'The sources disagree about this finding. Say that you checked it anyway.'],
+  [/only a person/i, 'Only a person can check this.'],
+  [/valid JSON object/i, NOT_SAVED_COPY],
+]
 
-/**
- * The toast copy for an error. Validation errors are
- * normally shown next to their field; errorCopy gives the summary form for
- * when no field can show them.
- */
-export function errorCopy(err: ApiError): ErrorCopy {
+/** The one plain sentence for an error. Never the engine's own text. */
+export function plainError(err: ApiError): string {
   switch (err.kind) {
     case 'busy':
-      return { message: BUSY_COPY, action: 'retry' }
+      return BUSY_COPY
     case 'internal':
-      return { message: INTERNAL_COPY, action: 'retry' }
+      return INTERNAL_COPY
     case 'not_found':
-      return { message: `${asSentence(err.message)} It may have changed in another app.`, action: 'refresh' }
+      return GONE_COPY
     case 'no_active':
-      return { message: NO_ACTIVE_COPY }
-    case 'conflict':
-      return { message: cleanMessage(err.message) }
-    case 'validation':
-      return { message: err.field ? `Check this entry: ${err.field}: ${err.message}` : cleanMessage(err.message) }
+      return NO_ACTIVE_COPY
     case 'other':
-    default:
-      if (err.field === 'clipboard') return { message: CLIPBOARD_COPY, action: 'retry' }
-      if (err.field === 'dialog') return { message: DIALOG_COPY }
-      return { message: cleanMessage(err.message) }
+      if (err.field === 'clipboard') return CLIPBOARD_COPY
+      if (err.field === 'dialog') return DIALOG_COPY
   }
+  for (const [re, copy] of RULES) if (re.test(err.message)) return copy
+  return err.kind === 'other' ? WENT_WRONG_COPY : NOT_SAVED_COPY
+}
+
+/** The toast copy for an error, with the action it offers. */
+export function errorCopy(err: ApiError): ErrorCopy {
+  const message = plainError(err)
+  if (err.kind === 'busy' || err.kind === 'internal' || (err.kind === 'other' && err.field === 'clipboard')) return { message, action: 'retry' }
+  if (err.kind === 'not_found') return { message, action: 'reload' }
+  return { message }
 }

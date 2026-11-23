@@ -4,6 +4,10 @@
 }
 
 .sample-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: var(--surface);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

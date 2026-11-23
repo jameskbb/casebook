@@ -27,8 +27,14 @@
   color: var(--ink-muted);
 }
 
+.detail-header-left > .status-label,
+.detail-header-left > .archived-tag {
+  flex: none;
+  white-space: nowrap;
+}
+
 .detail-header-title {
-  min-width: 0;
+  min-width: 8ch;
   font-size: var(--text-body);
   line-height: var(--leading-body);
   font-weight: var(--weight-semibold);

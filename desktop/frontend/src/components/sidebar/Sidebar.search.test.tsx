@@ -8,7 +8,7 @@ import { archivedHit, archivedSummaries, hits, markupHit } from '../../test/fixt
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
 import { DataOpsProvider } from './DataOps'
-import { Sidebar } from './Sidebar'
+import { SEARCH_ERROR_COPY, Sidebar } from './Sidebar'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -92,9 +92,9 @@ describe('Sidebar search', () => {
     const groups = within(results).getAllByRole('group')
     expect(groups).toHaveLength(2)
     expect(groups[0]).toHaveAccessibleName('Why did calls go up 30% in October when sales stayed the same? INV-0001')
-    expect(within(groups[0]).getByText("Your AI's current question")).toBeInTheDocument()
+    expect(within(groups[0]).getByText('Your AI is working on this')).toBeInTheDocument()
     expect(groups[1]).toHaveAccessibleName('Why are help desk tickets taking longer to close this month? INV-0002')
-    expect(within(groups[1]).queryByText("Your AI's current question")).not.toBeInTheDocument()
+    expect(within(groups[1]).queryByText('Your AI is working on this')).not.toBeInTheDocument()
 
     const first = within(groups[0]).getAllByRole('button')
     expect(first).toHaveLength(2)
@@ -139,7 +139,8 @@ describe('Sidebar search', () => {
     )
     renderSidebar()
     await typeQuery('billing')
-    expect(await screen.findByText('Must be at most 500 bytes')).toBeInTheDocument()
+    expect(await screen.findByText(SEARCH_ERROR_COPY)).toBeInTheDocument()
+    expect(screen.queryByText(/500 bytes/)).not.toBeInTheDocument()
   })
 
   it('opens the record of a claim hit and only the investigation for an investigation hit', async () => {

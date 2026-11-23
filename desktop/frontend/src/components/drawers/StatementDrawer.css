@@ -85,16 +85,6 @@
   gap: var(--space-2);
 }
 
-.drawer-more {
-  margin-top: var(--space-2);
-}
-
-.drawer-selects {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
-}
-
 .drawer-error {
   display: flex;
   align-items: flex-start;
@@ -128,12 +118,6 @@
 }
 
 /* A quiet line under a control group that explains why it is disabled. */
-.drawer-hint {
-  font-size: var(--text-label);
-  line-height: var(--leading-label);
-  color: var(--ink-muted);
-}
-
 /* The delete action sits last, apart from the everyday controls. */
 .drawer-delete {
   display: flex;

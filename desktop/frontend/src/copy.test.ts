@@ -113,6 +113,18 @@ describe('people-facing copy', () => {
     expect(copyOffenders(words, /\b(IDs?|CLI)\b/)).toEqual([])
   })
 
+  // Retired in the simplification round. The one verb for trust is check, the
+  // shared thing is the answer, a source backs a finding or goes against it,
+  // and nothing on screen is called a state, a mark or a version on a sheet.
+  // A phrase in ALLOWED is a different, everyday use of one of the words.
+  it('never shows a word retired in the simplification round', () => {
+    const ALLOWED = [/What the labels mean/g, /Report or spreadsheet/g, /which reports/g, /has to support MCP/g]
+    const banned =
+      /(revieww*|summar(?:y|ies)|briefs?|reports?|support(?:s|ed|ing)?|contradictw*|unarchivw*|set aside|status(?:es)?|labels?|as of|current|settlw*|previews?|refreshw*|another app|GitHub|data file)/i
+    const offenders = copyOffenders(/./).filter((line) => banned.test(ALLOWED.reduce((text, ok) => text.replace(ok, ''), line.slice(line.indexOf(': ') + 2))))
+    expect(offenders).toEqual([])
+  })
+
   it('allows MCP only once, where another AI tool has to support it', () => {
     const mentions = Object.entries(sources)
       .filter(([file]) => !/\.test\./.test(file))

@@ -114,23 +114,23 @@ describe('restore and unsaved drafts', () => {
 
   it('asks about a dirty draft before replacing any data, and Keep editing replaces nothing', async () => {
     const { user } = await openClaimWithDraft()
-    await user.click(screen.getByRole('button', { name: 'Data' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Restore from backup...' }))
-    const confirm = await screen.findByRole('dialog', { name: 'Replace all Casebook data with this backup?' })
-    await user.click(within(confirm).getByRole('button', { name: 'Replace all data' }))
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Bring back a backup...' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Replace everything in Casebook with this backup?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Replace everything' }))
     const discard = screen.getByRole('dialog', { name: DISCARD })
     expect(mocks.api.restoreBackup).not.toHaveBeenCalled()
     await user.click(within(discard).getByRole('button', { name: 'Keep editing' }))
     expect(mocks.api.restoreBackup).not.toHaveBeenCalled()
 
     await user.click(
-      within(screen.getByRole('dialog', { name: 'Replace all Casebook data with this backup?' })).getByRole('button', {
-        name: 'Replace all data',
+      within(screen.getByRole('dialog', { name: 'Replace everything in Casebook with this backup?' })).getByRole('button', {
+        name: 'Replace everything',
       }),
     )
     await user.click(within(screen.getByRole('dialog', { name: DISCARD })).getByRole('button', { name: 'Discard' }))
     await waitFor(() => expect(mocks.api.restoreBackup).toHaveBeenCalledTimes(1))
-    expect(await screen.findByRole('dialog', { name: 'Restore complete' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Your backup is open' })).toBeInTheDocument()
     // Discard was asked once, before the restore, never after it.
     expect(screen.queryByRole('dialog', { name: DISCARD })).toBeNull()
   })

@@ -1,8 +1,8 @@
-// Status labels. A question reads Answered (green) or No answer yet (muted),
+// State labels. A question reads Answered (green) or No answer yet (muted),
 // worked out from whether it has an answer; an archived one shows the
-// Archived pill tag. Records: finding and follow-up question statuses per
-// the Record kind visual language table. The text is always present; color
-// is never the only signal.
+// Archived pill tag. A finding shows a word only when it is not the usual
+// state, and a follow-up question only when it was left for later. The text
+// is always present; color is never the only signal.
 import { CircleCheck, CirclePause, Lightbulb } from 'lucide-react'
 import type { ClaimStatus, HypothesisStatus, QuestionStatus } from '../../api/types'
 import { claimStatusLabels, hypothesisStatusLabels } from '../../lib/labels'
@@ -12,6 +12,7 @@ import './StatusLabel.css'
 
 export const ANSWERED = 'Answered'
 export const NO_ANSWER_YET = 'No answer yet'
+export const LATER = 'Later'
 
 /** Answered or No answer yet. Nobody sets it: it follows the answer text. */
 export function AnswerState({ answer, archived = false }: { answer: string; archived?: boolean }) {
@@ -30,15 +31,13 @@ export type RecordStatusLabelProps =
   | { kind: 'question'; status: QuestionStatus }
 
 /**
- * The status of a finding or follow-up question. Default states render
- * nothing (a current claim, an open question); a hypothesis always says Not
- * tested yet or Supported because tentative versus established is the point.
+ * The state of a finding or follow-up question. The usual states render
+ * nothing (a finding that stands, an open or answered follow-up question);
+ * a finding being tested always says Not tested yet or Looks right so far.
  */
 export function RecordStatusLabel(props: RecordStatusLabelProps) {
   const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true as const, className: 'record-status-icon' }
   switch (props.status) {
-    case 'active':
-      return null
     case 'open':
       if (props.kind === 'question') return null
       return (
@@ -53,7 +52,7 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
       return (
         <span className="record-status record-status-supported">
           <CircleCheck {...icon} />
-          Supported
+          {hypothesisStatusLabels.supported}
         </span>
       )
     case 'superseded': {
@@ -73,18 +72,11 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
     case 'rejected':
     case 'disproven':
       return <span className="record-status">{claimStatusLabels.rejected}</span>
-    case 'resolved':
-      return (
-        <span className="record-status record-status-resolved">
-          <CircleCheck {...icon} />
-          Answered
-        </span>
-      )
     case 'deferred':
       return (
         <span className="record-status record-status-deferred">
           <CirclePause {...icon} />
-          Set aside
+          {LATER}
         </span>
       )
     default:

@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from './api/api'
+import { COPIED_FOR_AI } from './state/copyContext'
 import { mockApi } from './test/mockApi'
 import { openQuestion } from './test/openQuestion'
 import App from './App'
@@ -65,11 +66,11 @@ describe('global shortcuts', () => {
     expect(await screen.findByRole('dialog', { name: 'New question' })).toBeInTheDocument()
   })
 
-  it('copies context with Ctrl+Shift+C and shows Copied', async () => {
+  it('copies for your AI with Ctrl+Shift+C and says so in a toast', async () => {
     const { user } = await renderApp()
     await user.keyboard('{Control>}{Shift>}C{/Shift}{/Control}')
     await waitFor(() => expect(mocks.api.copyContext).toHaveBeenCalledWith('INV-0001'))
-    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    expect(await screen.findByText(COPIED_FOR_AI)).toBeInTheDocument()
   })
 
   it('stands down while a dialog is open', async () => {
@@ -90,8 +91,8 @@ describe('global shortcuts', () => {
 
   it('stands down while a menu is open', async () => {
     const { user, search } = await renderApp()
-    await user.click(screen.getByRole('button', { name: 'More actions' }))
-    await screen.findByRole('menu', { name: 'More actions' })
+    await user.click(screen.getByRole('button', { name: 'More' }))
+    await screen.findByRole('menu', { name: 'More' })
     await user.keyboard('/')
     expect(search).not.toHaveFocus()
     await user.keyboard('{Control>}n{/Control}')

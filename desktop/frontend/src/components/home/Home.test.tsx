@@ -7,7 +7,6 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { hideIds } from '../record/RecordId'
 import { ALL_CHECKED_BODY, Home, needYouHeading } from './Home'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -98,16 +97,5 @@ describe('Home', () => {
     await renderHome([calls])
     const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())
     expect(screen.getByText(today)).toBeInTheDocument()
-  })
-})
-
-describe('hideIds', () => {
-  it('wraps each code in a sentence, with the space before it, and leaves other text alone', () => {
-    const { container } = render(<p>{hideIds('Marked C-002: You checked this (see E-014 and INV-0003)')}</p>)
-    expect(container.textContent).toBe('Marked C-002: You checked this (see E-014 and INV-0003)')
-    expect(Array.from(container.querySelectorAll('.record-id')).map((el) => el.textContent)).toEqual([' C-002', ' E-014', ' INV-0003'])
-    const plain = render(<p>{hideIds('Updated the answer')}</p>)
-    expect(plain.container.querySelector('.record-id')).toBeNull()
-    expect(plain.container.textContent).toBe('Updated the answer')
   })
 })

@@ -1,6 +1,5 @@
-// A file the user picked cannot be used ("This file can't be
-// imported", "This file can't be restored"): the reason, then "Choose
-// another file..." to pick again or Close.
+// A file the person picked cannot be used: why, then "Choose another
+// file..." to pick again or Close.
 import { useRef } from 'react'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'

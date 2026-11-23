@@ -96,8 +96,8 @@ export function SearchResults({ query, hits, handle }: SearchResultsProps) {
                 <span className="search-group-title" id={titleId}>
                   {g.title}
                 </span>
-                {summary?.is_active && <ActiveMarker />}
               </p>
+              {summary?.is_active && <ActiveMarker />}
               <p className="search-group-line search-group-meta">
                 <span className="search-group-ref tabular" id={refId}>
                   {g.ref}

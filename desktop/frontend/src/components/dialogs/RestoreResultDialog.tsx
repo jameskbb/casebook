@@ -1,5 +1,5 @@
-// After a restore: which backup is now shown and where the safety copy
-// of the previous data went, with "Copy path" and "Done".
+// After a backup is brought back: which one is now shown and where the
+// backup of what was there before went, with "Copy location" and "Done".
 import { useRef } from 'react'
 import { Copy } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -9,7 +9,7 @@ import './RestoreConfirmDialog.css'
 export interface RestoreResultDialogProps {
   fileName: string
   safetyCopyPath: string
-  /** Replaces the default sentence about the safety copy. */
+  /** Replaces the usual sentence about where the earlier questions went. */
   body?: string
   onCopyPath: () => void
   onDone: () => void
@@ -19,7 +19,7 @@ export function RestoreResultDialog({ fileName, safetyCopyPath, body, onCopyPath
   const doneRef = useRef<HTMLButtonElement>(null)
   return (
     <Dialog
-      title="Restore complete"
+      title="Your backup is open"
       size="confirm"
       onClose={onDone}
       initialFocus={doneRef}
@@ -35,7 +35,7 @@ export function RestoreResultDialog({ fileName, safetyCopyPath, body, onCopyPath
       }
     >
       <p className="dialog-text dialog-text-wrap">
-        {body ?? `Casebook now shows the data from ${fileName}. Your previous data was saved to ${safetyCopyPath}.`}
+        {body ?? `Casebook now shows what was in ${fileName}. What you had before was saved to ${safetyCopyPath}.`}
       </p>
     </Dialog>
   )

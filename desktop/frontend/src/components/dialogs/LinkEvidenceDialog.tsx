@@ -1,13 +1,13 @@
-// Link evidence: a radio list of the investigation's evidence (ref, title,
-// source label) where evidence already linked to this record is disabled and
-// says how it is linked, then the relation (Supports by default). Linking
-// again with the other relation is done from the drawer (Mark as ...), so
-// linked items stay disabled here.
+// Add a source to a finding: a radio list of the question's sources, where
+// one already under this finding is disabled and says how it is used, then
+// whether it backs the finding (the default) or goes against it. Changing
+// that later is done from the finding drawer.
 import { useId, useRef, useState } from 'react'
 import { CircleAlert, Plus } from 'lucide-react'
 import { api } from '../../api/api'
 import type { Claim, Evidence, Hypothesis, Relation } from '../../api/types'
 import { splitFieldErrors } from '../../lib/formErrors'
+import { relationLabels } from '../../lib/labels'
 import { useWrite } from '../../state/useWrite'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -28,8 +28,8 @@ export interface LinkEvidenceDialogProps {
 }
 
 const RELATIONS: { value: Relation; label: string }[] = [
-  { value: 'supports', label: 'Supports' },
-  { value: 'contradicts', label: 'Contradicts' },
+  { value: 'supports', label: relationLabels.supports },
+  { value: 'contradicts', label: relationLabels.contradicts },
 ]
 
 export function LinkEvidenceDialog({
@@ -167,7 +167,7 @@ export function LinkEvidenceDialog({
                   <span className="choice-title">{e.title}</span>
                   {as && (
                     <span className="choice-note">
-                      {as === 'supports' ? 'Already supports this finding' : 'Already contradicts this finding'}
+                      {as === 'supports' ? 'Already backs this finding' : 'Already goes against this finding'}
                     </span>
                   )}
                 </span>
@@ -182,7 +182,7 @@ export function LinkEvidenceDialog({
           </p>
         )}
       </fieldset>
-      <SegmentedControl<Relation> label="What it does to the finding" options={RELATIONS} value={relation} onChange={setRelation} />
+      <SegmentedControl<Relation> label="Does this source back the finding?" options={RELATIONS} value={relation} onChange={setRelation} />
     </Dialog>
   )
 }

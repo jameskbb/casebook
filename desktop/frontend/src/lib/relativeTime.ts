@@ -7,6 +7,7 @@ const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const monthDay = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 const monthDayYear = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const absolute = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'short' })
+const longDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' })
 
 function parse(iso: string): Date | null {
   if (!iso) return null
@@ -47,4 +48,10 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
 export function formatAbsolute(iso: string): string {
   const d = parse(iso)
   return d ? absolute.format(d) : ''
+}
+
+/** "January 15, 2026" in local time; "" for empty input. */
+export function formatDate(iso: string): string {
+  const d = parse(iso)
+  return d ? longDate.format(d) : ''
 }

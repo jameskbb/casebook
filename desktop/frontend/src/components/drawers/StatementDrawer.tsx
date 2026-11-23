@@ -1,28 +1,27 @@
 // Finding drawer body (a claim or a hypothesis):
-//   1. the statement in Literata 20 under its label and status,
-//      with "Edit statement" opening an inline editor;
-//   2. "Why": the rationale. Confidence is stored and passed through
-//      unchanged, never shown;
-//   3. "Check this finding": I checked this, Sources disagree, Replace
-//      with..., with the Status and Label selects behind "More options";
-//   4. supporting and contradicting source blocks (each opens the source
-//      drawer) with Mark as ... and Unlink, then Link a source.
+//   1. the finding in Literata 20 under its labels, with "Edit finding"
+//      opening an inline editor;
+//   2. why you think so. Confidence is stored and never shown or sent;
+//   3. "Check this finding": I checked this, Sources disagree, Rule this out
+//      and Replace with a newer finding; a replaced or ruled-out finding
+//      shows only Bring this back;
+//   4. the sources that back it up and go against it (each opens the source
+//      drawer), then Add a source to this finding.
 //
 // Every write goes through useWrite. Saves show no toast; the group simply
-// shows the saved value. Edit-in-place safety: the statement editor and the
-// confidence form snapshot the stored values; a reload never touches unsaved
-// input, and when the stored values changed elsewhere the group says "This
-// changed in another app." with "Show latest". While a group holds unsaved
-// input, Esc discards that input first; the next Esc closes the drawers.
+// shows the saved value. Edit-in-place safety: the editors snapshot the
+// stored values; a reload never touches unsaved input, and when the stored
+// values changed meanwhile the group says so and offers the new version.
+// While a group holds unsaved input, Esc discards that input first; the next
+// Esc closes the drawers.
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { BadgeCheck, Link as LinkIcon, Pencil, Replace, Trash2, Unlink } from 'lucide-react'
+import { Link as LinkIcon, Pencil, Replace, Trash2, Unlink } from 'lucide-react'
 import { api } from '../../api/api'
 import { ApiError, errorCopy, toApiError } from '../../api/errors'
 import type {
   Claim,
   ClaimPatch,
   ClaimStatus,
-  Confidence,
   Evidence,
   Hypothesis,
   HypothesisPatch,
@@ -34,9 +33,8 @@ import type {
 import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
-import { claimStatusLabels, confidenceOptions, hypothesisStatusLabels, verificationLabels } from '../../lib/labels'
 import { pushLayer } from '../../lib/layers'
-import { STATEMENT_VERIFICATIONS, statementMarks } from '../../lib/recordState'
+import { statementMarks } from '../../lib/recordState'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { ImportedTag } from '../record/ImportedTag'
@@ -49,8 +47,7 @@ import { LinkEvidenceDialog } from '../dialogs/LinkEvidenceDialog'
 import { SupersedeDialog } from '../dialogs/SupersedeDialog'
 import { Banner } from '../ui/Banner'
 import { Button } from '../ui/Button'
-
-import { Select, type SelectOption } from '../ui/Select'
+import { ChangedElsewhereBanner, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { TextArea } from '../ui/TextArea'
 import { useToast } from '../ui/Toaster'
 import { EvidenceBlock } from './EvidenceBlock'
@@ -66,12 +63,15 @@ export type StatementDrawerProps = {
 
 /** The one act a person records: they compared the finding with its sources. */
 export const CHECKED_ACTION = 'I checked this'
-export const SETTLE_ACTION = 'I checked this, settle it'
-export const SETTLE_COPY = 'Checking this finding settles the disagreement between its sources. Confirm only after reading the finding and its sources.'
-export const SUPPORTING_TITLE = 'Sources that support it'
-export const CONTRADICTING_TITLE = 'Sources that contradict it'
-export const MORE_OPTIONS_LABEL = 'More options'
-export const FEWER_OPTIONS_LABEL = 'Fewer options'
+export const SETTLE_ACTION = 'Yes, I checked it'
+export const SETTLE_COPY = 'The sources disagree about this finding. Choose this only if you read them and the finding still holds.'
+export const DISAGREE_ACTION = 'Sources disagree'
+export const RULE_OUT_ACTION = 'Rule this out'
+export const REPLACE_ACTION = 'Replace with a newer finding'
+export const BRING_BACK_ACTION = 'Bring this back'
+export const SUPPORTING_TITLE = 'Sources that back it up'
+export const CONTRADICTING_TITLE = 'Sources that go against it'
+export const FINDING_CHANGED_COPY = 'This finding or its sources changed. Read the new version before you check it.'
 
 type Kind = 'claim' | 'hypothesis'
 type StatementRecord = Claim | Hypothesis
@@ -133,7 +133,7 @@ function useRecordCalls(kind: Kind, invRef: string, ref: string, basis?: string)
         : api.updateHypothesis(invRef, ref, patch as HypothesisPatch),
     setVerification: async (v: Verification, settleDispute = false): Promise<StatementRecord> => {
       if (v === 'human_verified') {
-        if (!basis) throw new ApiError('conflict', 'Reload this question before checking the finding.')
+        if (!basis) throw new ApiError('conflict', 'this finding changed; show the new version')
         await api.reviewStatement(invRef, { kind, ref, basis, verification: v, settle_dispute: settleDispute })
         return kind === 'claim' ? api.getClaim(invRef, ref) : api.getHypothesis(invRef, ref)
       }
@@ -185,9 +185,9 @@ export function StatementDrawer(props: StatementDrawerProps) {
   return (
     <>
       <StatementGroup kind={kind} record={r} calls={calls} />
-      <ConfidenceGroup kind={kind} record={r} calls={calls} />
-      {reviewChanged && <Banner tone="warning" action={<Button variant="secondary" onClick={() => setReviewSnapshot({ key: reviewKey, basis: latestBasis })}>Use latest for review</Button>}>
-        This finding or its sources changed. Read the latest version before checking it.
+      <WhyGroup kind={kind} record={r} calls={calls} />
+      {reviewChanged && <Banner tone="warning" action={<Button variant="secondary" onClick={() => setReviewSnapshot({ key: reviewKey, basis: latestBasis })}>{SHOW_NEW_VERSION}</Button>}>
+        {FINDING_CHANGED_COPY}
       </Banner>}
       <StatusGroup
         kind={kind}
@@ -347,7 +347,7 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
       {editing ? (
         <div className="statement-editor" ref={editorRef} onKeyDown={onKeyDown}>
           {changedElsewhere && (
-            <ChangedElsewhere
+            <ChangedElsewhereBanner
               onShowLatest={() => {
                 setSnapshot(r.statement)
                 setDraft(r.statement)
@@ -391,88 +391,53 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
   )
 }
 
-function ChangedElsewhere({ onShowLatest }: { onShowLatest: () => void }) {
-  return (
-    <Banner
-      className="changed-elsewhere"
-      action={
-        <Button variant="ghost" onClick={onShowLatest}>
-          Show latest
-        </Button>
-      }
-    >
-      This changed in another app.
-    </Banner>
-  )
-}
+/* Group 2: why you think so. Only this text is sent, so a save never writes over what an AI stored beside it. */
 
-/* Group 2: how sure we are. */
+const whyOf = (kind: Kind, r: StatementRecord): string => (kind === 'claim' ? (r as Claim).confidence_rationale : (r as Hypothesis).rationale)
 
-interface ConfidenceDraft {
-  confidence: Confidence
-  rationale: string
-}
-
-const sameConfidence = (a: ConfidenceDraft, b: ConfidenceDraft) =>
-  a.confidence === b.confidence && a.rationale === b.rationale
-
-function storedConfidence(kind: Kind, r: StatementRecord): ConfidenceDraft {
-  return {
-    confidence: confidenceOptions.includes(r.confidence) ? r.confidence : 'unknown',
-    rationale: kind === 'claim' ? (r as Claim).confidence_rationale : (r as Hypothesis).rationale,
-  }
-}
-
-function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: StatementRecord; calls: Calls }) {
+function WhyGroup({ kind, record: r, calls }: { kind: Kind; record: StatementRecord; calls: Calls }) {
   const write = useWrite()
-  const stored = storedConfidence(kind, r)
-  const [draft, setDraft] = useState<ConfidenceDraft>(stored)
-  const [snapshot, setSnapshot] = useState<ConfidenceDraft>(stored)
+  const stored = whyOf(kind, r)
+  const [draft, setDraft] = useState(stored)
+  const [snapshot, setSnapshot] = useState(stored)
   const [busy, setBusy] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
-  const rationaleField = kind === 'claim' ? 'confidence_rationale' : 'rationale'
+  const field = kind === 'claim' ? 'confidence_rationale' : 'rationale'
 
-  const dirty = !sameConfidence(draft, snapshot)
+  const dirty = draft !== snapshot
   useDirtyEditor(dirty, 'drawer')
-  const changedElsewhere =
-    useChangedElsewhere(snapshot, stored, dirty, sameConfidence) && !busy && !sameConfidence(stored, draft)
-  const changed = !sameConfidence(draft, stored)
+  const changedElsewhere = useChangedElsewhere(snapshot, stored, dirty) && !busy && stored !== draft
+  const changed = draft !== stored
 
-  const storedKey = JSON.stringify(stored)
+  // A clean editor follows reloads; a dirty one keeps its input.
   useEffect(() => {
     if (dirty) return
-    const latest: ConfidenceDraft = JSON.parse(storedKey)
-    setSnapshot((s) => (sameConfidence(s, latest) ? s : latest))
-    setDraft((d) => (sameConfidence(d, latest) ? d : latest))
-  }, [storedKey, dirty])
+    setSnapshot(stored)
+    setDraft(stored)
+  }, [stored, dirty])
 
   const reset = useCallback(() => {
-    const latest: ConfidenceDraft = JSON.parse(storedKey)
-    setSnapshot(latest)
-    setDraft(latest)
-    setErrors({})
+    setSnapshot(stored)
+    setDraft(stored)
+    setError(undefined)
     setSummary(undefined)
-  }, [storedKey])
+  }, [stored])
 
   useEscapeLayer(dirty, reset)
 
   const save = async () => {
     if (busy || !changed) return
     setBusy(true)
-    setErrors({})
+    setError(undefined)
     setSummary(undefined)
     const sent = draft
     try {
-      const patch: Patch =
-        kind === 'claim'
-          ? { confidence: sent.confidence, confidence_rationale: sent.rationale }
-          : { confidence: sent.confidence, rationale: sent.rationale }
-      const saved = await write(() => calls.update(patch))
+      const saved = await write(() => calls.update({ [field]: sent }))
       if (saved) setSnapshot(sent)
     } catch (e) {
-      const split = splitFieldErrors(e, [rationaleField])
-      setErrors(split.fieldErrors)
+      const split = splitFieldErrors(e, [field])
+      setError(split.fieldErrors[field])
       setSummary(split.summary)
     } finally {
       setBusy(false)
@@ -480,53 +445,40 @@ function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: State
   }
 
   return (
-    <DrawerGroup title="Why">
-      <div
-        className="confidence-form"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            void save()
-          }
-        }}
-      >
-        {changedElsewhere && <ChangedElsewhere onShowLatest={reset} />}
-        {summary && (
-          <p className="drawer-summary" role="alert">
-            {summary}
-          </p>
-        )}
-        <TextArea
-          label="Why (optional)"
-          value={draft.rationale}
-          onChange={(rationale) => setDraft((d) => ({ ...d, rationale }))}
-          error={errors[rationaleField]}
-          note={nearLimit(draft.rationale, LIMITS.rationale)}
-          spellCheck
-        />
-        <div className="drawer-form-actions">
-          <Button
-            variant="primary"
-            busy={busy}
-            busyLabel="Saving..."
-            disabled={!changed}
-            onClick={() => void save()}
-          >
-            Save
-          </Button>
-        </div>
+    <div
+      className="drawer-group confidence-form"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault()
+          void save()
+        }
+      }}
+    >
+      {changedElsewhere && <ChangedElsewhereBanner onShowLatest={reset} />}
+      {summary && (
+        <p className="drawer-summary" role="alert">
+          {summary}
+        </p>
+      )}
+      <TextArea
+        label="Why you think so (optional)"
+        value={draft}
+        onChange={setDraft}
+        error={error}
+        note={nearLimit(draft, LIMITS.rationale)}
+        spellCheck
+      />
+      <div className="drawer-form-actions">
+        <Button variant="primary" busy={busy} busyLabel="Saving..." disabled={!changed} onClick={() => void save()}>
+          Save
+        </Button>
       </div>
-    </DrawerGroup>
+    </div>
   )
 }
 
-/* Group 3: status and verification. */
-
-const CLAIM_STATUSES: ClaimStatus[] = ['active', 'disputed', 'rejected']
-const HYPOTHESIS_STATUSES: HypothesisStatus[] = ['open', 'supported', 'disproven']
-
-export const SUPERSEDED_HINT =
-  'A replaced finding keeps its label. To change it, bring it back first: choose More options, then a status.'
+/* Group 3: checking the finding. Four buttons cover what a person decides;
+   a replaced or ruled-out finding offers only Bring this back. */
 
 function StatusGroup({
   kind,
@@ -545,135 +497,82 @@ function StatusGroup({
 }) {
   const write = useWrite()
   const [busy, setBusy] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
-  // Verify, Dispute and Supersede sit in the open; the Status and
-  // Verification selects, the only way to set Disproven, Supported or
-  // Rejected, wait behind More options.
-  const [more, setMore] = useState(false)
   const [settleDispute, setSettleDispute] = useState(false)
 
   const run = async (fn: () => Promise<unknown>) => {
     if (busy) return
     setBusy(true)
-    setErrors({})
     setSummary(undefined)
     try {
-      // A conflict (for example a change the engine refuses on a superseded
-      // record) is shown here in plain words rather than as a toast.
+      // A change the engine refuses is shown here in plain words rather than as a toast.
       await write(fn, { rethrowConflict: true })
     } catch (e) {
-      const split = splitFieldErrors(e, ['status', 'verification', 'superseded_by'])
-      setErrors(split.fieldErrors)
-      setSummary(split.summary)
-      // A field error shows under its select, so never leave it hidden.
-      if (Object.keys(split.fieldErrors).length > 0) setMore(true)
+      setSummary(splitFieldErrors(e, []).summary)
     } finally {
       setBusy(false)
     }
   }
 
-  // Verify settles a dispute (the claim becomes active), Dispute
-  // sets both halves, and nothing but Supersede by... makes a record
-  // superseded. A superseded record changes only through its status.
   const marks = statementMarks(kind, r)
-  const superseded = marks.superseded
-  const verified = !marks.disputed && r.verification === 'human_verified'
+  const retired = RETIRED.has(r.status)
   const disputed = marks.disputed
+  const checked = !disputed && r.verification === 'human_verified'
 
-  const statusOptions: SelectOption[] =
-    kind === 'claim'
-      ? CLAIM_STATUSES.map((s) => ({ value: s, label: claimStatusLabels[s] }))
-      : HYPOTHESIS_STATUSES.map((s) => ({ value: s, label: hypothesisStatusLabels[s] }))
-  if (r.status === 'superseded') statusOptions.unshift({ value: 'superseded', label: claimStatusLabels.superseded, disabled: true })
-  const verificationOptions: SelectOption[] = STATEMENT_VERIFICATIONS.map((v) => ({ value: v, label: verificationLabels[v] }))
-  // The selects show the one coherent state: a disputed claim reads Disputed
-  // in both, a superseded record Superseded in both.
-  const statusValue: string = marks.status
-  let verificationValue: Verification = r.verification
-  if (superseded) verificationValue = 'superseded'
-  else if (kind === 'claim' && disputed) verificationValue = 'disputed'
-  else if (!STATEMENT_VERIFICATIONS.includes(verificationValue)) verificationValue = 'ai_generated'
-  if (verificationValue === 'superseded') {
-    verificationOptions.push({ value: 'superseded', label: verificationLabels.superseded, disabled: true })
-  }
+  const check = (settle = false) =>
+    run(async () => {
+      await calls.setVerification('human_verified', settle)
+      // A guess the person checked is no longer waiting to be tested.
+      if (kind === 'hypothesis' && r.status === 'open') await calls.update({ status: 'supported' })
+    })
 
   return (
     <DrawerGroup title="Check this finding">
       {r.status === 'superseded' && r.superseded_by && <SupersededBy refText={r.superseded_by} onOpen={onOpenRef} />}
       <div className="drawer-actions">
-        {verified ? (
-          <Button variant="secondary" icon={BadgeCheck} disabled>
-            {verificationLabels.human_verified}
-          </Button>
-        ) : (
+        {retired ? (
+          // It comes back as Not checked: bringing it back is not checking it.
           <Button
             variant="secondary"
-            disabled={busy || superseded || reviewChanged}
-            onClick={() => disputed ? setSettleDispute(true) : void run(() => calls.setVerification('human_verified'))}
+            disabled={busy}
+            onClick={() => void run(() => calls.update({ status: kind === 'claim' ? 'active' : 'open', verification: 'ai_generated' }))}
           >
-            {CHECKED_ACTION}
+            {BRING_BACK_ACTION}
           </Button>
+        ) : (
+          <>
+            {!checked && (
+              <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => (disputed ? setSettleDispute(true) : void check())}>
+                {CHECKED_ACTION}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              disabled={busy || disputed}
+              onClick={() =>
+                void run(() => (kind === 'claim' ? calls.update({ status: 'disputed', verification: 'disputed' }) : calls.setVerification('disputed')))
+              }
+            >
+              {DISAGREE_ACTION}
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={() => void run(() => calls.update({ status: kind === 'claim' ? 'rejected' : 'disproven' }))}>
+              {RULE_OUT_ACTION}
+            </Button>
+            <Button variant="secondary" icon={Replace} disabled={busy} onClick={onSupersede}>
+              {REPLACE_ACTION}
+            </Button>
+          </>
         )}
-        <Button
-          variant="secondary"
-          disabled={busy || disputed || superseded}
-          onClick={() =>
-            void run(() =>
-              kind === 'claim'
-                ? calls.update({ status: 'disputed', verification: 'disputed' })
-                : calls.setVerification('disputed'),
-            )
-          }
-        >
-          {verificationLabels.disputed}
-        </Button>
-        <Button variant="secondary" icon={Replace} disabled={busy} onClick={onSupersede}>
-          Replace with...
-        </Button>
       </div>
-      {settleDispute && disputed && <Banner tone="warning" action={<>
+      {settleDispute && disputed && !retired && <Banner tone="warning" action={<>
         <Button variant="ghost" onClick={() => setSettleDispute(false)}>Cancel</Button>
-        <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void run(() => calls.setVerification('human_verified', true))}>{SETTLE_ACTION}</Button>
+        <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void check(true)}>{SETTLE_ACTION}</Button>
       </>}>{SETTLE_COPY}</Banner>}
       {summary && (
         <p className="drawer-summary" role="alert">
           {summary}
         </p>
       )}
-      <button
-        type="button"
-        className="text-button drawer-more"
-        aria-expanded={more}
-        onClick={() => setMore((v) => !v)}
-      >
-        {more ? FEWER_OPTIONS_LABEL : MORE_OPTIONS_LABEL}
-      </button>
-      {more && (
-        <div className="drawer-selects">
-          <Select
-            label="Status"
-            value={statusValue}
-            options={statusOptions}
-            disabled={busy}
-            error={errors.status ?? errors.superseded_by}
-            onChange={(v) => {
-              if (v !== statusValue) void run(() => calls.update({ status: v as ClaimStatus | HypothesisStatus }))
-            }}
-          />
-          <Select
-            label="Label"
-            value={verificationValue}
-            options={verificationOptions}
-            disabled={busy || superseded || reviewChanged}
-            error={errors.verification}
-            onChange={(v) => {
-              if (v !== verificationValue) void run(() => calls.setVerification(v as Verification))
-            }}
-          />
-        </div>
-      )}
-      {superseded && <p className="drawer-hint">{SUPERSEDED_HINT}</p>}
     </DrawerGroup>
   )
 }
@@ -682,7 +581,7 @@ function StatusGroup({
    names this one as its replacement. */
 
 export const deleteStatementBody = (r: StatementRecord) =>
-  `This finding will be removed from this question.${r.links.length > 0 ? ' Its sources stay.' : ''} Use this for a finding added by mistake. To keep it in the history, mark it Ruled out or replace it instead.`
+  `This finding will be removed from this question.${r.links.length > 0 ? ' Its sources stay.' : ''} Use this for a finding added by mistake. To keep it on the page, rule it out or replace it instead.`
 
 export const replacesBlocker = (replaced: string[]) =>
   replaced.length === 1
@@ -717,10 +616,31 @@ function DeleteStatement({
           title={`Delete this ${noun}?`}
           body={deleteStatementBody(r)}
           blocker={replaced.length > 0 ? replacesBlocker(replaced) : null}
+          blockerTitle="This finding replaced another one"
           confirmLabel={`Delete ${noun}`}
           onConfirm={async () => {
             const call = kind === 'claim' ? api.deleteClaim : api.deleteHypothesis
-            const done = await write(() => call(invRef, r.ref).then(() => true), { rethrowConflict: true })
+            const inv = detail.investigation
+            const backing = (inv.conclusion_supporting_claims ?? []).filter((ref) => ref !== r.ref)
+            const against = (inv.conclusion_contradicting_claims ?? []).filter((ref) => ref !== r.ref)
+            const inAnswer = backing.length + against.length < (inv.conclusion_supporting_claims ?? []).length + (inv.conclusion_contradicting_claims ?? []).length
+            const done = await write(
+              async () => {
+                // The engine keeps a finding the answer is based on, so the answer lets go of it first.
+                if (inAnswer) {
+                  await api.updateConclusion(invRef, {
+                    conclusion: inv.conclusion,
+                    confidence: inv.conclusion_confidence,
+                    rationale: inv.conclusion_rationale,
+                    supporting_claims: backing,
+                    contradicting_claims: against,
+                  })
+                }
+                await call(invRef, r.ref)
+                return true
+              },
+              { rethrowConflict: true },
+            )
             if (done) {
               toast.success(`Deleted the ${noun}.`)
               onDeleted?.()
@@ -823,7 +743,7 @@ function EvidenceGroups({
                   disabled={pending === e.ref}
                   onClick={() => void flip(e.ref, relation === 'supports' ? 'contradicts' : 'supports')}
                 >
-                  {relation === 'supports' ? 'It contradicts this' : 'It supports this'}
+                  {relation === 'supports' ? 'It goes against this' : 'It backs this'}
                 </Button>
                 <Button variant="ghost" icon={Unlink} disabled={pending === e.ref} onClick={() => void unlink(e.ref, relation)}>
                   Remove from this finding
@@ -842,7 +762,7 @@ function EvidenceGroups({
         {supporting.length > 0 ? (
           list(supporting, 'supports')
         ) : (
-          <p className="drawer-empty">{none ? 'This finding has no sources yet.' : 'Nothing supports this yet.'}</p>
+          <p className="drawer-empty">{none ? 'This finding has no sources yet.' : 'Nothing backs this yet.'}</p>
         )}
       </DrawerGroup>
       {!none && (
@@ -850,7 +770,7 @@ function EvidenceGroups({
           {contradicting.length > 0 ? (
             list(contradicting, 'contradicts')
           ) : (
-            <p className="drawer-empty">Nothing contradicts this yet.</p>
+            <p className="drawer-empty">Nothing goes against this yet.</p>
           )}
         </DrawerGroup>
       )}

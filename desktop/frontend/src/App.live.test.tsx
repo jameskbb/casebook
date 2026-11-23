@@ -8,7 +8,7 @@ import App from './App'
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('./api/api', () => ({ api: mocks.api }))
 
-const BANNER = "Casebook can't check for changes right now. It will keep trying."
+const BANNER = 'Casebook cannot see new changes right now. It will keep trying.'
 
 describe('App live refresh banner', () => {
   beforeEach(() => {

@@ -2,12 +2,12 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../api/api'
-import { ApiError } from '../api/errors'
+import { ApiError, BUSY_COPY, GONE_COPY, INTERNAL_COPY, NOT_SAVED_COPY } from '../api/errors'
 import { ToastProvider } from '../components/ui/Toaster'
 import { mockApi } from '../test/mockApi'
 import { OpenAtLaunch } from '../test/OpenAtLaunch'
 import { AppDataProvider, useAppData } from './appData'
-import { useWrite } from './useWrite'
+import { TRY_AGAIN, useWrite } from './useWrite'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../api/api', () => ({ api: mocks.api }))
@@ -51,12 +51,12 @@ function renderToggleable(fn: () => Promise<string>) {
   return { onResult, hide: () => r.rerender(view(false)) }
 }
 
-describe('useWrite stale Retry toasts', () => {
+describe('useWrite stale Try again toasts', () => {
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('dismisses the Retry toast once a later write from the same component succeeds', async () => {
+  it('dismisses the Try again toast once a later write from the same component succeeds', async () => {
     const fn = vi
       .fn<() => Promise<string>>()
       .mockRejectedValueOnce(new ApiError('busy', 'Casebook database is busy; try again'))
@@ -66,14 +66,14 @@ describe('useWrite stale Retry toasts', () => {
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Casebook is busy')
 
-    // The user presses Save again instead of Retry; it succeeds.
+    // The user presses Save again instead of Try again; it succeeds.
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
     expect(fn).toHaveBeenCalledTimes(2)
   })
 
-  it('dismisses the Retry toast when the component unmounts, so a closed form never submits again', async () => {
+  it('dismisses the Try again toast when the component unmounts, so a closed form never submits again', async () => {
     const fn = vi.fn<() => Promise<string>>().mockRejectedValueOnce(new ApiError('busy', 'busy')).mockResolvedValue('saved')
     const user = userEvent.setup()
     const { hide } = renderToggleable(fn)
@@ -84,12 +84,15 @@ describe('useWrite stale Retry toasts', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps toasts without Retry after unmount', async () => {
+  it('keeps toasts without Try again after unmount', async () => {
     const fn = vi.fn<() => Promise<string>>().mockRejectedValue(new ApiError('conflict', 'conflict: claim C-001 is superseded'))
     const user = userEvent.setup()
     const { hide } = renderToggleable(fn)
     await user.click(await screen.findByRole('button', { name: 'Save' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Claim C-001 is superseded')
+    const toast = await screen.findByRole('alert')
+    expect(toast).toHaveTextContent(NOT_SAVED_COPY)
+    expect(toast).not.toHaveTextContent(/C-001|superseded/)
+    expect(within(toast).queryByRole('button', { name: TRY_AGAIN })).not.toBeInTheDocument()
     hide()
     expect(screen.getByRole('alert')).toBeInTheDocument()
   })
@@ -109,7 +112,7 @@ describe('useWrite', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('offers Retry on busy and repeats the same call', async () => {
+  it('offers Try again on busy and repeats the same call', async () => {
     const fn = vi
       .fn<() => Promise<string>>()
       .mockRejectedValueOnce(new ApiError('busy', 'Casebook database is busy; try again'))
@@ -118,37 +121,38 @@ describe('useWrite', () => {
     const onResult = renderHarness(fn)
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     const toast = await screen.findByRole('alert')
-    expect(toast).toHaveTextContent('Casebook is busy with another change. Nothing was saved.')
+    expect(toast).toHaveTextContent(BUSY_COPY)
     expect(onResult).toHaveBeenCalledWith(undefined)
 
-    await user.click(within(toast).getByRole('button', { name: 'Retry' }))
+    await user.click(within(toast).getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(fn).toHaveBeenCalledTimes(2))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('offers Retry on internal errors with the generic copy', async () => {
+  it('offers Try again on internal errors with the generic copy', async () => {
     const user = userEvent.setup()
     renderHarness(async () => {
       throw new ApiError('internal', 'casebook: internal storage error')
     })
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     const toast = await screen.findByRole('alert')
-    expect(toast).toHaveTextContent(
-      'Something went wrong and nothing was saved. Try again. If it keeps happening, back up your data and restart Casebook.',
-    )
-    expect(within(toast).getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(toast).toHaveTextContent(INTERNAL_COPY)
+    expect(toast).not.toHaveTextContent('internal storage error')
+    expect(within(toast).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
-  it('appends the refresh hint on not_found and offers Refresh', async () => {
+  it('says it could not find that on not_found and offers Reload', async () => {
     const user = userEvent.setup()
     renderHarness(async () => {
       throw new ApiError('not_found', 'not found: claim C-009 in INV-0001')
     })
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     const toast = await screen.findByRole('alert')
-    expect(toast).toHaveTextContent('Claim C-009 in INV-0001. It may have changed in another app.')
+    expect(toast).toHaveTextContent(GONE_COPY)
+    expect(toast).not.toHaveTextContent(/C-009|INV-0001/)
+    expect(within(toast).queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
     const before = vi.mocked(mocks.api.listInvestigations).mock.calls.length
-    await user.click(within(toast).getByRole('button', { name: 'Refresh' }))
+    await user.click(within(toast).getByRole('button', { name: 'Reload' }))
     await waitFor(() => expect(vi.mocked(mocks.api.listInvestigations).mock.calls.length).toBeGreaterThan(before))
   })
 
@@ -159,7 +163,8 @@ describe('useWrite', () => {
     })
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     await waitFor(() => expect(onResult).toHaveBeenCalled())
-    expect(onResult.mock.calls[0][0]).toMatchObject({ kind: 'validation', field: 'title' })
+    expect(onResult.mock.calls[0][0]).toBeInstanceOf(ApiError)
+    expect(onResult.mock.calls[0][0]).toMatchObject({ kind: 'validation', field: 'title', message: 'is required' })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

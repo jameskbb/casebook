@@ -1,11 +1,11 @@
-// "This changed in another app." with "Show latest": shown by an
-// editor that holds unsaved input when a reload changed
-// the stored values it started from. The input stays until the user chooses
-// Show latest.
+// Shown by an editor that holds unsaved input when a reload changed the
+// stored values it started from. The input stays until the person chooses
+// Show the new version.
 import { Banner } from './Banner'
 import { Button } from './Button'
 
-export const CHANGED_ELSEWHERE_COPY = 'This changed in another app.'
+export const CHANGED_ELSEWHERE_COPY = 'This changed while you had it open. Your AI may have updated it.'
+export const SHOW_NEW_VERSION = 'Show the new version'
 
 export function ChangedElsewhereBanner({ onShowLatest }: { onShowLatest: () => void }) {
   return (
@@ -13,7 +13,7 @@ export function ChangedElsewhereBanner({ onShowLatest }: { onShowLatest: () => v
       className="changed-elsewhere"
       action={
         <Button variant="ghost" onClick={onShowLatest}>
-          Show latest
+          {SHOW_NEW_VERSION}
         </Button>
       }
     >

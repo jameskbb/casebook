@@ -3,10 +3,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, NOT_SAVED_COPY, REQUIRED_COPY } from '../../api/errors'
 import type { Claim, Evidence } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
-import { evidence, hypotheses } from '../../test/fixtures'
+import { evidence } from '../../test/fixtures'
 import { newClaim } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
@@ -22,10 +22,10 @@ const providers = (ui: ReactNode) => (
   </ToastProvider>
 )
 
-function renderDialog(kind: 'claim' | 'hypothesis', list: Evidence[] = evidence) {
+function renderDialog(list: Evidence[] = evidence) {
   const onClose = vi.fn()
   const onCreated = vi.fn()
-  render(providers(<StatementDialog kind={kind} invRef="INV-0001" evidence={list} onClose={onClose} onCreated={onCreated} />))
+  render(providers(<StatementDialog invRef="INV-0001" evidence={list} onClose={onClose} onCreated={onCreated} />))
   return { onClose, onCreated }
 }
 
@@ -43,7 +43,7 @@ describe('StatementDialog', () => {
       .mockResolvedValue(newClaim)
     Object.assign(mocks.api, mockApi({ addClaim }))
     const user = userEvent.setup()
-    const { onClose } = renderDialog('claim')
+    const { onClose } = renderDialog()
     const statement = screen.getByLabelText('Finding')
     await user.type(statement, 'First wording.')
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
@@ -51,7 +51,7 @@ describe('StatementDialog', () => {
 
     await user.clear(statement)
     await user.type(statement, 'Second wording.')
-    await user.click(within(toast).getByRole('button', { name: 'Retry' }))
+    await user.click(within(toast).getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(addClaim).toHaveBeenCalledTimes(2))
     expect(addClaim.mock.calls[1][1]).toMatchObject({ statement: 'Second wording.' })
     await waitFor(() => expect(onClose).toHaveBeenCalled())
@@ -59,14 +59,14 @@ describe('StatementDialog', () => {
 
   it('adds a claim with its rationale and supporting and contradicting sources, and asks for no confidence', async () => {
     const user = userEvent.setup()
-    const { onClose, onCreated } = renderDialog('claim')
+    const { onClose, onCreated } = renderDialog()
     expect(screen.getByRole('dialog', { name: 'Add finding' })).toBeInTheDocument()
     expect(screen.getByText('What did you find? One clear sentence.')).toBeInTheDocument()
     expect(screen.queryByRole('radiogroup', { name: 'Confidence' })).toBeNull()
     await user.type(screen.getByLabelText('Finding'), 'The bills went out twice because a file was loaded two times.')
-    await user.type(screen.getByLabelText('Why (optional)'), 'Code and docs.')
-    await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
-    await user.click(within(row('E-003')).getByRole('radio', { name: 'Contradicts' }))
+    await user.type(screen.getByLabelText('Why you think so (optional)'), 'Code and docs.')
+    await user.click(within(row('E-001')).getByRole('radio', { name: 'Backs it up' }))
+    await user.click(within(row('E-003')).getByRole('radio', { name: 'Goes against it' }))
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(mocks.api.addClaim).toHaveBeenCalledWith('INV-0001', {
       statement: 'The bills went out twice because a file was loaded two times.',
@@ -77,46 +77,30 @@ describe('StatementDialog', () => {
         { evidence_ref: 'E-003', relation: 'contradicts' },
       ],
     })
+    expect(mocks.api.addHypothesis).not.toHaveBeenCalled()
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('C-005'))
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('lists every piece of evidence with None selected', () => {
-    renderDialog('claim')
+  it('lists every source with None, Backs it up and Goes against it, None selected', () => {
+    renderDialog()
     for (const e of evidence) {
       const r = row(e.ref)
       expect(r).toHaveTextContent(e.title)
+      expect(within(r).getAllByRole('radio').map((x) => x.textContent)).toEqual(['None', 'Backs it up', 'Goes against it'])
       expect(within(r).getByRole('radio', { name: 'None' })).toHaveAttribute('aria-checked', 'true')
     }
   })
 
-  it('adds a hypothesis with rationale through addHypothesis', async () => {
-    const user = userEvent.setup()
-    Object.assign(mocks.api, mockApi({ addHypothesis: async () => ({ ...hypotheses[0], ref: 'H-004' }) }))
-    const { onCreated } = renderDialog('hypothesis')
-    expect(screen.getByRole('dialog', { name: 'Add finding to test' })).toBeInTheDocument()
-    expect(screen.getByText('What might explain it? One clear sentence.')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Finding'), 'Data transfer.')
-    await user.type(screen.getByLabelText('Why (optional)'), 'A hunch.')
-    await user.click(screen.getByRole('button', { name: 'Add finding to test' }))
-    expect(mocks.api.addHypothesis).toHaveBeenCalledWith('INV-0001', {
-      statement: 'Data transfer.',
-      confidence: 'unknown',
-      rationale: 'A hunch.',
-      links: [],
-    })
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('H-004'))
-  })
-
   it('says so when there is no evidence to link', () => {
-    renderDialog('claim', [])
+    renderDialog([])
     expect(screen.getByText('No sources yet. You can add one to this finding later.')).toBeInTheDocument()
   })
 
   it('shows Adding... while the call runs', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ addClaim: () => new Promise<Claim>(() => {}) }))
-    renderDialog('claim')
+    renderDialog()
     await user.type(screen.getByLabelText('Finding'), 'S')
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
@@ -132,16 +116,17 @@ describe('StatementDialog', () => {
         },
       }),
     )
-    renderDialog('claim')
+    renderDialog()
     await user.type(screen.getByLabelText('Finding'), 'S')
-    await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
-    await user.click(within(row('E-003')).getByRole('radio', { name: 'Supports' }))
+    await user.click(within(row('E-001')).getByRole('radio', { name: 'Backs it up' }))
+    await user.click(within(row('E-003')).getByRole('radio', { name: 'Backs it up' }))
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
-    expect(await within(row('E-003')).findByText('evidence E-003 is not in INV-0001')).toBeInTheDocument()
-    expect(within(row('E-001')).queryByText('evidence E-003 is not in INV-0001')).toBeNull()
+    expect(await within(row('E-003')).findByText(NOT_SAVED_COPY)).toBeInTheDocument()
+    expect(within(row('E-001')).queryByText(NOT_SAVED_COPY)).toBeNull()
+    expect(screen.queryByText(/is not in INV-0001/)).toBeNull()
   })
 
-  it('shows a statement error under Statement', async () => {
+  it('shows a finding error under Finding in plain words', async () => {
     const user = userEvent.setup()
     Object.assign(
       mocks.api,
@@ -151,9 +136,10 @@ describe('StatementDialog', () => {
         },
       }),
     )
-    renderDialog('claim')
+    renderDialog()
     await user.click(screen.getByRole('button', { name: 'Add finding' }))
-    expect(await screen.findByText('is required')).toBeInTheDocument()
+    expect(await screen.findByText(REQUIRED_COPY)).toBeInTheDocument()
+    expect(screen.queryByText('is required')).toBeNull()
     expect(screen.getByLabelText('Finding')).toHaveAttribute('aria-invalid', 'true')
   })
 })

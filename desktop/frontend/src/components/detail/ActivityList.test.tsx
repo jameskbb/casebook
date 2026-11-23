@@ -9,18 +9,23 @@ import { act as row, manyActivity } from '../../test/fixtures.detail'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { ActivityList } from './ActivityList'
+import { ActivityList, shortName } from './ActivityList'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
 
-function Harness({ onOpenRef }: { onOpenRef?: (ref: string) => void }) {
+type NameOf = (ref: string) => string | undefined
+
+/** The words of the fixture source E-003 and of the findings, as the question page passes them. */
+const names: NameOf = (ref) => (ref === detail.evidence[2].ref ? detail.evidence[2].title : detail.claims.find((c) => c.ref === ref)?.statement)
+
+function Harness({ onOpenRef, nameOf }: { onOpenRef?: (ref: string) => void; nameOf?: NameOf }) {
   const { detail: d } = useAppData()
   if (!d) return null
-  return <ActivityList activities={d.recent_activity} onOpenRef={onOpenRef} />
+  return <ActivityList activities={d.recent_activity} onOpenRef={onOpenRef} nameOf={nameOf} />
 }
 
-function renderList(activities: Activity[], onOpenRef?: (ref: string) => void) {
+function renderList(activities: Activity[], onOpenRef?: (ref: string) => void, nameOf?: NameOf) {
   const d: InvestigationDetail = { ...detail, recent_activity: activities }
   Object.assign(
     mocks.api,
@@ -32,7 +37,7 @@ function renderList(activities: Activity[], onOpenRef?: (ref: string) => void) {
   return render(
     <ToastProvider>
       <AppDataProvider><OpenAtLaunch />
-        <Harness onOpenRef={onOpenRef} />
+        <Harness onOpenRef={onOpenRef} nameOf={nameOf} />
       </AppDataProvider>
     </ToastProvider>,
   )
@@ -45,8 +50,8 @@ describe('ActivityList', () => {
 
   it('reads each row as a plain sentence with the actor tooltip', async () => {
     renderList([
-      row(claude, 'evidence.add', 'E-005', 'Call log'),
-      row(human, 'question.resolve', 'Q-001', 'Yes, says the head of billing.'),
+      row(claude, 'evidence.add', 'E-005', 'Added evidence E-005 "Call log"'),
+      row(human, 'question.resolve', 'Q-001', 'Resolved question Q-001: Yes, says the head of billing.'),
     ])
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
@@ -54,40 +59,52 @@ describe('ActivityList', () => {
     expect(items[1]).toHaveTextContent('You answered a follow-up question Q-001')
     // The follow-up question's code is there for an AI, but hidden from a reader with the other codes.
     expect(within(items[1]).getByText('Q-001')).toHaveClass('record-id')
-    expect(within(items[0]).getByText('Claude Code')).toHaveAttribute('title', 'AI, claude-code')
-    expect(within(items[1]).getByText('You')).toHaveAttribute('title', 'Person, casebook-ui')
+    expect(within(items[0]).getByText('Claude Code')).toHaveAttribute('title', 'AI, Claude Code')
+    expect(within(items[1]).getByText('You')).toHaveAttribute('title', 'Person, Casebook')
+    // The answer to a follow-up question is its second line; the stored sentence around it is not.
+    expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Yes, says the head of billing\.$/)
   })
 
   it('names a source or finding by its words, with its code kept for when codes are on', async () => {
     const onOpenRef = vi.fn()
     const user = userEvent.setup()
-    const d: InvestigationDetail = { ...detail, recent_activity: [row(claude, 'evidence.add', 'E-003', detail.evidence[2].title), row(human, 'claim.update', 'C-001', 'Updated claim C-001: verification human_verified')] }
-    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [summaries[0]], getInvestigationDetail: async () => d }))
-    function Named() {
-      const { detail: loaded } = useAppData()
-      if (!loaded) return null
-      const names = new Map([[loaded.evidence[2].ref, loaded.evidence[2].title], [loaded.claims[0].ref, loaded.claims[0].statement]])
-      return <ActivityList activities={loaded.recent_activity} onOpenRef={onOpenRef} nameOf={(ref) => names.get(ref)} />
-    }
-    render(<ToastProvider><AppDataProvider><OpenAtLaunch /><Named /></AppDataProvider></ToastProvider>)
+    renderList(
+      [row(claude, 'evidence.add', 'E-003', `Added evidence E-003 "${detail.evidence[2].title}"`), row(human, 'claim.update', 'C-001', 'Updated claim C-001: verification human_verified')],
+      onOpenRef,
+      names,
+    )
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
     expect(items[0]).toHaveTextContent('Claude Code added the source E-003 Calls about a bill: 400 in September, 1,070 in October')
     expect(within(items[0]).getByText('E-003')).toHaveClass('record-id')
-    // The second line would only repeat the title, so it is left out.
+    // The first line already names the source, so there is no second line.
     expect(items[0].querySelector('.activity-summary')).toBeNull()
-    // A code inside the second line is hidden the same way.
-    const marked = items[1].querySelector('.activity-summary') as HTMLElement
-    expect(marked).toHaveTextContent('Marked C-001: You checked this')
-    expect(within(marked).getByText('C-001')).toHaveClass('record-id')
+    expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Checked this\.$/)
     await user.click(within(items[0]).getByRole('button', { name: /Calls about a bill/ }))
     expect(onOpenRef).toHaveBeenCalledWith('E-003')
   })
 
-  it('shows the engine summary on a second line as text, omitted when empty or equal to the target', async () => {
+  it('shows a checkpoint note as written, with each code hidden and its words after it', async () => {
+    renderList([row(claude, 'checkpoint', 'INV-0001', 'Added C-003 (E-007).')], undefined, names)
+    const history = await screen.findByRole('region', { name: 'How we got here' })
+    const note = history.querySelector('.activity-summary') as HTMLElement
+    const codes = Array.from(note.querySelectorAll('.record-id'))
+    // The bracket holds only a code, so it hides whole; the bare code hides and the finding's words stand in.
+    expect(codes.map((c) => c.textContent?.trim())).toEqual(['C-003', '(E-007)'])
+    const words = codes[0].nextElementSibling as HTMLElement
+    expect(words).toHaveClass('codes-off')
+    expect(words).toHaveTextContent(`"${shortName(detail.claims[2].statement, 40)}"`)
+    expect(note.querySelectorAll('.codes-off')).toHaveLength(1)
+    expect(note.textContent?.startsWith('Added')).toBe(true)
+    expect(note.textContent?.endsWith('.')).toBe(true)
+  })
+
+  it('shows a note as text, and no second line for a stored summary it does not know', async () => {
+    const unknown = 'Frobnicated claim C-001 (status active)'
     renderList([
-      row(claude, 'evidence.add', 'E-005', '**not markup** <b>x</b>'),
-      row(human, 'claim.update', 'C-001', 'C-001'),
+      row(claude, 'checkpoint', 'INV-0001', '**not markup** <b>x</b>'),
+      row(human, 'claim.update', 'C-001', unknown),
+      row(claude, 'x.y', 'C-001', unknown),
       row(human, 'conclusion.update', 'INV-0001', ''),
     ])
     const history = await screen.findByRole('region', { name: 'How we got here' })
@@ -96,20 +113,29 @@ describe('ActivityList', () => {
     expect(items[0].querySelector('b')).toBeNull()
     expect(items[1].querySelector('.activity-summary')).toBeNull()
     expect(items[2].querySelector('.activity-summary')).toBeNull()
+    expect(items[2]).toHaveTextContent('Claude Code made a change')
+    expect(items[3].querySelector('.activity-summary')).toBeNull()
+    expect(history).not.toHaveTextContent('Frobnicated')
+    expect(history).not.toHaveTextContent('x.y')
   })
 
-  it('rewrites engine summaries in plain words and keeps the stored text in the title', async () => {
+  it('rewrites engine summaries in plain words and keeps the stored text out of the page', async () => {
     const raw = 'Updated claim C-001: statement, verification; verification reset to ai_generated after AI edit'
-    renderList([row(claude, 'claim.update', 'C-001', raw), row(human, 'active.set', 'INV-0001', 'Set active investigation to INV-0001')])
+    const stored = [raw, 'Set active investigation to INV-0001', "Made INV-0001 your AI's current question"]
+    renderList([row(claude, 'claim.update', 'C-001', stored[0]), row(human, 'active.set', 'INV-0001', stored[1]), row(human, 'active.set', 'INV-0001', stored[2])])
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
     const reset = items[0].querySelector('.activity-summary') as HTMLElement
-    expect(reset).toHaveTextContent('Edited finding C-001 (wording). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
-    expect(reset).toHaveAttribute('title', raw)
+    expect(reset).toHaveTextContent(/^Changed the wording\. It changed after it was checked, so it needs checking again\.$/)
     // The first line already says it, so the second is left out.
-    expect(items[1]).toHaveTextContent("You made this your AI's current question")
+    expect(items[1]).toHaveTextContent('You chose this question for your AI to work on')
     expect(items[1].querySelector('.activity-summary')).toBeNull()
+    expect(items[2].querySelector('.activity-summary')).toBeNull()
     expect(history).not.toHaveTextContent('ai_generated')
+    // No tooltip carries the stored text either.
+    const titles = Array.from(history.querySelectorAll('[title]')).map((el) => el.getAttribute('title') ?? '')
+    for (const s of stored) for (const t of titles) expect(t).not.toContain(s)
+    expect(titles.join(' ')).not.toMatch(/ai_generated|verification|investigation/)
   })
 
   it('shows the relative time with the absolute time in the title', async () => {

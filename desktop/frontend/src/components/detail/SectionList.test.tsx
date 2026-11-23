@@ -86,17 +86,6 @@ describe('SectionList', () => {
     expect(screen.getByRole('button', { name: 'Show 2 resolved questions' })).toBeInTheDocument()
   })
 
-  it('renders a lead above the rows and does not call the section empty', () => {
-    renderList({
-      emptyText: 'Nothing is open. Add a question when something still needs an answer.',
-      emptyWithRuledOut: true,
-      lead: <p>Findings to test</p>,
-      items: [],
-    })
-    expect(screen.getByText('Findings to test')).toBeInTheDocument()
-    expect(screen.queryByText(/Nothing is open/)).not.toBeInTheDocument()
-  })
-
   it('hides the empty copy when only ruled-out items exist by default', () => {
     renderList({ ruledOut: items(1, 'X') })
     expect(screen.queryByText(/No claims yet/)).not.toBeInTheDocument()

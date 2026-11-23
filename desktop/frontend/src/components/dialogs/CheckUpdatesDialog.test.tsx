@@ -2,12 +2,12 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, WENT_WRONG_COPY } from '../../api/errors'
 import type { UpdateCheck } from '../../api/types'
 import { ahead, ASSET_URL, NO_RELEASE_MESSAGE, unknownBuild, updateAvailable, upToDate } from '../../test/fixtures.update'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { CheckUpdatesDialog, LINK_COPIED, UPDATE_HOW_COPY, UPDATE_INTRO_COPY } from './CheckUpdatesDialog'
+import { CheckUpdatesDialog, LINK_COPIED, UPDATE_FAILED_COPY, UPDATE_HOW_COPY, UPDATE_INTRO_COPY } from './CheckUpdatesDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -21,13 +21,13 @@ function renderDialog(onClose = vi.fn()) {
   return onClose
 }
 
-/** Renders the dialog with checkForUpdates resolving r and chooses Check now. */
+/** Renders the dialog with checkForUpdates resolving r and chooses Look now. */
 async function checkWith(r: UpdateCheck) {
   Object.assign(mocks.api, mockApi({ checkForUpdates: vi.fn(async () => r) }))
   const user = userEvent.setup()
   renderDialog()
-  await user.click(screen.getByRole('button', { name: 'Check now' }))
-  await screen.findByRole('button', { name: 'Check again' })
+  await user.click(screen.getByRole('button', { name: 'Look now' }))
+  await screen.findByRole('button', { name: 'Look again' })
   return user
 }
 
@@ -36,11 +36,12 @@ describe('CheckUpdatesDialog', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('explains the check and asks nothing until Check now', async () => {
+  it('explains the look, without naming GitHub, and asks nothing until Look now', async () => {
     const onClose = renderDialog()
-    const dialog = screen.getByRole('dialog', { name: 'Check for updates' })
+    const dialog = screen.getByRole('dialog', { name: 'Look for updates' })
     expect(within(dialog).getByText(UPDATE_INTRO_COPY)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Check now' })).toHaveFocus()
+    expect(dialog).not.toHaveTextContent(/github/i)
+    expect(screen.getByRole('button', { name: 'Look now' })).toHaveFocus()
     expect(screen.queryByRole('button', { name: 'Open the download page' })).not.toBeInTheDocument()
     await new Promise((r) => setTimeout(r, 20))
     expect(mocks.api.checkForUpdates).not.toHaveBeenCalled()
@@ -48,7 +49,7 @@ describe('CheckUpdatesDialog', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('shows Checking... while the check runs', async () => {
+  it('shows Looking... while it looks', async () => {
     let finish: (r: UpdateCheck) => void = () => {}
     Object.assign(
       mocks.api,
@@ -56,8 +57,8 @@ describe('CheckUpdatesDialog', () => {
     )
     const user = userEvent.setup()
     renderDialog()
-    await user.click(screen.getByRole('button', { name: 'Check now' }))
-    expect(await screen.findByRole('button', { name: 'Checking...' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Look now' }))
+    expect(await screen.findByRole('button', { name: 'Looking...' })).toBeDisabled()
     finish(upToDate)
     expect(await screen.findByText('You have the latest version, Casebook v0.5.0.')).toBeInTheDocument()
     expect(mocks.api.checkForUpdates).toHaveBeenCalledTimes(1)
@@ -101,7 +102,7 @@ describe('CheckUpdatesDialog', () => {
   it('says when this build is newer than the latest release', async () => {
     await checkWith(ahead)
     expect(
-      screen.getByText('You have Casebook v0.6.0-rc.1, which is newer than the latest published version, v0.5.0.'),
+      screen.getByText('You have Casebook v0.6.0. The newest version for everyone is v0.5.0.'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Open the download page' })).not.toBeInTheDocument()
   })
@@ -109,19 +110,27 @@ describe('CheckUpdatesDialog', () => {
   it('says when this build is not a release version', async () => {
     await checkWith(unknownBuild)
     expect(
-      screen.getByText('This copy (dev) is a test version. The latest published version is Casebook v0.5.0.'),
+      screen.getByText('This is a test version (dev). The newest version for everyone is Casebook v0.5.0.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open the download page' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Copy download link' })).not.toBeInTheDocument()
   })
 
-  it('checks again on request', async () => {
+  it('shows a long test version short', async () => {
+    await checkWith({ ...unknownBuild, current: 'v0.8.3-0.2026-abc' })
+    expect(
+      screen.getByText('This is a test version (v0.8.3). The newest version for everyone is Casebook v0.5.0.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).not.toHaveTextContent('2026-abc')
+  })
+
+  it('looks again on request', async () => {
     const user = await checkWith(upToDate)
-    await user.click(screen.getByRole('button', { name: 'Check again' }))
+    await user.click(screen.getByRole('button', { name: 'Look again' }))
     await waitFor(() => expect(mocks.api.checkForUpdates).toHaveBeenCalledTimes(2))
   })
 
-  it('shows the error from Go in the dialog and allows a retry', async () => {
+  it('shows the fixed failure copy, never the message from Go, and allows another try', async () => {
     const check = vi
       .fn<Api['checkForUpdates']>()
       .mockRejectedValueOnce(new ApiError('other', NO_RELEASE_MESSAGE))
@@ -129,11 +138,12 @@ describe('CheckUpdatesDialog', () => {
     Object.assign(mocks.api, mockApi({ checkForUpdates: check }))
     const user = userEvent.setup()
     renderDialog()
-    await user.click(screen.getByRole('button', { name: 'Check now' }))
-    const dialog = screen.getByRole('dialog', { name: 'Check for updates' })
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(`${NO_RELEASE_MESSAGE}.`)
+    await user.click(screen.getByRole('button', { name: 'Look now' }))
+    const dialog = screen.getByRole('dialog', { name: 'Look for updates' })
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(UPDATE_FAILED_COPY)
+    expect(dialog).not.toHaveTextContent(NO_RELEASE_MESSAGE)
 
-    await user.click(screen.getByRole('button', { name: 'Check now' }))
+    await user.click(screen.getByRole('button', { name: 'Look now' }))
     expect(await screen.findByText('You have the latest version, Casebook v0.5.0.')).toBeInTheDocument()
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -146,6 +156,7 @@ describe('CheckUpdatesDialog', () => {
       }),
     })
     await user.click(screen.getByRole('button', { name: 'Open the download page' }))
-    expect(await screen.findByText('Check for updates first')).toBeInTheDocument()
+    expect(await screen.findByText(WENT_WRONG_COPY)).toBeInTheDocument()
+    expect(screen.queryByText('Check for updates first')).not.toBeInTheDocument()
   })
 })

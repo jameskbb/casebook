@@ -11,6 +11,7 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { DetailView } from '../detail/DetailView'
 import { ToastProvider } from '../ui/Toaster'
+import { CONTRADICTING_TITLE, SUPPORTING_TITLE } from './StatementDrawer'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -54,7 +55,7 @@ describe('StatementDrawer drill-down', () => {
       ),
     ).toHaveClass('drawer-statement')
 
-    const supporting = within(drawer).getByRole('region', { name: 'Sources that support it' })
+    const supporting = within(drawer).getByRole('region', { name: SUPPORTING_TITLE })
     const blocks = supporting.querySelectorAll('[data-ref]')
     expect(Array.from(blocks).map((b) => b.getAttribute('data-ref'))).toEqual(['E-001', 'E-004'])
 
@@ -62,17 +63,15 @@ describe('StatementDrawer drill-down', () => {
       .parentElement as HTMLElement
     expect(within(e1).getByText('Notice dated October 4: 1,900 customers were charged twice')).toBeInTheDocument()
     expect(within(e1).getByText(/charged 1,900 customers twice/)).toBeInTheDocument()
-    expect(within(e1).getByText('File')).toBeInTheDocument()
     expect(within(e1).getByText('Email from the billing team')).toBeInTheDocument()
     expect(within(e1).getByText('Shared drive, Billing, notice-2026-10-04.pdf')).toBeInTheDocument()
     expect(within(e1).getByText(formatAbsolute(T0), { exact: false })).toBeInTheDocument()
 
     const e4 = within(supporting).getByRole('button', { name: /^Open source E-004:/ }).parentElement as HTMLElement
-    expect(within(e4).getByText('Something a person said')).toBeInTheDocument()
     expect(within(e4).getByText('Head of billing, in person')).toBeInTheDocument()
 
-    const contradicting = within(drawer).getByRole('region', { name: 'Sources that contradict it' })
-    expect(within(contradicting).getByText('Nothing contradicts this yet.')).toBeInTheDocument()
+    const contradicting = within(drawer).getByRole('region', { name: CONTRADICTING_TITLE })
+    expect(within(contradicting).getByText('Nothing goes against this yet.')).toBeInTheDocument()
   })
 
   it('pushes the evidence drawer with Back, returns to the claim and closes the stack with Esc', async () => {
@@ -102,29 +101,25 @@ describe('StatementDrawer drill-down', () => {
   it('shows the empty line for a hypothesis with no linked evidence', async () => {
     const user = userEvent.setup()
     renderDetail()
-    // H-001 is open, so its row sits under Not tested yet.
-    const explain = await screen.findByRole('region', { name: 'Not tested yet' })
+    // H-001 is open, so its row sits under Still to find out.
+    const explain = await screen.findByRole('region', { name: 'Still to find out' })
     await user.click(within(explain).getByRole('button', { name: /^Open finding H-001:/ }))
     const drawer = screen.getByRole('dialog', { name: 'Finding H-001' })
     expect(within(drawer).getByText('This finding has no sources yet.')).toBeInTheDocument()
-    expect(within(drawer).queryByRole('region', { name: 'Sources that contradict it' })).toBeNull()
+    expect(within(drawer).queryByRole('region', { name: CONTRADICTING_TITLE })).toBeNull()
   })
 
-  it('hides the Status and Verification selects behind More options', async () => {
+  it('offers no More options, Status or Label in the Check this finding group', async () => {
     const user = userEvent.setup()
     renderDetail()
-    await user.click(await openClaimButton('C-001'))
-    const status = within(screen.getByRole('dialog', { name: 'Finding C-001' })).getByRole('region', {
+    await user.click(await openClaimButton('C-002'))
+    const status = within(screen.getByRole('dialog', { name: 'Finding C-002' })).getByRole('region', {
       name: 'Check this finding',
     })
-    expect(within(status).queryByLabelText('Status')).not.toBeInTheDocument()
-    expect(within(status).queryByLabelText('Label')).not.toBeInTheDocument()
-    await user.click(within(status).getByRole('button', { name: 'More options', expanded: false }))
-    expect(within(status).getByLabelText('Status')).toBeInTheDocument()
-    expect(within(status).getByLabelText('Label')).toBeInTheDocument()
-    await user.click(within(status).getByRole('button', { name: 'Fewer options', expanded: true }))
-    expect(within(status).queryByLabelText('Status')).not.toBeInTheDocument()
-    expect(within(status).queryByLabelText('Label')).not.toBeInTheDocument()
+    expect(within(status).getByRole('button', { name: 'I checked this' })).toBeInTheDocument()
+    expect(within(status).queryByRole('button', { name: 'More options' })).toBeNull()
+    expect(within(status).queryByLabelText('Status')).toBeNull()
+    expect(within(status).queryByLabelText('Label')).toBeNull()
   })
 
   it('offers the finding that replaced it with a button that pushes the replacement', async () => {

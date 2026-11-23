@@ -48,3 +48,23 @@
 .theme-switch .segmented {
   background: var(--sidebar-hover);
 }
+
+/* The Technical window: three short blocks, each a label, a value and one action. */
+.technical-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.technical-label {
+  font-weight: var(--weight-semibold);
+}
+
+.technical-hint,
+.technical-value {
+  color: var(--ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  overflow-wrap: anywhere;
+  margin-bottom: var(--space-2);
+}

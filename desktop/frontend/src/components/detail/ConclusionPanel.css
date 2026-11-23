@@ -121,22 +121,16 @@
   padding-bottom: var(--space-1);
 }
 
-.conclusion-claim-selection,
-.conclusion-review-form {
+.conclusion-check-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
   min-width: 0;
 }
-.conclusion-claim-selection {
-  border: 1px solid var(--rule);
-  padding: var(--space-4);
-  border-radius: var(--radius-sm);
-}
-.conclusion-claim-selection legend { font-weight: var(--weight-semibold); }
 .conclusion-basis,
-.conclusion-review-record { overflow-wrap: anywhere; }
+.conclusion-check-state { overflow-wrap: anywhere; }
+.conclusion-check-state { color: var(--ink-muted); }
 .conclusion-basis ul { padding-left: var(--space-6); }
 .conclusion-basis li + li { margin-top: var(--space-2); }
 .conclusion-basis { width: 100%; }

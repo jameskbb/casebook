@@ -41,9 +41,9 @@ describe('SupersedeDialog', () => {
 
   it('explains the change and lists the other claims that are not superseded', () => {
     renderClaim(claims[3])
-    expect(screen.getByRole('dialog', { name: 'Replace this finding' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Replace with a newer finding' })).toBeInTheDocument()
     expect(
-      screen.getByText('Choose the finding that replaces it. The old one stays in the history, marked as replaced.'),
+      screen.getByText('Choose the finding that replaces it. The old one stays here, crossed out.'),
     ).toBeInTheDocument()
     const options = screen.getAllByRole('radio').map((r) => r.closest('label')?.textContent)
     expect(options).toEqual([`C-001${claims[0].statement}`, `C-002${claims[1].statement}`])
@@ -89,9 +89,9 @@ describe('SupersedeDialog', () => {
   it('uses the hypothesis copy and call', async () => {
     const user = userEvent.setup()
     renderHypothesis(hypotheses[0])
-    expect(screen.getByRole('dialog', { name: 'Replace this finding' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Replace with a newer finding' })).toBeInTheDocument()
     expect(
-      screen.getByText('Choose the finding that replaces it. The old one stays in the history, marked as replaced.'),
+      screen.getByText('Choose the finding that replaces it. The old one stays here, crossed out.'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /H-003/ }))
     await user.click(screen.getByRole('button', { name: 'Replace finding' }))

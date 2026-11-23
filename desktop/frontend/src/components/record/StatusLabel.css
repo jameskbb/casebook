@@ -8,13 +8,7 @@
   color: var(--ink-muted);
 }
 
-.status-investigating {
-  color: var(--primary);
-}
 
-.status-blocked {
-  color: var(--disputed);
-}
 
 .status-resolved {
   color: var(--claim);
@@ -50,8 +44,7 @@
   color: var(--hypothesis);
 }
 
-.record-status-supported .record-status-icon,
-.record-status-resolved .record-status-icon {
+.record-status-supported .record-status-icon {
   color: var(--claim);
 }
 

@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, BUSY_COPY, NOT_SAVED_COPY, REQUIRED_COPY, TOO_LONG_COPY } from '../../api/errors'
 import type { Investigation } from '../../api/types'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { investigation } from '../../test/fixtures'
@@ -37,15 +37,15 @@ describe('NewInvestigationDialog', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('leaves Make this the active investigation unchecked when one is already active', async () => {
+  it('leaves Have my AI work on this question unchecked when it already works on another', async () => {
     renderDialog()
     const dialog = await screen.findByRole('dialog', { name: 'New question' })
-    expect(within(dialog).getByLabelText("Make this your AI's current question")).not.toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'Have my AI work on this question' })).not.toBeChecked()
     expect(within(dialog).getByText("What do you want to know? For example: Why did calls go up when sales stayed the same?")).toBeInTheDocument()
-    expect(within(dialog).getByText('The period, the numbers, and where the data lives.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Which months, the numbers, and which reports to look at.')).toBeInTheDocument()
   })
 
-  it('shows Creating... and disables the submit while the call runs', async () => {
+  it('shows Adding... and disables the submit while the call runs', async () => {
     let resolve: (v: Investigation) => void = () => {}
     Object.assign(
       mocks.api,
@@ -70,7 +70,29 @@ describe('NewInvestigationDialog', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('shows a title validation error under the Title field', async () => {
+  it('says Write something here first under the question when it is missing', async () => {
+    Object.assign(
+      mocks.api,
+      mockApi({
+        createInvestigation: async () => {
+          throw new ApiError('validation', 'is required', 'title')
+        },
+      }),
+    )
+    const user = userEvent.setup()
+    const { onClose } = renderDialog()
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
+
+    const title = within(dialog).getByLabelText('Question')
+    await waitFor(() => expect(title).toHaveAttribute('aria-invalid', 'true'))
+    expect(title).toHaveAccessibleDescription(expect.stringContaining(REQUIRED_COPY))
+    expect(dialog).not.toHaveTextContent('is required')
+    expect(title).toHaveFocus()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('shows a plain too-long sentence under the question, never the engine text', async () => {
     Object.assign(
       mocks.api,
       mockApi({
@@ -87,13 +109,14 @@ describe('NewInvestigationDialog', () => {
 
     const title = within(dialog).getByLabelText('Question')
     await waitFor(() => expect(title).toHaveAttribute('aria-invalid', 'true'))
-    expect(title).toHaveAccessibleDescription(expect.stringContaining('must be at most 200 bytes'))
+    expect(title).toHaveAccessibleDescription(expect.stringContaining(TOO_LONG_COPY))
+    expect(dialog).not.toHaveTextContent('200 bytes')
     expect(title).toHaveFocus()
     expect(within(dialog).getByRole('button', { name: 'Add question' })).toBeEnabled()
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('summarizes a validation error on a field the form does not show', async () => {
+  it('puts a validation error on a field the form does not show into the summary, in plain words', async () => {
     Object.assign(
       mocks.api,
       mockApi({
@@ -107,7 +130,8 @@ describe('NewInvestigationDialog', () => {
     const dialog = await screen.findByRole('dialog', { name: 'New question' })
     await user.type(within(dialog).getByLabelText('Question'), 'x')
     await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
-    expect(await within(dialog).findByText('Check this entry: status: must not be archived')).toBeInTheDocument()
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(NOT_SAVED_COPY)
+    expect(dialog).not.toHaveTextContent(/status|must not be archived/)
   })
 
   it('warns when the title is close to its byte limit', async () => {
@@ -120,7 +144,7 @@ describe('NewInvestigationDialog', () => {
     expect(within(dialog).getByText('Almost too long (185 of 200 characters)')).toBeInTheDocument()
   })
 
-  it('shows the busy toast with Retry when the database is busy', async () => {
+  it('shows the busy toast with Try again when Casebook is busy', async () => {
     let calls = 0
     Object.assign(
       mocks.api,
@@ -138,8 +162,8 @@ describe('NewInvestigationDialog', () => {
     await user.type(within(dialog).getByLabelText('Question'), 'Retry me')
     await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
     const toast = await screen.findByRole('alert')
-    expect(toast).toHaveTextContent('Casebook is busy with another change. Nothing was saved.')
-    await user.click(within(toast).getByRole('button', { name: 'Retry' }))
+    expect(toast).toHaveTextContent(BUSY_COPY)
+    await user.click(within(toast).getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('INV-0004'))
   })
 })

@@ -6,7 +6,7 @@
 // shown in the dialog in plain words; nothing was deleted then.
 import { useRef, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
-import { asSentence, errorCopy, toApiError } from '../../api/errors'
+import { plainError, toApiError } from '../../api/errors'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import './RestoreConfirmDialog.css'
@@ -24,9 +24,11 @@ export interface DeleteDialogProps {
   /** Runs the delete; resolves true when it was done. */
   onConfirm: () => Promise<boolean>
   onClose: () => void
+  /** The title while a blocker is shown: what stands in the way, not a question. */
+  blockerTitle?: string
 }
 
-export function DeleteDialog({ title, body, blocker, confirmLabel, onConfirm, onClose }: DeleteDialogProps) {
+export function DeleteDialog({ title, body, blocker, blockerTitle, confirmLabel, onConfirm, onClose }: DeleteDialogProps) {
   const safeRef = useRef<HTMLButtonElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export function DeleteDialog({ title, body, blocker, confirmLabel, onConfirm, on
       if (await onConfirm()) onClose()
     } catch (e) {
       const err = toApiError(e)
-      setError(`${asSentence(err.kind === 'conflict' ? err.message : errorCopy(err).message)} Nothing was deleted.`)
+      setError(`${plainError(err)} Nothing was deleted.`)
     } finally {
       setBusy(false)
     }
@@ -47,7 +49,7 @@ export function DeleteDialog({ title, body, blocker, confirmLabel, onConfirm, on
 
   return (
     <Dialog
-      title={title}
+      title={blocker && blockerTitle ? blockerTitle : title}
       size="confirm"
       onClose={() => {
         if (!busy) onClose()

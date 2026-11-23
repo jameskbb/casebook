@@ -1,13 +1,13 @@
-// Check for updates. Opened from the Data menu; nothing is asked
-// until the person chooses Check now. The Go side makes the one request to
-// GitHub (internal/update) and never downloads anything: an available update
-// is a link to its release page, and the person replaces the program files
-// themselves. The result is announced in a polite live region; a failed
-// check shows Go's message in the dialog, with Check now to try again.
+// Look for updates. Opened from the Settings menu; nothing is asked until
+// the person chooses Look now. The Go side makes the one request
+// (internal/update) and never downloads anything: an update is a link to its
+// download page, and the person installs it themselves. The result is
+// announced in a polite live region; a failure says so in plain words, with
+// Look now to try again.
 import { useRef, useState } from 'react'
 import { Copy, ExternalLink, RefreshCw } from 'lucide-react'
 import { api } from '../../api/api'
-import { asSentence, CLIPBOARD_COPY, errorCopy, toApiError } from '../../api/errors'
+import { CLIPBOARD_COPY, errorCopy, toApiError } from '../../api/errors'
 import type { UpdateCheck } from '../../api/types'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -15,12 +15,16 @@ import { useToast } from '../ui/Toaster'
 import './CheckUpdatesDialog.css'
 
 export const UPDATE_INTRO_COPY =
-  'Casebook will ask GitHub which version is the latest. It sends nothing about you or this computer and downloads nothing. You choose when to update.'
+  'Casebook will look online for a newer version. It sends nothing about you or this computer and downloads nothing. You choose when to update.'
 export const UPDATE_HOW_COPY =
-  'Download it from the download page, then install it over this one. Your data stays where it is.'
-export const LINK_COPIED = 'Download link copied to the clipboard.'
+  'Download it from the download page, then install it over this one. Your questions stay where they are.'
+export const LINK_COPIED = 'Download link copied.'
+export const UPDATE_FAILED_COPY = 'Casebook could not look for a newer version. See that you are online, then try again.'
 
-/** The result lines for one check, by state. */
+/** v0.8.3 from a longer test version name. */
+const short = (v: string) => v.replace(/-.*$/, '')
+
+/** The result lines for one look, by state. */
 export function updateLines(r: UpdateCheck): string[] {
   switch (r.state) {
     case 'update_available':
@@ -28,10 +32,10 @@ export function updateLines(r: UpdateCheck): string[] {
     case 'up_to_date':
       return [`You have the latest version, Casebook ${r.latest}.`]
     case 'ahead':
-      return [`You have Casebook ${r.current}, which is newer than the latest published version, ${r.latest}.`]
+      return [`You have Casebook ${short(r.current)}. The newest version for everyone is ${r.latest}.`]
     case 'unknown':
     default:
-      return [`This copy (${r.current}) is a test version. The latest published version is Casebook ${r.latest}.`]
+      return [`This is a test version (${short(r.current)}). The newest version for everyone is Casebook ${r.latest}.`]
   }
 }
 
@@ -51,10 +55,10 @@ export function CheckUpdatesDialog({ onClose }: CheckUpdatesDialogProps) {
     try {
       setResult(await api.checkForUpdates())
       setError(null)
-    } catch (e) {
-      // A failed check unpins the release page on the Go side too.
+    } catch {
+      // A failure forgets the download page on the Go side too.
       setResult(null)
-      setError(asSentence(errorCopy(toApiError(e)).message))
+      setError(UPDATE_FAILED_COPY)
     } finally {
       setChecking(false)
     }
@@ -81,7 +85,7 @@ export function CheckUpdatesDialog({ onClose }: CheckUpdatesDialogProps) {
   const assetURL = result?.state === 'update_available' ? result.asset?.url : undefined
   return (
     <Dialog
-      title="Check for updates"
+      title="Look for updates"
       onClose={onClose}
       initialFocus={checkRef}
       className="update-dialog"
@@ -96,10 +100,10 @@ export function CheckUpdatesDialog({ onClose }: CheckUpdatesDialogProps) {
             variant={result ? 'secondary' : 'primary'}
             icon={result ? RefreshCw : undefined}
             busy={checking}
-            busyLabel="Checking..."
+            busyLabel="Looking..."
             onClick={() => void check()}
           >
-            {result ? 'Check again' : 'Check now'}
+            {result ? 'Look again' : 'Look now'}
           </Button>
           {assetURL && (
             <Button key="copy" variant="secondary" icon={Copy} onClick={() => void copyLink(assetURL)}>

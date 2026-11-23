@@ -10,7 +10,7 @@ import './EmptyMain.css'
 
 export interface EmptyMainProps {
   onNew: () => void
-  /** Shows Add a question from a file... */
+  /** Shows Open a question someone sent you... */
   onImport?: () => void
 }
 
@@ -45,7 +45,7 @@ export function EmptyMain({ onNew, onImport }: EmptyMainProps) {
           <div className="empty-main-actions">
             <Button variant="primary" icon={Plug} onClick={() => setConnectOpen(true)}>Connect your AI</Button>
             <Button variant="secondary" icon={Plus} onClick={onNew}>New question</Button>
-            {onImport && <Button variant="ghost" icon={Upload} onClick={onImport}>Add a question from a file...</Button>}
+            {onImport && <Button variant="ghost" icon={Upload} onClick={onImport}>Open a question someone sent you...</Button>}
           </div>
           <div className="empty-main-guide">
             <h3>See an example</h3>

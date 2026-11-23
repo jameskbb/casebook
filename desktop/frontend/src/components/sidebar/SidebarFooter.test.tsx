@@ -2,15 +2,15 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
+import { DIALOG_COPY, FILE_COPY } from '../../api/errors'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { backupInfo, DB_PATH } from '../../test/fixtures'
 import { cancelledImport, importChangedRef, importSameRef, LONG_DB_PATH } from '../../test/fixtures.dataops'
 import { mockApi } from '../../test/mockApi'
-import { truncateMiddle } from '../../lib/truncatePath'
 import { ToastProvider } from '../ui/Toaster'
 import App from '../../App'
-import { DataOpsProvider } from './DataOps'
-import { SidebarFooter } from './SidebarFooter'
+import { BACKUP_EXISTS_COPY, DataOpsProvider } from './DataOps'
+import { OPEN_SENT_QUESTION_LABEL, SETTINGS_LABEL, SHOW_IDS_LABEL, SidebarFooter } from './SidebarFooter'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -33,9 +33,9 @@ function renderFooter() {
   )
 }
 
-/** Opens the Data menu and chooses an item. */
+/** Opens the Settings menu and chooses an item. */
 async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole('button', { name: 'Data' }))
+  await user.click(screen.getByRole('button', { name: SETTINGS_LABEL }))
   await user.click(await screen.findByRole('menuitem', { name }))
 }
 
@@ -54,7 +54,7 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => cancelledImport) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Add a question from a file...')
+    await choose(user, OPEN_SENT_QUESTION_LABEL)
     await waitFor(() => expect(mocks.api.importInvestigation).toHaveBeenCalled())
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importSameRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Add a question from a file...')
+    await choose(user, OPEN_SENT_QUESTION_LABEL)
     expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0004'))
   })
@@ -75,12 +75,12 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importChangedRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Add a question from a file...')
+    await choose(user, OPEN_SENT_QUESTION_LABEL)
     expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0004'))
   })
 
-  it('explains a file that cannot be imported', async () => {
+  it('explains a file that cannot be opened, without the engine text', async () => {
     Object.assign(mocks.api, {
       importInvestigation: vi.fn(async () => {
         throw JSON.stringify({ kind: 'validation', field: 'version', message: 'unsupported version 2' })
@@ -88,12 +88,13 @@ describe('SidebarFooter import', () => {
     })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Add a question from a file...')
-    const dialog = await screen.findByRole('dialog', { name: "This file can't be added" })
-    expect(dialog).toHaveTextContent('version: unsupported version 2. Nothing was added.')
+    await choose(user, OPEN_SENT_QUESTION_LABEL)
+    const dialog = await screen.findByRole('dialog', { name: 'Casebook cannot open this file' })
+    expect(dialog).toHaveTextContent(`${FILE_COPY} Nothing was added.`)
+    expect(dialog).not.toHaveTextContent('unsupported version 2')
     await user.click(within(dialog).getByRole('button', { name: 'Choose another file...' }))
     await waitFor(() => expect(mocks.api.importInvestigation).toHaveBeenCalledTimes(2))
-    const again = await screen.findByRole('dialog', { name: "This file can't be added" })
+    const again = await screen.findByRole('dialog', { name: 'Casebook cannot open this file' })
     await user.click(within(again).getAllByRole('button', { name: 'Close' }).at(-1)!)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
@@ -108,18 +109,19 @@ describe('SidebarFooter backup', () => {
     Object.assign(mocks.api, { backUp: vi.fn(async () => ({ cancelled: true, info: backupInfo })) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Back up all data...')
+    await choose(user, 'Save a backup...')
     await waitFor(() => expect(mocks.api.backUp).toHaveBeenCalled())
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByText(/Backup saved/)).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('says where the backup went and copies the path', async () => {
+  it('names only the backup file, not its folder, and copies the full location', async () => {
     renderFooter()
     const user = await ready()
-    await choose(user, 'Back up all data...')
-    const toast = (await screen.findByText(`Backup saved to ${backupInfo.path}.`)).closest('.toast') as HTMLElement
+    await choose(user, 'Save a backup...')
+    const toast = (await screen.findByText('Backup saved as casebook-backup-2026-11-06.db.')).closest('.toast') as HTMLElement
+    expect(toast).not.toHaveTextContent('Documents')
     await user.click(within(toast).getByRole('button', { name: 'Copy location' }))
     expect(mocks.api.copyText).toHaveBeenCalledWith(backupInfo.path)
   })
@@ -132,8 +134,8 @@ describe('SidebarFooter backup', () => {
     })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Back up all data...')
-    expect(await screen.findByRole('alert')).toHaveTextContent('A file with that name already exists. Choose a new name.')
+    await choose(user, 'Save a backup...')
+    expect(await screen.findByRole('alert')).toHaveTextContent(BACKUP_EXISTS_COPY)
   })
 
   it('reports a native dialog failure', async () => {
@@ -144,112 +146,124 @@ describe('SidebarFooter backup', () => {
     })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Back up all data...')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the window for choosing a file. Try again.')
+    await choose(user, 'Save a backup...')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(DIALOG_COPY)
+    expect(alert).not.toHaveTextContent('boom')
   })
 })
 
-describe('SidebarFooter data file', () => {
-  async function openData() {
+describe('SidebarFooter Settings menu', () => {
+  beforeEach(() => {
+    Object.assign(mocks.api, mockApi())
+  })
+
+  async function openSettings() {
     const user = userEvent.setup()
     renderFooter()
     await waitFor(() => expect(mocks.api.listInvestigations).toHaveBeenCalled())
-    await user.click(screen.getByRole('button', { name: 'Data' }))
+    await user.click(screen.getByRole('button', { name: SETTINGS_LABEL }))
     return user
   }
 
-  it('keeps the footer to the Data menu and the theme switch', async () => {
-    Object.assign(mocks.api, mockApi())
+  it('keeps the footer to the Settings menu and the theme switch', async () => {
     renderFooter()
     await waitFor(() => expect(mocks.api.listInvestigations).toHaveBeenCalled())
-    expect(screen.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-haspopup', 'menu')
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument()
     expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
   })
 
-  it('lists the data actions, the data file and Connect AI clients in the Data menu', async () => {
-    Object.assign(mocks.api, mockApi())
-    await openData()
-    const menu = await screen.findByRole('menu', { name: 'Data' })
+  it('lists what a person does, then Technical, with no data file, codes or version item', async () => {
+    await openSettings()
+    const menu = await screen.findByRole('menu', { name: 'Settings' })
     const names = within(menu)
       .getAllByRole('menuitem')
       .map((el) => el.textContent)
     expect(names).toEqual([
-      'Add a question from a file...',
-      'Back up all data...',
-      'Restore from backup...',
-      `Data file${truncateMiddle(DB_PATH)}`,
       'Connect your AI...',
-      'Show the codes your AI usesLike C-001 and E-004',
-      'Check for updates...',
-      'Versionv0.1.0',
+      'Open a question someone sent you...',
+      'Save a backup...',
+      'Bring back a backup...',
+      'Look for updates...',
+      'Technical...',
     ])
+    expect(menu).not.toHaveTextContent(/Data file|codes|Version|v0\.1\.0/)
+    expect(menu).not.toHaveTextContent(DB_PATH)
   })
 
-  it('shows and hides the codes your AI uses, and remembers the choice', async () => {
+  it('opens Look for updates without looking', async () => {
+    const user = await openSettings()
+    await user.click(await screen.findByRole('menuitem', { name: 'Look for updates...' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Look for updates' })
+    expect(within(dialog).getByRole('button', { name: 'Look now' })).toBeInTheDocument()
+    expect(mocks.api.checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('opens Connect your AI', async () => {
+    const user = await openSettings()
+    await user.click(await screen.findByRole('menuitem', { name: 'Connect your AI...' }))
+    expect(await screen.findByRole('dialog', { name: 'Connect your AI' })).toBeInTheDocument()
+  })
+})
+
+describe('SidebarFooter Technical', () => {
+  beforeEach(() => {
     Object.assign(mocks.api, mockApi())
     window.localStorage.removeItem('casebook.showIds')
     delete document.documentElement.dataset.showIds
-    const user = await openData()
-    await user.click(await screen.findByRole('menuitem', { name: /^Show the codes your AI uses/ }))
+  })
+
+  async function openTechnical() {
+    renderFooter()
+    const user = await ready()
+    await choose(user, 'Technical...')
+    return { user, dialog: await screen.findByRole('dialog', { name: 'Technical' }) }
+  }
+
+  it('shows and hides the codes your AI uses, and remembers the choice', async () => {
+    const { user, dialog } = await openTechnical()
+    const toggle = within(dialog).getByRole('switch', { name: SHOW_IDS_LABEL })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
     expect(document.documentElement.dataset.showIds).toBe('true')
     expect(window.localStorage.getItem('casebook.showIds')).toBe('true')
-    await user.click(screen.getByRole('button', { name: 'Data' }))
-    await user.click(await screen.findByRole('menuitem', { name: /^Hide the codes your AI uses/ }))
+    await user.click(toggle)
     expect(document.documentElement.dataset.showIds).toBeUndefined()
     expect(window.localStorage.getItem('casebook.showIds')).toBe('false')
   })
 
-  it('opens Check for updates from the Data menu without checking', async () => {
-    Object.assign(mocks.api, mockApi())
-    const user = await openData()
-    await user.click(await screen.findByRole('menuitem', { name: 'Check for updates...' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Check for updates' })
-    expect(within(dialog).getByRole('button', { name: 'Check now' })).toBeInTheDocument()
-    expect(mocks.api.checkForUpdates).not.toHaveBeenCalled()
-  })
-
-  it('copies the version from the Data menu', async () => {
-    Object.assign(mocks.api, mockApi())
-    const user = await openData()
-    await user.click(await screen.findByRole('menuitem', { name: 'Casebook version v0.1.0. Copy it' }))
-    await waitFor(() => expect(mocks.api.copyText).toHaveBeenCalledWith('Casebook v0.1.0'))
-  })
-
-  it('shows a short path with the full path in its title and name', async () => {
+  it('shows where the questions are kept in full and copies the location', async () => {
     Object.assign(mocks.api, mockApi({ dataLocation: async () => LONG_DB_PATH }))
-    await openData()
-    const item = await screen.findByRole('menuitem', { name: new RegExp('^Data file') })
-    expect(item).toHaveTextContent(truncateMiddle(LONG_DB_PATH))
-    expect(item).toHaveAttribute('title', LONG_DB_PATH)
-    expect(item).toHaveAccessibleName(`Data file ${LONG_DB_PATH}. Copy its location`)
+    const { user, dialog } = await openTechnical()
+    const label = await within(dialog).findByText('Where your questions are kept')
+    expect(label.nextElementSibling).toHaveTextContent(LONG_DB_PATH)
+    await user.click(within(dialog).getByRole('button', { name: 'Copy location' }))
+    expect(mocks.api.copyText).toHaveBeenCalledWith(LONG_DB_PATH)
+    expect(await screen.findByText('Location copied.')).toBeInTheDocument()
   })
 
-  it('shows a short path unchanged', async () => {
-    Object.assign(mocks.api, mockApi({ dataLocation: async () => 'D:\\Casebook\\casebook.db' }))
-    await openData()
-    expect(await screen.findByRole('menuitem', { name: /^Data file/ })).toHaveTextContent('D:\\Casebook\\casebook.db')
+  it('shows a short version and copies the full one', async () => {
+    Object.assign(mocks.api, mockApi({ appVersion: async () => 'v0.8.3-0.2026-abc' }))
+    const { user, dialog } = await openTechnical()
+    expect(await within(dialog).findByText('v0.8.3')).toBeInTheDocument()
+    expect(dialog).not.toHaveTextContent('2026-abc')
+    await user.click(within(dialog).getByRole('button', { name: 'Copy version' }))
+    await waitFor(() => expect(mocks.api.copyText).toHaveBeenCalledWith('Casebook v0.8.3-0.2026-abc'))
+    expect(await screen.findByText('Version copied.')).toBeInTheDocument()
   })
 
-  it('shortens the default per-user path', async () => {
-    Object.assign(mocks.api, mockApi())
-    await openData()
-    const item = await screen.findByRole('menuitem', { name: /^Data file/ })
-    expect(item).toHaveTextContent('C:\\Users\\Ada...a\\Local\\Casebook\\casebook.db')
-    expect(item).toHaveAttribute('title', DB_PATH)
-  })
-
-  it('copies the full path when the data file is chosen', async () => {
-    Object.assign(mocks.api, mockApi())
-    const user = await openData()
-    await user.click(await screen.findByRole('menuitem', { name: /^Data file/ }))
-    expect(mocks.api.copyText).toHaveBeenCalledWith(DB_PATH)
-    expect(await screen.findByText('Location copied to the clipboard.')).toBeInTheDocument()
+  it('gives focus back to the Settings button when it closes', async () => {
+    const { user, dialog } = await openTechnical()
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: SETTINGS_LABEL })).toHaveFocus()
   })
 })
 
-describe('Empty main pane import', () => {
-  it('runs the same import flow from the empty state', async () => {
+describe('First-open screen import', () => {
+  it('runs the same import flow from the first-open screen', async () => {
     Object.assign(
       mocks.api,
       mockApi({ listInvestigations: async () => [], importInvestigation: async () => importSameRef }),
@@ -257,7 +271,7 @@ describe('Empty main pane import', () => {
     const user = userEvent.setup()
     render(<App />)
     const main = await screen.findByRole('main')
-    await user.click(await within(main).findByRole('button', { name: 'Add a question from a file...' }))
+    await user.click(await within(main).findByRole('button', { name: OPEN_SENT_QUESTION_LABEL }))
     expect(mocks.api.importInvestigation).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Added "Why did calls go up 30% in October when sales stayed the same?" to your questions.')).toBeInTheDocument()
   })

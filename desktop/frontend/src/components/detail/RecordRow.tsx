@@ -1,7 +1,7 @@
 // Finding row (a claim or a hypothesis). Line 1: its check label and its
 // status when not the default. Then the statement in Literata, full text.
 // Then its sources, nested: a plus for one that backs it, a minus for one
-// that contradicts it, the source's title, where it came from and its own
+// that goes against it, the source's title, where it came from and its own
 // check label, so a person reads a finding and its sources in one place.
 // With onOpen the whole row opens the finding through a stretched button
 // under the content, and each source is its own button (no nested controls);
@@ -80,13 +80,13 @@ function FindingSource({ link: l, source, onOpen }: { link: EvidenceLink; source
   const against = l.relation === 'contradicts'
   const Sign = against ? Minus : Plus
   const from = source ? source.source_label || (sourceTypeLabels[source.source_type] ?? '') : ''
-  // The name a screen reader says: "Supports this: <title> <where from> <check label>".
+  // The name a screen reader says: "Backs this: <title> <where from> <check label>".
   const content = (
     <>
       <Sign className="finding-source-sign" size={16} strokeWidth={2} aria-hidden="true" />
       <span className="finding-source-text">
         <span className="finding-source-title">
-          <span className="sr-only">{against ? 'Contradicts this:' : 'Supports this:'}</span> <RecordId>{l.evidence_ref}</RecordId>{' '}
+          <span className="sr-only">{against ? 'Goes against this:' : 'Backs this:'}</span> <RecordId>{l.evidence_ref}</RecordId>{' '}
           {l.evidence_title}
         </span>{' '}
         {from && <span className="finding-source-from">{from}</span>}

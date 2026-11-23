@@ -1,16 +1,15 @@
-// The full-window startup error: shown instead
-// of the app when the database could not be opened. It never writes on its
-// own. It shows where the data file is, with Open data folder and Copy path,
-// and when a backup can fix the problem it offers Restore from
-// backup: Casebook moves the file it could not open into the backups folder
-// (nothing is deleted), opens the backup in its place and then starts
-// normally. A file from a newer Casebook says to update Casebook, and also
-// offers the restore for a person going back to this version: the newer
-// Casebook wrote a casebook-pre-upgrade backup before it upgraded the data.
+// The full-window startup error: shown instead of the app when the stored
+// questions could not be opened. It never writes on its own. When a backup
+// can fix the problem it offers Bring back a backup: Casebook keeps the file
+// it could not open (nothing is deleted), opens the backup instead and then
+// starts as usual. A file from a newer Casebook says to update Casebook, and
+// also offers the backup that newer Casebook made before it changed the
+// file, for a person going back to this version. Where the file is sits
+// under Technical details.
 import { useState } from 'react'
 import { Copy, FolderOpen, RotateCcw, TriangleAlert } from 'lucide-react'
 import { api } from '../api/api'
-import { asSentence, CLIPBOARD_COPY, errorCopy, toApiError } from '../api/errors'
+import { CLIPBOARD_COPY, plainError, toApiError } from '../api/errors'
 import type { RestorePick, StartupInfo } from '../api/types'
 import { useAppData } from '../state/appData'
 import { RestoreConfirmDialog } from './dialogs/RestoreConfirmDialog'
@@ -20,8 +19,8 @@ import { useToast } from './ui/Toaster'
 import './StartupError.css'
 
 export const RECOVER_WARNING =
-  'Casebook moves the data file it could not open into the backups folder next to it (nothing is deleted), then opens this backup in its place.'
-export const FOLDER_COPY = 'Could not open the data folder. Copy its location and open it yourself.'
+  'Casebook keeps the file it could not open and opens this backup instead. Nothing is deleted.'
+export const FOLDER_COPY = 'Could not open the folder. Copy its location and open it yourself.'
 
 export function StartupError({ info }: { info: StartupInfo }) {
   const toast = useToast()
@@ -33,16 +32,10 @@ export function StartupError({ info }: { info: StartupInfo }) {
 
   const tooNew = info.kind === 'schema_too_new'
   const canRestore = info.recoverable === true
-  const heading = tooNew ? 'This data needs a newer Casebook' : 'Casebook could not open its data'
+  const heading = tooNew ? 'Your questions were saved by a newer Casebook' : 'Casebook could not open your questions'
   const body = tooNew
-    ? `The data file at ${info.db_path} was saved by a newer version of Casebook. Update Casebook to open it. Nothing has been changed.${
-        canRestore
-          ? ' To keep using this version instead, restore the casebook-pre-upgrade backup from the backups folder next to the data file.'
-          : ''
-      }`
-    : `${asSentence(info.message || 'The data file could not be opened')} Close Casebook and try again.${
-        canRestore ? ' If this keeps happening, restore a backup.' : ''
-      }`
+    ? `Update Casebook to open them. Nothing was changed.${canRestore ? ' To keep using this version, bring back the backup Casebook made before the update.' : ''}`
+    : `Close Casebook and try again.${canRestore ? ' If this keeps happening, bring back a backup.' : ''}`
 
   const openFolder = async () => {
     try {
@@ -56,7 +49,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
     try {
       if (viaLocation) await api.copyDataLocation()
       else await api.copyText(path)
-      toast.success('Location copied to the clipboard.')
+      toast.success('Location copied.')
     } catch {
       toast.error(CLIPBOARD_COPY)
     }
@@ -68,7 +61,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
       const picked = await api.pickBackupToRecover()
       if (!picked.cancelled) setPick(picked)
     } catch (e) {
-      setProblem(`${errorCopy(toApiError(e)).message.replace(/\.?$/, '.')} Nothing was changed.`)
+      setProblem(`${plainError(toApiError(e))} Nothing was changed.`)
     }
   }
 
@@ -79,7 +72,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
       const res = await api.recoverFromBackup(pick.path)
       setResult({ fileName: pick.file_name, moved: res.safety_copy_path })
     } catch (e) {
-      setProblem(`${errorCopy(toApiError(e)).message.replace(/\.?$/, '.')} Nothing was changed.`)
+      setProblem(`${plainError(toApiError(e))} Nothing was changed.`)
     } finally {
       setRestoring(false)
       setPick(null)
@@ -93,20 +86,21 @@ export function StartupError({ info }: { info: StartupInfo }) {
         <h1 className="startup-error-heading">{heading}</h1>
         <p className="startup-error-body">{body}</p>
         {info.db_path && (
-          <div className="startup-error-location">
+          <details className="startup-error-location">
+            <summary>Technical details</summary>
             <p className="startup-error-path">
-              <span className="startup-error-path-label">Data file</span>
+              <span className="startup-error-path-label">Where your questions are kept</span>
               <code className="startup-error-path-text">{info.db_path}</code>
             </p>
             <div className="startup-error-actions">
               <Button variant="ghost" icon={FolderOpen} onClick={() => void openFolder()}>
-                Open data folder
+                Open the folder
               </Button>
               <Button variant="ghost" icon={Copy} onClick={() => void copyPath(info.db_path, true)}>
                 Copy location
               </Button>
             </div>
-          </div>
+          </details>
         )}
         {problem && (
           <p className="startup-error-problem" role="alert">
@@ -116,7 +110,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
         <div className="startup-error-actions">
           {canRestore && (
             <Button variant="secondary" icon={RotateCcw} onClick={() => void choose()}>
-              Restore from backup...
+              Bring back a backup...
             </Button>
           )}
           <Button variant="secondary" onClick={() => void api.quit().catch(() => {})}>
@@ -140,7 +134,7 @@ export function StartupError({ info }: { info: StartupInfo }) {
         <RestoreResultDialog
           fileName={result.fileName}
           safetyCopyPath={result.moved}
-          body={`Casebook now uses the data from ${result.fileName}. The file it could not open was moved to ${result.moved}.`}
+          body={`Casebook now shows what was in ${result.fileName}. The file it could not open was kept at ${result.moved}.`}
           onCopyPath={() => void copyPath(result.moved, false)}
           onDone={() => {
             setResult(null)

@@ -5,13 +5,16 @@ import type { Api } from '../../api/api'
 import type { InvestigationDetail } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { CopyContextProvider } from '../../state/copyContext'
-import { detail, questions, summaries } from '../../test/fixtures'
+import { claims, detail, evidence, questions, summaries } from '../../test/fixtures'
 import { archivedDetail, emptyDetail, manyRuledOutDetail, partialDetail } from '../../test/fixtures.detail'
-import { detailWithBareEvidence } from '../../test/fixtures.records'
+import { bareEvidence, detailWith, detailWithBareEvidence } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
+import { ADD_TO_FIND_OUT } from '../dialogs/QuestionDialog'
+import { LATER } from '../record/StatusLabel'
 import { ToastProvider } from '../ui/Toaster'
-import { DetailView } from './DetailView'
+import { ALL_SOURCES_USED_COPY, DetailView } from './DetailView'
+import { BACK_IN_LIST_COPY, CHECK_FINDINGS_LABEL, PUT_BACK_LABEL } from './MoreMenu'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -56,31 +59,70 @@ describe('DetailView reading column', () => {
     const c1 = backing.querySelector('[data-ref="C-001"]') as HTMLElement
     const sources = within(within(c1).getByRole('list', { name: 'Sources for this finding' })).getAllByRole('listitem')
     expect(sources.map((li) => li.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'Supports this: E-001 Notice dated October 4: 1,900 customers were charged twice Email from the billing team Not checked',
-      'Supports this: E-004 Head of billing: the mistake was on October 3 only Head of billing, in person You checked this',
+      'Backs this: E-001 Notice dated October 4: 1,900 customers were charged twice Email from the billing team Not checked',
+      'Backs this: E-004 Head of billing: the mistake was on October 3 only Head of billing, in person You checked this',
     ])
     // The code is in the page for an AI and for tests, but hidden from a reader.
     expect(within(sources[0]).getByText('E-001')).toHaveClass('record-id')
-    // A source that contradicts a finding carries the minus class, under the finding it contradicts.
+    // A source that goes against a finding carries the minus class, under that finding.
     const c4 = section('Where sources disagree').querySelector('[data-ref="C-004"]') as HTMLElement
-    const against = within(c4).getByRole('button', { name: /^Contradicts this:/ })
+    const against = within(c4).getByRole('button', { name: /^Goes against this:/ })
     expect(against).toHaveClass('is-against')
     expect(against).toHaveTextContent('Call log')
     // A finding with no sources has no list.
-    const h1 = section('Not tested yet').querySelector('[data-ref="H-001"]') as HTMLElement
+    const h1 = section('Still to find out').querySelector('[data-ref="H-001"]') as HTMLElement
     expect(within(h1).queryByRole('list')).toBeNull()
+  })
+
+  it('has no Review findings button: the walk-through opens from the More menu and goes back to the question', async () => {
+    const user = userEvent.setup()
+    renderDetail()
+    await screen.findByRole('region', { name: 'What backs this up' })
+    expect(screen.queryByRole('button', { name: /review findings/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: CHECK_FINDINGS_LABEL })).toBeNull()
+    expect(document.body).not.toHaveTextContent(/review findings/i)
+    await user.click(screen.getByRole('button', { name: 'More' }))
+    await user.click(screen.getByRole('menuitem', { name: CHECK_FINDINGS_LABEL }))
+    const walk = await screen.findByRole('region', { name: CHECK_FINDINGS_LABEL })
+    expect(within(walk).getByRole('heading', { level: 2, name: CHECK_FINDINGS_LABEL })).toBeInTheDocument()
+    // The walk-through takes the place of the reading column; the header stays.
+    expect(screen.queryByRole('region', { name: 'What backs this up' })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    await user.click(within(walk).getByRole('button', { name: 'Back to the question' }))
+    expect(screen.queryByRole('region', { name: CHECK_FINDINGS_LABEL })).toBeNull()
+    expect(screen.getByRole('region', { name: 'What backs this up' })).toBeInTheDocument()
   })
 
   it('lists only the sources no finding uses under Other sources, and says so when there are none', async () => {
     const { unmount } = renderDetail()
     await screen.findByRole('region', { name: 'Other sources' })
     expect(section('Other sources').querySelectorAll('.evidence-row')).toHaveLength(0)
-    expect(within(section('Other sources')).getByText('Every source is under the finding it backs or contradicts.')).toBeInTheDocument()
+    expect(within(section('Other sources')).getByText(ALL_SOURCES_USED_COPY)).toBeInTheDocument()
     unmount()
     renderDetail(detailWithBareEvidence())
     await screen.findByRole('region', { name: 'Other sources' })
     const rows = section('Other sources').querySelectorAll('.evidence-row')
     expect(Array.from(rows).map((r) => r.getAttribute('data-ref'))).toEqual(['E-009'])
+  })
+
+  it('lists a source whose only finding is replaced under Other sources, and not one under a finding that stands', async () => {
+    // E-009 backs only C-003, which C-002 replaced, so it would otherwise sit behind Show replaced findings.
+    const lone = { ...bareEvidence, claim_links: [{ ref: 'C-003', relation: 'supports' as const }] }
+    renderDetail(
+      detailWith({
+        evidence: [...evidence, lone],
+        claims: claims.map((c) =>
+          c.ref === 'C-003' ? { ...c, links: [...c.links, { ...c.links[0], evidence_ref: lone.ref, evidence_title: lone.title, relation: 'supports' as const }] } : c,
+        ),
+      }),
+    )
+    const other = await screen.findByRole('region', { name: 'Other sources' })
+    const refs = Array.from(other.querySelectorAll('.evidence-row')).map((r) => r.getAttribute('data-ref'))
+    // E-001 backs C-001, which stands. E-003 is used by the replaced C-003 too, but also by C-002, which stands.
+    expect(refs).toEqual(['E-009'])
+    expect(within(other).getByText(lone.title)).toBeInTheDocument()
+    expect(within(other).queryByText(ALL_SOURCES_USED_COPY)).toBeNull()
+    expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
   })
 
   it('renders the sections in reading order after the question', async () => {
@@ -93,7 +135,7 @@ describe('DetailView reading column', () => {
       'What backs this up',
       'Where sources disagree',
       'Ruled out',
-      'Not tested yet',
+      'Still to find out',
       'Other sources',
       'How we got here',
     ])
@@ -102,7 +144,7 @@ describe('DetailView reading column', () => {
     expect(label.compareDocumentPosition(conclusion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('shows the answer with the count of sources checked, no confidence, and the Why: rationale', async () => {
+  it('shows the answer with the count of sources checked, no confidence, and how you know', async () => {
     renderDetail()
     const panel = await screen.findByRole('region', { name: 'The answer' })
     expect(within(panel).getByText('The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.')).toBeInTheDocument()
@@ -110,7 +152,7 @@ describe('DetailView reading column', () => {
     const live = detail.evidence.filter((e) => e.verification !== 'superseded')
     const byYou = live.filter((e) => e.verification === 'human_verified').length
     expect(panel.querySelector('.conclusion-checked')).toHaveTextContent(`${byYou} of ${live.length} sources checked by you`)
-    expect(within(panel).getByText('Why:')).toBeInTheDocument()
+    expect(within(panel).getByText('How you know:')).toBeInTheDocument()
     const rationale = "The billing team's notice and the call log agree. Whether long waits cost any sales is still open."
     expect(within(panel).getByText(rationale)).toBeInTheDocument()
   })
@@ -133,11 +175,14 @@ describe('DetailView reading column', () => {
     expect(section('Where sources disagree').querySelector('[data-ref="C-004"]')).not.toBeNull()
     expect(section('Ruled out').querySelector('[data-ref="H-002"]')).not.toBeNull()
 
-    const open = section('Not tested yet')
+    // An answered follow-up question sits behind its own disclosure, with its answer and no state word.
+    const open = section('Still to find out')
+    expect(open.querySelector('[data-ref="Q-002"]')).toBeNull()
+    await user.click(within(open).getByRole('button', { name: 'Show 1 answered' }))
+    const answered = open.querySelector('[data-ref="Q-002"]') as HTMLElement
+    expect(answered.querySelector('.question-row-answer')).toHaveTextContent('Yes. Both go to the sales line')
     expect(within(open).queryByText('Answered')).toBeNull()
-    await user.click(within(open).getByRole('button', { name: 'Show 1 answered follow-up question' }))
-    expect(within(open).getByText('Answered')).toBeInTheDocument()
-    expect(within(open).getByRole('button', { name: 'Hide 1 answered follow-up question' })).toBeInTheDocument()
+    expect(within(open).getByRole('button', { name: 'Hide 1 answered' })).toBeInTheDocument()
   })
 
   it('uses plural and singular disclosure copy by count', async () => {
@@ -149,42 +194,43 @@ describe('DetailView reading column', () => {
     // The two rejected claims are ruled out, in the open.
     expect(section('Ruled out').querySelectorAll('.record-row')).toHaveLength(3)
     expect(
-      within(section('Not tested yet')).getByRole('button', { name: 'Show 1 answered follow-up question' }),
+      within(section('Still to find out')).getByRole('button', { name: 'Show 1 answered' }),
     ).toBeInTheDocument()
   })
 
-  it('lists open explanations and deferred questions under Not tested yet without expanding anything', async () => {
+  it('lists a finding not tested yet and the follow-up questions together under Still to find out, with one add button', async () => {
     const user = userEvent.setup()
     renderDetail()
-    await screen.findByRole('region', { name: 'Not tested yet' })
-    const open = section('Not tested yet')
-    const list = within(open).getByRole('list', { name: 'Findings to test' })
-    expect(within(open).getByRole('heading', { level: 3, name: 'Findings to test' })).toBeInTheDocument()
-    // H-001 is Open; H-003 is Supported and H-002 Disproven, so neither repeats here.
-    expect(list.querySelector('[data-ref="H-001"]')).not.toBeNull()
+    await screen.findByRole('region', { name: 'Still to find out' })
+    expect(screen.queryByRole('region', { name: 'Not tested yet' })).toBeNull()
+    const open = section('Still to find out')
+    // One list, no subheadings: the finding to test first, then the open question, then the one left for later.
+    expect(within(open).queryAllByRole('heading', { level: 3 })).toHaveLength(0)
+    const lists = Array.from(open.querySelectorAll('ul.section-rows'))
+    expect(lists).toHaveLength(1)
+    expect(Array.from(lists[0].children).map((li) => li.querySelector('[data-ref]')?.getAttribute('data-ref'))).toEqual(['H-001', 'Q-001', 'Q-003'])
+    // H-003 looks right so far and H-002 is ruled out, so neither repeats here.
     expect(open.querySelector('[data-ref="H-003"]')).toBeNull()
     expect(open.querySelector('[data-ref="H-002"]')).toBeNull()
-    // The findings come before the follow-up questions, which have their own subheading.
-    const q1 = open.querySelector('[data-ref="Q-001"]') as HTMLElement
-    expect(list.compareDocumentPosition(q1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    const questionsHeading = within(open).getByRole('heading', { level: 3, name: 'Follow-up questions' })
-    expect(list.compareDocumentPosition(questionsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(questionsHeading.compareDocumentPosition(q1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    const deferred = open.querySelector('[data-ref="Q-003"]') as HTMLElement
-    expect(within(deferred).getByText('Set aside')).toBeInTheDocument()
-    expect(within(deferred).getByText('Waiting for the refund list on November 10.')).toBeInTheDocument()
-    await user.click(within(list).getByRole('button', { name: /^Open finding H-001:/ }))
+    // Exactly one add button for both kinds.
+    const adds = within(open).getAllByRole('button', { name: /^Add/ })
+    expect(adds).toHaveLength(1)
+    expect(adds[0]).toHaveAccessibleName(ADD_TO_FIND_OUT)
+    expect(ADD_TO_FIND_OUT).toBe('Add something to find out')
+    const later = open.querySelector('[data-ref="Q-003"]') as HTMLElement
+    expect(within(later).getByText(LATER)).toBeInTheDocument()
+    expect(within(later).getByText('Waiting for the refund list on November 10.')).toBeInTheDocument()
+    await user.click(within(open).getByRole('button', { name: /^Open finding H-001:/ }))
     expect(await screen.findByRole('dialog', { name: 'Finding H-001' })).toBeInTheDocument()
   })
 
-  it('keeps the Not tested yet empty copy when nothing is open', async () => {
+  it('keeps the Still to find out empty copy and its add button when only answered questions are left', async () => {
     renderDetail({ ...detail, hypotheses: detail.hypotheses.filter((h) => h.status !== 'open'), questions: [questions[1]] })
-    await screen.findByRole('region', { name: 'Not tested yet' })
-    const open = section('Not tested yet')
-    expect(within(open).getByText('Nothing is waiting to be tested.')).toBeInTheDocument()
-    expect(within(open).queryByText('Findings to test')).toBeNull()
-    expect(within(open).queryByRole('heading', { level: 3, name: 'Follow-up questions' })).toBeNull()
-    expect(within(open).getByRole('button', { name: 'Show 1 answered follow-up question' })).toBeInTheDocument()
+    await screen.findByRole('region', { name: 'Still to find out' })
+    const open = section('Still to find out')
+    expect(within(open).getByText('Nothing is left to find out.')).toBeInTheDocument()
+    expect(within(open).getAllByRole('button', { name: ADD_TO_FIND_OUT })).toHaveLength(1)
+    expect(within(open).getByRole('button', { name: 'Show 1 answered' })).toBeInTheDocument()
   })
 
   it('renders every empty section copy for a new question', async () => {
@@ -194,8 +240,8 @@ describe('DetailView reading column', () => {
     expect(screen.getByRole('region', { name: 'Sources' })).toBeInTheDocument()
     for (const text of [
       'No answer yet. Write it here when the findings back one.',
-      'No findings yet. Add one when a source backs a clear statement.',
-      'Nothing is waiting to be tested.',
+      'No findings yet. Your AI adds them here, or you can add one.',
+      'Nothing is left to find out.',
       'No sources yet. Add what you found and where you found it.',
       'Nothing has happened yet.',
     ]) {
@@ -210,7 +256,7 @@ describe('DetailView reading column', () => {
     const user = userEvent.setup()
     renderDetail(emptyDetail())
     const guide = await screen.findByRole('region', { name: 'Get your first finding' })
-    expect(guide).toHaveTextContent('Ask your AI to work on this question and save what it finds here. Connect it once, then copy the message it offers to start with.')
+    expect(guide).toHaveTextContent('Ask your AI to work on this question and save what it finds here. Connect your AI once. Then copy the starter message and paste it into your AI.')
     const connect = within(guide).getByRole('button', { name: 'Connect your AI...' })
     const add = within(guide).getByRole('button', { name: 'Add a source myself' })
     await user.tab()
@@ -238,15 +284,16 @@ describe('DetailView reading column', () => {
     expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
   })
 
-  it('shows the archived banner and unarchives with a toast', async () => {
+  it('shows the archived banner and puts the question back in the list with a toast', async () => {
     const user = userEvent.setup()
     renderDetail(archivedDetail())
     expect(
       await screen.findByText('This question is archived. It is hidden from the list and nothing was deleted.'),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Unarchive' }))
+    expect(screen.queryByRole('button', { name: 'Unarchive' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: PUT_BACK_LABEL }))
     expect(mocks.api.unarchiveInvestigation).toHaveBeenCalledWith('INV-0003')
-    expect(await screen.findByText('Unarchived this question. It is back in the list.')).toBeInTheDocument()
+    expect(await screen.findByText(BACK_IN_LIST_COPY)).toBeInTheDocument()
   })
 
   it('opens Edit question from the question block', async () => {

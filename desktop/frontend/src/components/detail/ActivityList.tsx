@@ -1,15 +1,15 @@
-// How we got here (the history): newest first, each row a
-// plain sentence naming who did it and the source or finding by its words
-// (its code shows only when codes are on), the engine summary on a
-// second line as text (common shapes rewritten in plain words by
-// activitySummary, the stored text kept in its title), and a relative time with the absolute
-// time in its title, re-rendered once a minute (useNow). Twenty rows by default; the show-more button reloads
-// the detail with up to 200.
+// How we got here (the history): newest first, each row a plain sentence
+// naming who did it and the source or finding by its words (its code shows
+// only when codes are on), a second line in plain words when it adds
+// something (lib/activity activitySummary; the stored engine text is never
+// shown), and a relative time with the absolute time in its title,
+// re-rendered once a minute (useNow). Twenty rows at first; the show-more
+// button reloads the detail with up to 200.
 import { ScrollText } from 'lucide-react'
 import type { Activity } from '../../api/types'
 import { activitySentence, activitySummary } from '../../lib/activity'
 import { ImportedTag } from '../record/ImportedTag'
-import { hideIds, RecordId } from '../record/RecordId'
+import { CodedText, RecordId } from '../record/RecordId'
 import { formatAbsolute, formatRelative } from '../../lib/relativeTime'
 import { useNow } from '../../hooks/useNow'
 import { useAppData } from '../../state/appData'
@@ -26,7 +26,7 @@ export interface ActivityListProps {
   onOpenRef?: (ref: string) => void
   /** The title or statement of a record, shown in place of its code. */
   nameOf?: (ref: string) => string | undefined
-  /** The question's conclusion_reviewed_at, so the review row reads as a review. */
+  /** The question's conclusion_reviewed_at, so the row where the person checked the answer says so. */
   conclusionReviewedAt?: string
 }
 
@@ -80,11 +80,10 @@ function ActivityRow({
   conclusionReviewedAt?: string
 }) {
   const s = activitySentence(a)
-  const summary = a.summary.trim()
   const plain = activitySummary(a, { conclusionReviewedAt })
   const name = a.target_ref ? nameOf?.(a.target_ref) : undefined
   // The second line shows only when it adds to the first.
-  const showSummary = summary !== '' && summary !== a.target_ref && plain !== '' && plain !== name
+  const showSummary = plain !== '' && plain !== name
   return (
     <div className="activity-row">
       <div className="activity-main">
@@ -117,9 +116,11 @@ function ActivityRow({
             )
           })}
         </p>
-        {showSummary && (plain === summary
-          ? <p className="activity-summary">{hideIds(a.summary)}</p>
-          : <p className="activity-summary" title={a.summary}>{hideIds(plain)}</p>)}
+        {showSummary && (
+          <p className="activity-summary">
+            <CodedText text={plain} nameOf={(ref) => { const words = nameOf?.(ref); return words && shortName(words, 40) }} />
+          </p>
+        )}
       </div>
       <time className="activity-time tabular" dateTime={a.created_at} title={formatAbsolute(a.created_at)}>
         {formatRelative(a.created_at, now)}

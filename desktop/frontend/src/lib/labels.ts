@@ -1,17 +1,7 @@
 // Display labels for the engine enums (docs/api.md section 9) and ordered
 // option lists for pickers. The screen says question, answer, finding and
 // source, and one verb, check. Confidence is stored but never shown.
-import type {
-  ActorKind,
-  ClaimStatus,
-  Confidence,
-  HypothesisStatus,
-  QuestionStatus,
-  RecordType,
-  Relation,
-  SourceType,
-  Verification,
-} from '../api/types'
+import type { ActorKind, ClaimStatus, Confidence, HypothesisStatus, Relation, SourceType, Verification } from '../api/types'
 
 /** The stored confidence values. Edits pass the stored value through unchanged. */
 export const confidenceOptions: Confidence[] = ['unknown', 'low', 'medium', 'high']
@@ -24,89 +14,52 @@ export const verificationLabels: Record<Verification, string> = {
   superseded: 'Replaced',
 }
 
-export const verificationOptions: Verification[] = [
-  'ai_generated',
-  'human_verified',
-  'source_verified',
-  'disputed',
-  'superseded',
-]
-
-/** One sentence per verification value, for tooltips and the labels legend. */
+/** One sentence per check label, for tooltips and the legend. */
 export const verificationHelp: Record<Verification, string> = {
-  ai_generated: 'Nobody has checked this version against its source.',
+  ai_generated: 'Nobody has checked this yet.',
   source_verified: 'Your AI compared this with its source. You have not checked it yourself.',
-  human_verified: 'A person checked this against its source.',
-  disputed: 'A source contradicts this. It stays here until you decide.',
-  superseded: 'A newer one replaced this. It is kept for the history.',
+  human_verified: 'You checked this against its source.',
+  disputed: 'A source says something different. It stays here until you decide.',
+  superseded: 'A newer one took its place.',
 }
 
-/** Status words used in the legend that are not verification values. */
-export const statusHelp = {
-  open: 'A finding that has not been tested against a source.',
-  supported: 'The sources so far back this finding. It is not settled.',
-  ruledOut: 'A source ruled this out, or it was withdrawn. It stays visible.',
-  current: 'A finding the answer stands on now.',
-}
-
-export const claimStatusLabels: Record<ClaimStatus, string> = {
-  active: 'Current',
+// A claim whose stored state is "active" shows no state word at all.
+export const claimStatusLabels: Record<Exclude<ClaimStatus, 'active'>, string> = {
   disputed: 'Sources disagree',
   superseded: 'Replaced',
   rejected: 'Ruled out',
 }
 
-export const claimStatusOptions: ClaimStatus[] = ['active', 'disputed', 'superseded', 'rejected']
-
 export const hypothesisStatusLabels: Record<HypothesisStatus, string> = {
   open: 'Not tested yet',
-  supported: 'Supported',
+  supported: 'Looks right so far',
   disproven: 'Ruled out',
   superseded: 'Replaced',
 }
 
-export const hypothesisStatusOptions: HypothesisStatus[] = ['open', 'supported', 'disproven', 'superseded']
-
-export const questionStatusLabels: Record<QuestionStatus, string> = {
-  open: 'Open',
-  resolved: 'Answered',
-  deferred: 'Set aside',
-}
-
+// Every stored kind has a plain label, so a source an AI saved still reads
+// well. A person picks from the six in sourceTypeOptions.
 export const sourceTypeLabels: Record<SourceType, string> = {
-  sql_query: 'Data query',
-  code: 'Code',
-  file: 'File',
-  jira: 'Jira',
-  // Kept for existing records, so a source of this type still shows its true
-  // origin. A new source cannot pick it (see sourceTypeOptions).
-  evernote_note: 'Evernote note',
-  documentation: 'Document',
-  api_response: 'Data from another system',
+  sql_query: 'Numbers your AI looked up',
+  code: 'Something your AI read',
+  file: 'Report or spreadsheet',
+  jira: 'Document or email',
+  evernote_note: 'Document or email',
+  documentation: 'Document or email',
+  api_response: 'Numbers your AI looked up',
   user_statement: 'Something a person said',
-  ai_tool_output: 'Result from your AI',
+  ai_tool_output: 'Something your AI found',
   manual_observation: 'Something you saw',
   external_url: 'Web page',
-  casebook_artifact: 'Another Casebook question',
+  casebook_artifact: 'Another question',
 }
 
-export const sourceTypeOptions: SourceType[] = [
-  'sql_query',
-  'code',
-  'file',
-  'jira',
-  'documentation',
-  'api_response',
-  'user_statement',
-  'ai_tool_output',
-  'manual_observation',
-  'external_url',
-  'casebook_artifact',
-]
+/** The kinds a person can choose, in the order shown. The engine has no kind for "something else". */
+export const sourceTypeOptions: SourceType[] = ['file', 'documentation', 'external_url', 'user_statement', 'manual_observation', 'ai_tool_output']
 
 export const relationLabels: Record<Relation, string> = {
-  supports: 'Supports',
-  contradicts: 'Contradicts',
+  supports: 'Backs it up',
+  contradicts: 'Goes against it',
 }
 
 export const actorKindLabels: Record<ActorKind, string> = {
@@ -114,12 +67,4 @@ export const actorKindLabels: Record<ActorKind, string> = {
   ai: 'AI',
   import: 'File',
   system: 'Casebook',
-}
-
-export const recordTypeLabels: Record<RecordType, string> = {
-  investigation: 'Question',
-  evidence: 'Source',
-  claim: 'Finding',
-  hypothesis: 'Finding',
-  question: 'Follow-up question',
 }

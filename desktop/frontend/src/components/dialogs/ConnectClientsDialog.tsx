@@ -1,9 +1,10 @@
-// Connect AI clients: where the casebook command-line tool
-// is, whether Claude Code and Codex already run Casebook, and the one
-// command (or the configuration to merge by hand) that connects each. The
-// panel only reads: client settings are written by `casebook setup claude`
-// and `casebook setup codex`, which back the file up first and change only
-// Casebook's entry, so the panel copies that command for the user to run.
+// Connect your AI: the one line that connects Claude Code or Codex, whether
+// each is connected already, and a first message to start with. The panel
+// only reads: an AI tool's settings are written by the line the person runs,
+// which saves a copy of the settings first and changes only Casebook's entry.
+// Everything a person does not need to act (other ways to connect, where the
+// settings are, the program an AI uses to reach Casebook) sits under
+// Technical details.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CircleCheck, CircleDashed, Copy, RefreshCw, TriangleAlert } from 'lucide-react'
 import { api } from '../../api/api'
@@ -18,7 +19,7 @@ import { useToast } from '../ui/Toaster'
 import './ConnectClientsDialog.css'
 
 export const CLI_MISSING_COPY =
-  'Casebook could not find the helper program your AI uses to reach it, so the commands below will not work yet. Install Casebook again to get it.'
+  'Casebook could not find the part of it your AI talks to, so the line below will not work yet. Install Casebook again to fix this.'
 export const CLI_ON_PATH_COPY =
   'This test version uses the helper program already installed on this computer.'
 
@@ -26,7 +27,7 @@ export const CLAUDE_AFTER_COPY =
   'Then restart Claude Code. Type /casebook there to work with your questions.'
 export const CODEX_AFTER_COPY = 'Then start a new chat in Codex and ask it to use Casebook.'
 export const OTHER_MCP_COPY =
-  'Run casebook setup mcp. It prints the settings to paste into your AI tool. The tool has to support MCP, the usual way AI tools connect to other apps.'
+  'Send this to whoever set up your AI tool: run casebook setup mcp, paste what it prints into the tool\'s settings, then restart the tool. The tool has to support MCP, the usual way AI tools connect to other apps.'
 
 export const FIRST_FINDING_PROMPT = 'Help me find out why calls to our call center went up when sales stayed the same. First ask me which months and which reports to use. Save one finding in Casebook with the source it came from, and note what we still need to check.'
 
@@ -34,14 +35,15 @@ type ClientChoice = 'claude' | 'codex' | 'other'
 
 type Status = { tone: 'ok' | 'warn' | 'off'; label: string }
 
-/** The one-line status of an AI tool. */
+/** The one-line state of an AI tool: Connected, Not connected, or Needs fixing. */
 export function clientStatus(c: ClientConnection, cliKnown: boolean): Status {
-  if (c.config_problem) return { tone: 'warn', label: "Settings file can't be read" }
+  if (c.config_problem) return { tone: 'warn', label: NEEDS_FIXING }
   if (!c.configured) return { tone: 'off', label: 'Not connected' }
-  if (!c.command_exists) return { tone: 'warn', label: 'Connected to a copy of Casebook that is gone' }
-  if (cliKnown && !c.matches_cli) return { tone: 'warn', label: 'Connected to a different copy of Casebook' }
+  if (!c.command_exists || (cliKnown && !c.matches_cli)) return { tone: 'warn', label: NEEDS_FIXING }
   return { tone: 'ok', label: 'Connected' }
 }
+
+export const NEEDS_FIXING = 'Needs fixing: run the line again'
 
 function StatusIcon({ tone }: { tone: Status['tone'] }) {
   const props = { size: 16, strokeWidth: 1.75, 'aria-hidden': true as const }
@@ -61,9 +63,15 @@ function CodeLine({ text, copyLabel, onCopy }: { text: string; copyLabel: string
   )
 }
 
-/** "Run in PowerShell" on Windows, "Run in a terminal" elsewhere. */
+/** Where the line is pasted: "PowerShell" on Windows, "the Terminal app" elsewhere. */
+export function shellName(shell: string | undefined): string {
+  return shell && shell !== 'terminal' ? shell : 'the Terminal app'
+}
+
+/** The hand-off sentence: what to do with the line, and what to do if that means nothing to you. */
 export function runLabel(shell: string | undefined): string {
-  return shell && shell !== 'terminal' ? `Run this in ${shell}` : 'Run this in a terminal window'
+  const where = shellName(shell)
+  return `Copy this line, paste it into ${where} and press Enter. Never used ${where}? Send this line to whoever set up your AI tool.`
 }
 
 interface ClientSectionProps {
@@ -87,37 +95,35 @@ function ClientSection({ name, shell, client, cliKnown, after, onCopy }: ClientS
         </span>
       </div>
       <p className="connect-label">{runLabel(shell)}</p>
-      <CodeLine text={client.setup_command} copyLabel={`Copy the ${name} setup command`} onCopy={onCopy} />
-      {status.tone === 'warn' && !client.config_problem && <p className="connect-muted">Run the command again to fix this.</p>}
+      <CodeLine text={client.setup_command} copyLabel={`Copy the line for ${name}`} onCopy={onCopy} />
       <p className="connect-muted">{after}</p>
-      <details className="connect-disclosure">
-        <summary>Other ways to connect</summary>
-        <div className="connect-details-body">
-          {client.setup_command_cmd && <>
-            <p className="connect-label">Or in Command Prompt</p>
-            <CodeLine text={client.setup_command_cmd} copyLabel={`Copy the ${name} setup command for Command Prompt`} onCopy={onCopy} />
-          </>}
-          {client.setup_command_wsl && <>
-            <p className="connect-label">Or in WSL (bash), for {name} installed inside WSL</p>
-            <CodeLine text={client.setup_command_wsl} copyLabel={`Copy the ${name} setup command for WSL`} onCopy={onCopy} />
-            {name === 'Claude Code' && <p className="connect-muted">The WSL command connects Claude Code only. It does not add the reminders to save findings. Add those by hand as the Claude Code guide shows.</p>}
-          </>}
-          <p className="connect-label">Or add the settings by hand</p>
-          <pre className="connect-code connect-pre">{client.snippet}</pre>
-          <Button variant="secondary" icon={Copy} onClick={() => onCopy(client.snippet)}>Copy settings</Button>
-        </div>
-      </details>
-      <details className="connect-disclosure">
-        <summary>{name} settings</summary>
-        <div className="connect-details-body">
-          <p className="connect-muted connect-wrap">Settings: <BreakablePath text={client.config_path} /></p>
-          <p className="connect-muted">This reads the settings file. It cannot tell whether {name} is running. Choose Check again after you run the command.</p>
-          {client.hooks.length > 0 && <p className="connect-muted">Reminders added: {client.hooks.join(', ')}</p>}
-          {name === 'Claude Code' && <p className="connect-muted">In the command, --hooks opens your AI's current question when Claude Code starts and reminds it to save findings. --skill adds the /casebook command.</p>}
-          {name === 'Codex' && <p className="connect-muted">In the command, --skill adds the /casebook command.</p>}
-        </div>
-      </details>
     </section>
+  )
+}
+
+/** The rest of what Casebook knows about one AI tool, for whoever set it up. */
+function ClientTechnical({ name, client, onCopy }: { name: string; client: ClientConnection; onCopy: (text: string) => void }) {
+  return (
+    <>
+      {client.setup_command_cmd && <>
+        <p className="connect-label">The same line for Command Prompt</p>
+        <CodeLine text={client.setup_command_cmd} copyLabel={`Copy the line for ${name} in Command Prompt`} onCopy={onCopy} />
+      </>}
+      {client.setup_command_wsl && <>
+        <p className="connect-label">The same line for WSL (bash), for {name} installed inside WSL</p>
+        <CodeLine text={client.setup_command_wsl} copyLabel={`Copy the line for ${name} in WSL`} onCopy={onCopy} />
+        {name === 'Claude Code' && <p className="connect-muted">The WSL line connects Claude Code only. It does not add the reminders to save findings. Add those by hand as the Claude Code guide shows.</p>}
+      </>}
+      <p className="connect-label">Or add the settings by hand</p>
+      <pre className="connect-code connect-pre">{client.snippet}</pre>
+      <Button variant="secondary" icon={Copy} onClick={() => onCopy(client.snippet)}>Copy settings</Button>
+      <p className="connect-muted connect-wrap">{name} settings: <BreakablePath text={client.config_path} /></p>
+      {client.config_problem && <p className="connect-muted">Casebook could not read this settings file.</p>}
+      <p className="connect-muted">Casebook reads the settings file. It cannot tell whether {name} is running. Choose Look again after you run the line.</p>
+      {client.hooks.length > 0 && <p className="connect-muted">Reminders added: {client.hooks.join(', ')}</p>}
+      {name === 'Claude Code' && <p className="connect-muted">In the line, --hooks opens the question your AI is working on when Claude Code starts and reminds it to save findings. --skill adds the /casebook command.</p>}
+      {name === 'Codex' && <p className="connect-muted">In the line, --skill adds the /casebook command.</p>}
+    </>
   )
 }
 
@@ -149,7 +155,7 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
     void load()
   }, [load])
 
-  // Keep the choice of AI tool at the top when the status first arrives.
+  // Keep the choice of AI tool at the top when the state first arrives.
   const introRef = useRef<HTMLParagraphElement>(null)
   const loaded = data !== null
   useLayoutEffect(() => {
@@ -161,13 +167,14 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
   const copy = async (text: string) => {
     try {
       await api.copyText(text)
-      toast.success('Copied to the clipboard.')
+      toast.success('Copied.')
     } catch {
       toast.error(CLIPBOARD_COPY)
     }
   }
 
   const cliKnown = Boolean(data?.cli_path)
+  const name = client === 'claude' ? 'Claude Code' : client === 'codex' ? 'Codex' : 'your AI tool'
   return (
     <Dialog
       title="Connect your AI"
@@ -176,8 +183,8 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
       className="connect-dialog"
       footer={
         <>
-          <Button variant="secondary" icon={RefreshCw} busy={loading} busyLabel="Checking..." onClick={() => void load()}>
-            Check again
+          <Button variant="secondary" icon={RefreshCw} busy={loading} busyLabel="Looking..." onClick={() => void load()}>
+            Look again
           </Button>
           <Button variant="primary" ref={doneRef} onClick={onClose}>
             Done
@@ -186,7 +193,7 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
       }
     >
       <p className="dialog-text" ref={introRef}>
-        Choose the AI tool you use. Copy its command and run it yourself. The command saves a copy of the tool's settings first and adds only Casebook.
+        Choose the AI tool you use. You do this once.
       </p>
       <SegmentedControl<ClientChoice> label="Your AI tool" value={client} onChange={setClient} options={[
         { value: 'claude', label: 'Claude Code' },
@@ -194,7 +201,7 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
         { value: 'other', label: 'Another AI tool' },
       ]} />
       {error && <p className="connect-error" role="alert">{error}</p>}
-      {loading && !data && <p className="connect-muted" role="status">Checking your settings...</p>}
+      {loading && !data && <p className="connect-muted" role="status">Looking at your settings...</p>}
       {data && <>
         {!cliKnown && <p className="connect-note">
           <TriangleAlert className="connect-status-icon is-warn" size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -202,7 +209,7 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
         </p>}
         {client !== 'other' ? <ClientSection
           key={client}
-          name={client === 'claude' ? 'Claude Code' : 'Codex'}
+          name={name}
           shell={data.shell}
           client={data[client]}
           cliKnown={cliKnown}
@@ -211,25 +218,27 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
         /> : <section className="connect-section" aria-label="Another AI tool">
           <h3 className="connect-section-title">Connect another AI tool</h3>
           <p className="connect-muted">{OTHER_MCP_COPY}</p>
-          <p className="connect-muted">Paste what it prints into your AI tool's settings, then restart the tool. The helper program that runs the command is listed under Technical details below.</p>
         </section>}
         <section className="connect-section" aria-label="Your first finding">
           <h3 className="connect-section-title">Ask for your first finding</h3>
-          <p className="connect-muted">In {client === 'claude' ? 'Claude Code' : client === 'codex' ? 'Codex' : 'your AI tool'}, start with this message. Change the question to your own.</p>
+          <p className="connect-muted">In {name}, start with this message. Change the question to your own.</p>
           <p className="connect-prompt">{FIRST_FINDING_PROMPT}</p>
           <Button variant="secondary" icon={Copy} onClick={() => void copy(FIRST_FINDING_PROMPT)}>Copy this message</Button>
-          <p className="connect-muted">Then open the question here, open the finding and read its sources. Choose I checked this only after you have checked it. Write the answer and use Share the answer to review what you send to your team.</p>
+          <p className="connect-muted">Then open the question here and read each finding and its sources. Choose I checked this only after you have checked it. Write the answer, then use Share the answer to send it to your team.</p>
         </section>
         <details className="connect-disclosure">
           <summary>Technical details</summary>
           <section className="connect-details-body" aria-label="Technical details">
-            {cliKnown && <CodeLine text={data.cli_path} copyLabel="Copy the location of the helper program" onCopy={(t) => void copy(t)} />}
+            {client !== 'other' && <ClientTechnical name={name} client={data[client]} onCopy={(t) => void copy(t)} />}
+            {cliKnown && <>
+              <p className="connect-label">The program your AI uses to reach Casebook</p>
+              <CodeLine text={data.cli_path} copyLabel="Copy where the program is" onCopy={(t) => void copy(t)} />
+            </>}
             {data.cli_source === 'path' && <p className="connect-muted">{CLI_ON_PATH_COPY}</p>}
-            {!cliKnown && <p className="connect-muted">Working from the source code? Run scripts/build-cli.sh to build the helper program. Casebook looks in the bin folder next to this app, then among the programs installed on this computer. Until it finds one, the commands use the name casebook.</p>}
             {data.db_path && <p className="connect-muted connect-wrap">
-              This window uses <BreakablePath text={data.db_path} />. The commands include it after --db, so your AI opens the same data.
+              This window keeps your questions in <BreakablePath text={data.db_path} />. The lines include it after --db, so your AI opens the same questions.
             </p>}
-            <p className="connect-muted">Casebook only reads settings here. It never runs the commands or changes your AI tool's settings for you.</p>
+            <p className="connect-muted">Casebook only reads settings here. It never runs the lines or changes your AI tool's settings for you.</p>
           </section>
         </details>
       </>}

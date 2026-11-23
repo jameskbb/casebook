@@ -1,6 +1,6 @@
-// Step two of restore: what
-// the backup holds and a plain warning. Cancel has the initial focus; only
-// "Replace all data" goes on to RestoreBackup.
+// Step two of bringing back a backup: what it holds and a plain warning.
+// Cancel has the initial focus; only "Replace everything" goes on to
+// RestoreBackup.
 import { TriangleAlert } from 'lucide-react'
 import type { BackupInfo } from '../../api/types'
 import { restoreSummary } from '../../lib/restoreCopy'
@@ -8,13 +8,13 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import './RestoreConfirmDialog.css'
 
 export const RESTORE_WARNING =
-  'Everything currently in Casebook will be replaced, including changes made by AI tools. Casebook saves a safety copy of your current data first.'
+  'Everything in Casebook now will be replaced, including what your AI added. Casebook saves a backup of what you have now first.'
 
 export interface RestoreConfirmDialogProps {
   fileName: string
   info: BackupInfo
   busy?: boolean
-  /** Replaces the default warning (startup recovery explains what it moves aside). */
+  /** Replaces the usual warning (at startup it says what happens to the file that would not open). */
   warning?: string
   onConfirm: () => void
   onCancel: () => void
@@ -30,9 +30,9 @@ export function RestoreConfirmDialog({
 }: RestoreConfirmDialogProps) {
   return (
     <ConfirmDialog
-      title="Replace all Casebook data with this backup?"
+      title="Replace everything in Casebook with this backup?"
       body={<p className="dialog-text dialog-text-wrap">{restoreSummary(fileName, info)}</p>}
-      confirmLabel="Replace all data"
+      confirmLabel="Replace everything"
       busy={busy}
       busyLabel="Replacing..."
       onConfirm={onConfirm}

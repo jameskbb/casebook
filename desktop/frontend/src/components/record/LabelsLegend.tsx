@@ -1,36 +1,24 @@
-// What the labels mean: one sentence per label a finding or source shows in
-// the reading column, so a person can defend a line without knowing the
-// engine's words for it. Current follows the checking rows so a reader can
-// tell "who checked it" apart from "still stands on it".
-import { claimStatusLabels, hypothesisStatusLabels, statusHelp, verificationHelp, verificationLabels } from '../../lib/labels'
+// What the labels mean: one sentence for each of the four check labels a
+// finding or source can show. The other words on the page (Ruled out, Not
+// tested yet) are section headings and explain themselves there.
+import { verificationHelp, verificationLabels } from '../../lib/labels'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import './LabelsLegend.css'
 
-const ROWS: [string, string][] = [
-  [verificationLabels.ai_generated, verificationHelp.ai_generated],
-  [verificationLabels.source_verified, verificationHelp.source_verified],
-  [verificationLabels.human_verified, verificationHelp.human_verified],
-  [verificationLabels.disputed, verificationHelp.disputed],
-  [claimStatusLabels.active, statusHelp.current],
-  [hypothesisStatusLabels.open, statusHelp.open],
-  [hypothesisStatusLabels.supported, statusHelp.supported],
-  [hypothesisStatusLabels.disproven, statusHelp.ruledOut],
-  [verificationLabels.superseded, verificationHelp.superseded],
-]
+const ROWS = ['ai_generated', 'source_verified', 'human_verified', 'disputed'] as const
 
 export function LabelsLegend({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title="What the labels mean" size="confirm" onClose={onClose} footer={<Button onClick={onClose}>Close</Button>}>
       <dl className="labels-legend">
-        {ROWS.map(([label, help]) => (
-          <div key={label} className="labels-legend-row">
-            <dt>{label}</dt>
-            <dd>{help}</dd>
+        {ROWS.map((v) => (
+          <div key={v} className="labels-legend-row">
+            <dt>{verificationLabels[v]}</dt>
+            <dd>{verificationHelp[v]}</dd>
           </div>
         ))}
       </dl>
-      <p className="labels-legend-note">Only a person can mark a finding "{verificationLabels.human_verified}".</p>
     </Dialog>
   )
 }

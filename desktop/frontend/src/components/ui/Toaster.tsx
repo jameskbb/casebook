@@ -31,6 +31,8 @@ interface ToastItem {
 }
 
 export const SUCCESS_TOAST_MS = 4000
+/** A toast with something to press (Undo) stays long enough to read and reach. */
+export const ACTION_TOAST_MS = 10000
 const MAX_TOASTS = 3
 
 const ToastContext = createContext<ToastApi | null>(null)
@@ -64,7 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       if (kind === 'success') {
         timers.current.set(
           id,
-          setTimeout(() => dismiss(id), SUCCESS_TOAST_MS),
+          setTimeout(() => dismiss(id), action ? ACTION_TOAST_MS : SUCCESS_TOAST_MS),
         )
       }
       return id

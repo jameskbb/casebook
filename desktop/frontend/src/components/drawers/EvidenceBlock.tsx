@@ -1,9 +1,8 @@
-// One linked piece of evidence inside a claim or hypothesis drawer:
-// title 16/600, the summary, then the source type, source
-// label, reference and captured date, omitting whatever is missing. The
-// whole block opens the evidence drawer through a stretched button under the
-// content (the Plan 02 row pattern), so the reference stays selectable plain
-// text and the block's own actions stay separate buttons.
+// One source inside a finding drawer: name 16/600, what it shows, then
+// where it came from, where to find it and its date, leaving out whatever is
+// missing. The whole block opens the source drawer through a stretched
+// button under the content, so where to find it stays selectable plain text
+// and the block's own actions stay separate buttons.
 import type { ReactNode } from 'react'
 import type { Evidence } from '../../api/types'
 import { sourceTypeLabels } from '../../lib/labels'
@@ -17,7 +16,7 @@ import './EvidenceBlock.css'
 export interface EvidenceBlockProps {
   evidence: Evidence
   onOpen: (ref: string) => void
-  /** Ghost actions under the block (Mark as contradicting, Unlink). */
+  /** Ghost actions under the block. */
   actions?: ReactNode
 }
 
@@ -39,8 +38,7 @@ export function EvidenceBlock({ evidence: e, onOpen, actions }: EvidenceBlockPro
         <p className="evidence-block-title">{e.title}</p>
         {e.summary && <p className="evidence-block-summary">{e.summary}</p>}
         <p className="evidence-block-source">
-          <span>{sourceTypeLabels[e.source_type] ?? e.source_type}</span>
-          {e.source_label && <span>{e.source_label}</span>}
+          <span>{e.source_label || sourceTypeLabels[e.source_type]}</span>
         </p>
         {e.source_ref && (
           <p className="evidence-block-reference">
@@ -49,7 +47,7 @@ export function EvidenceBlock({ evidence: e, onOpen, actions }: EvidenceBlockPro
         )}
         {captured && (
           <p className="evidence-block-captured tabular">
-            <span className="evidence-block-captured-label">As of</span> {captured}
+            <span className="evidence-block-captured-label">Dated</span> {captured}
           </p>
         )}
       </div>

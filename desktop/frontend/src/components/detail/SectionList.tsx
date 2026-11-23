@@ -20,13 +20,11 @@ export interface SectionListProps<T> {
   addLabel?: string
   onAdd?: () => void
   emptyText: string
-  /** Show the empty copy when only ruled-out items exist (Still open). */
+  /** Show the empty copy when only collapsed items exist (Still to find out). */
   emptyWithRuledOut?: boolean
-  /** Rendered above the rows (Still open's open explanations); counts as content. */
-  lead?: ReactNode
   items: T[]
   ruledOut?: T[]
-  /** Singular and plural nouns for the disclosure ("ruled-out hypothesis"). */
+  /** Singular and plural words for the disclosure ("Show 2 replaced findings"). */
   ruledOutNoun?: [string, string]
   itemKey: (item: T) => string
   renderItem: (item: T) => ReactNode
@@ -45,7 +43,6 @@ export function SectionList<T>({
   onAdd,
   emptyText,
   emptyWithRuledOut = false,
-  lead,
   items,
   ruledOut = [],
   ruledOutNoun,
@@ -57,7 +54,7 @@ export function SectionList<T>({
   const [showRuledOut, setShowRuledOut] = useState(false)
   const ruledOutId = useId()
   const headingId = `section-${id}`
-  const empty = items.length === 0 && !lead && (ruledOut.length === 0 || emptyWithRuledOut)
+  const empty = items.length === 0 && (ruledOut.length === 0 || emptyWithRuledOut)
   const add =
     onAdd && addLabel ? (
       <Button variant="ghost" icon={Plus} onClick={onAdd}>
@@ -83,7 +80,6 @@ export function SectionList<T>({
           {add}
         </div>
       )}
-      {lead}
       {items.length > 0 && (
         <ul className="section-rows">
           {items.map((item) => (

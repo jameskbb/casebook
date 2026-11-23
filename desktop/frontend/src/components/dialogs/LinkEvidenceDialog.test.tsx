@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
+import { ApiError, NOT_SAVED_COPY } from '../../api/errors'
 import type { Claim, Evidence, Hypothesis } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { claims, evidence, hypotheses } from '../../test/fixtures'
@@ -54,19 +54,21 @@ describe('LinkEvidenceDialog', () => {
     const dialog = screen.getByRole('dialog', { name: 'Add a source to this finding' })
     const e1 = within(dialog).getByRole('radio', { name: /E-001/ })
     expect(e1).toBeDisabled()
-    expect(e1.closest('label')).toHaveTextContent('Already supports this finding')
+    expect(e1.closest('label')).toHaveTextContent('Already backs this finding')
     expect(within(dialog).getByRole('radio', { name: /E-004/ })).toBeDisabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ })).toBeEnabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ }).closest('label')).toHaveTextContent(
       'Sales were $510k in September and $512k in October',
     )
-    expect(within(dialog).getByRole('radio', { name: 'Supports' })).toHaveAttribute('aria-checked', 'true')
+    const relation = within(dialog).getByRole('radiogroup', { name: 'Does this source back the finding?' })
+    expect(within(relation).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Backs it up', 'Goes against it'])
+    expect(within(relation).getByRole('radio', { name: 'Backs it up' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('labels evidence linked as contradicting', () => {
     renderDialog(claims[3])
     expect(screen.getByRole('radio', { name: /E-003/ }).closest('label')).toHaveTextContent(
-      'Already contradicts this finding',
+      'Already goes against this finding',
     )
   })
 
@@ -84,7 +86,7 @@ describe('LinkEvidenceDialog', () => {
     renderDialog(hypotheses[0])
     expect(screen.getByRole('dialog', { name: 'Add a source to this finding' })).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /E-003/ }))
-    await user.click(screen.getByRole('radio', { name: 'Contradicts' }))
+    await user.click(screen.getByRole('radio', { name: 'Goes against it' }))
     await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', 'E-003', 'contradicts')
   })
@@ -106,7 +108,7 @@ describe('LinkEvidenceDialog', () => {
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
 
-  it('shows a conflict inside the dialog', async () => {
+  it('shows a conflict inside the dialog in plain words', async () => {
     const user = userEvent.setup()
     Object.assign(
       mocks.api,
@@ -119,7 +121,8 @@ describe('LinkEvidenceDialog', () => {
     renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
     await user.click(screen.getByRole('button', { name: 'Add source' }))
-    expect(await screen.findByText('Evidence E-002 belongs to another investigation')).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent(NOT_SAVED_COPY)
+    expect(screen.queryByText(/belongs to another investigation/)).toBeNull()
   })
 
   it('says so when the investigation has no evidence and offers Add source', async () => {

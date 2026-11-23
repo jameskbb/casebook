@@ -26,7 +26,11 @@ describe('first case guidance', () => {
     expect(screen.getByText('Made-up example. Nothing here can be changed.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Supports this:/ }))
+    // The example finding and its source are read, not opened.
+    const example = screen.getByRole('article', { name: 'Call center example' })
+    expect(within(example).queryByRole('button', { name: /finding|Call log/i })).not.toBeInTheDocument()
+    expect(within(example).getByText('Almost all of the extra calls were about a bill, not about buying.').closest('button')).toBeNull()
+    await user.click(within(example).getByRole('button', { name: 'Read the source' }))
     expect(screen.getByRole('table', { name: 'Calls by reason' })).toBeInTheDocument()
     expect(screen.getByText(/then choose I checked this/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'See an example' }))

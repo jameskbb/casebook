@@ -187,7 +187,7 @@ function TopDrawer({ detail, refs, push, back, closeAll }: TopDrawerProps) {
 function NotFound({ refText }: { refText: string }) {
   return (
     <p className="drawer-empty">
-      This was not found. It may have changed in another app. <RecordId>{refText}</RecordId>
+      This is no longer here. Your AI may have changed it. <RecordId>{refText}</RecordId>
     </p>
   )
 }

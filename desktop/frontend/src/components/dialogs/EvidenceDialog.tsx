@@ -1,14 +1,14 @@
-// Add and edit evidence. Fields: title, summary, source type (default Manual
-// observation), source, reference, captured (local time, converted to an
-// RFC3339 timestamp), raw detail behind its own disclosure and metadata behind
-// "Advanced". Metadata text goes to the engine as typed; the engine checks
-// it is a JSON object.
+// Add and edit a source. Four fields: Name, What it shows, Where to find it
+// and Exact words or numbers. The kind of source (Something you saw unless
+// changed) and its date (local time, sent as an RFC3339 timestamp) sit under
+// More. Where it came from and the extra details an AI stores are not edited
+// here; an edit leaves them as they are.
 //
-// Edit mode loads the raw detail through GetEvidence with include_raw_detail
-// and sends only the fields that changed; clearing Captured sends an empty
-// value, which resets it to the time the evidence was added. Validation
-// errors appear under their field (opening the disclosure that holds it);
-// errors on other fields go to the summary at the top.
+// Edit mode loads the exact words through GetEvidence with include_raw_detail
+// and sends only the fields that changed; clearing the date sends an empty
+// value, which sets it back to the day the source was added. An error
+// appears under its field (opening More when it is in there); any other goes
+// to the top of the form.
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { api } from '../../api/api'
@@ -19,7 +19,6 @@ import { fromLocalInputValue, isInvalidCaptured, toLocalInputValue } from '../..
 import { captureHints } from '../../lib/captureHints'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { sourceTypeLabels, sourceTypeOptions } from '../../lib/labels'
-import { prettyMetadata } from '../../lib/metadata'
 import { useWrite } from '../../state/useWrite'
 import { Button } from '../ui/Button'
 import { ChangedElsewhereBanner } from '../ui/ChangedElsewhereBanner'
@@ -37,33 +36,27 @@ const FIELDS = [
   'summary',
   'source_type',
   'source_ref',
-  'source_label',
   'captured_at',
   'raw_detail',
-  'metadata',
 ] as const
 
 interface Values {
   title: string
   summary: string
   source_type: SourceType
-  source_label: string
   source_ref: string
   /** datetime-local value. */
   captured: string
   raw_detail: string
-  metadata: string
 }
 
 const EMPTY: Values = {
   title: '',
   summary: '',
   source_type: 'manual_observation',
-  source_label: '',
   source_ref: '',
   captured: '',
   raw_detail: '',
-  metadata: '',
 }
 
 function valuesOf(e: Evidence): Values {
@@ -71,11 +64,9 @@ function valuesOf(e: Evidence): Values {
     title: e.title,
     summary: e.summary,
     source_type: e.source_type,
-    source_label: e.source_label,
     source_ref: e.source_ref,
     captured: toLocalInputValue(e.captured_at),
     raw_detail: '',
-    metadata: prettyMetadata(e.metadata),
   }
 }
 
@@ -99,23 +90,19 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
   const [baseline, setBaseline] = useState<Values>(initial)
   const [values, setValues] = useState<Values>(initial)
   const [rawState, setRawState] = useState<RawState>(existing?.has_raw_detail ? 'loading' : 'none')
-  const [rawOpen, setRawOpen] = useState(Boolean(existing?.has_raw_detail))
-  const [advancedOpen, setAdvancedOpen] = useState(Boolean(existing && existing.metadata))
-  const [guideOpen, setGuideOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const [focusInvalid, setFocusInvalid] = useState(false)
-  const [focusRaw, setFocusRaw] = useState(false)
   const fieldsRef = useRef<HTMLDivElement>(null)
-  const rawRef = useRef<HTMLTextAreaElement>(null)
   const capture = captureHints[values.source_type]
-  // A record of a type new evidence cannot pick keeps its own type listed.
+  // A source of a kind a person cannot pick keeps its own kind listed.
   const typeOptions: SourceType[] =
     existing && !sourceTypeOptions.includes(existing.source_type) ? [...sourceTypeOptions, existing.source_type] : sourceTypeOptions
 
-  // Edit mode: load the stored raw detail when the dialog opens (and again
-  // on Show latest).
+  // Edit mode: load the stored exact words when the dialog opens (and again
+  // on Show the new version).
   const rawRequest = useRef(0)
   const loadRaw = (ev: Evidence) => {
     const id = ++rawRequest.current
@@ -147,8 +134,8 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     // Loads once when the dialog opens.
   }, [])
 
-  // The stored fields (raw detail aside, which is fetched on demand)
-  // changed in another app while the form holds input.
+  // The stored fields (the exact words aside, which are fetched on demand)
+  // changed while the form holds input.
   const dirty = !same(values, baseline)
   const storedNow = existing ? valuesOf(existing) : null
   const withoutRaw = (v: Values) => ({ ...v, raw_detail: '' })
@@ -170,23 +157,15 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     fieldsRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
   }, [focusInvalid])
 
-  useEffect(() => {
-    if (!focusRaw) return
-    setFocusRaw(false)
-    rawRef.current?.focus()
-  }, [focusRaw])
-
   const set = <K extends keyof Values>(key: K) => (value: Values[K]) => setValues((v) => ({ ...v, [key]: value }))
 
   const buildInput = (): EvidenceInput => {
     const v = values
     const input: EvidenceInput = { title: v.title, summary: v.summary, source_type: v.source_type }
-    if (v.source_label.trim()) input.source_label = v.source_label
     if (v.source_ref.trim()) input.source_ref = v.source_ref
     const captured = fromLocalInputValue(v.captured)
     if (captured) input.captured_at = captured
     if (v.raw_detail.trim()) input.raw_detail = v.raw_detail
-    if (v.metadata.trim()) input.metadata = v.metadata
     return input
   }
 
@@ -197,11 +176,9 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     if (v.title !== b.title) patch.title = v.title
     if (v.summary !== b.summary) patch.summary = v.summary
     if (v.source_type !== b.source_type) patch.source_type = v.source_type
-    if (v.source_label !== b.source_label) patch.source_label = v.source_label
     if (v.source_ref !== b.source_ref) patch.source_ref = v.source_ref
     if (v.captured !== b.captured) patch.captured_at = v.captured ? fromLocalInputValue(v.captured) : ''
     if (rawState !== 'loading' && rawState !== 'failed' && v.raw_detail !== b.raw_detail) patch.raw_detail = v.raw_detail
-    if (v.metadata !== b.metadata) patch.metadata = v.metadata
     return patch
   }
 
@@ -215,6 +192,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     if (isInvalidCaptured(values.captured)) {
       setSummary(undefined)
       setFieldErrors({ captured_at: CAPTURED_INVALID_COPY })
+      setMoreOpen(true)
       setFocusInvalid(true)
       return
     }
@@ -243,29 +221,12 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
       const split = splitFieldErrors(e, FIELDS)
       setFieldErrors(split.fieldErrors)
       setSummary(split.summary)
-      if (split.fieldErrors.raw_detail) setRawOpen(true)
-      if (split.fieldErrors.metadata) setAdvancedOpen(true)
+      if (split.fieldErrors.source_type || split.fieldErrors.captured_at) setMoreOpen(true)
       setFocusInvalid(true)
     } finally {
       setBusy(false)
     }
   }
-
-  const rawField = (
-    <TextArea
-      ref={rawRef}
-      label="Source detail (optional)"
-      hint={capture?.detail}
-      value={values.raw_detail}
-      onChange={set('raw_detail')}
-      error={fieldErrors.raw_detail}
-      note={rawState === 'failed' ? 'The saved source detail could not be loaded, so it cannot be edited now.' : nearLimit(values.raw_detail, LIMITS.rawDetail)}
-      disabled={rawState === 'loading' || rawState === 'failed'}
-      rows={6}
-      spellCheck={false}
-      className="evidence-raw-input"
-    />
-  )
 
   submitRef.current = submit
 
@@ -294,49 +255,24 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     >
       <div className="dialog-fields" ref={fieldsRef}>
         <TextField
-          label="Title"
-          hint="What is this source, in a few words?"
+          label="Name"
+          hint="Like Call log or Email from the billing team"
           value={values.title}
           onChange={set('title')}
           error={fieldErrors.title}
           note={nearLimit(values.title, LIMITS.title)}
         />
         <TextArea
-          label="Summary"
-          hint="What it shows, in one or two sentences"
+          label="What it shows"
+          hint="One or two sentences"
           value={values.summary}
           onChange={set('summary')}
           error={fieldErrors.summary}
           note={nearLimit(values.summary, LIMITS.evidenceSummary)}
           spellCheck
         />
-        <div className="evidence-dialog-row">
-          <Select
-            label="Kind of source"
-            value={values.source_type}
-            onChange={(v) => set('source_type')(v as SourceType)}
-            options={typeOptions.map((t) => ({ value: t, label: sourceTypeLabels[t] }))}
-            error={fieldErrors.source_type}
-          />
-          <TextField
-            label="As of (optional)"
-            hint={existing ? 'Leave empty to use the time it was added' : 'Leave empty to use now'}
-            type="datetime-local"
-            value={values.captured}
-            onChange={set('captured')}
-            error={fieldErrors.captured_at}
-          />
-        </div>
         <TextField
-          label="Where it came from (optional)"
-          hint="Like Call log or Email from the billing team"
-          value={values.source_label}
-          onChange={set('source_label')}
-          error={fieldErrors.source_label}
-          note={nearLimit(values.source_label, LIMITS.sourceLabel)}
-        />
-        <TextField
-          label="Where to find it (optional)"
+          label="Where to find it"
           hint={capture?.reference}
           value={values.source_ref}
           onChange={set('source_ref')}
@@ -344,88 +280,42 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
           note={nearLimit(values.source_ref, LIMITS.sourceRef)}
           spellCheck={false}
         />
-        <div className="evidence-capture-guide">
-          <Button
-            variant="ghost"
-            className="disclosure-button"
-            aria-expanded={guideOpen}
-            aria-controls="evidence-capture-guide-content"
-            onClick={() => setGuideOpen((v) => !v)}
-          >
-            <ChevronDown
-              className={['disclosure-icon', guideOpen ? 'is-open' : ''].filter(Boolean).join(' ')}
-              size={16}
-              strokeWidth={1.75}
-              aria-hidden="true"
-            />
-            What to write down
-          </Button>
-          {guideOpen && (
-            <div id="evidence-capture-guide-content" className="evidence-capture-guide-content">
-              <p>Write down enough for someone else to find this source and check it later. Use what applies.</p>
-              <ul>
-                <li>When two numbers are compared, say which months or dates, and what was counted and what was left out.</li>
-                <li>For a number, say what it counts and in what unit: calls, dollars, days.</li>
-                <li>Put the exact page, sheet or report under Where to find it, and the lines that matter under Source detail.</li>
-              </ul>
-              {capture && <>
-                <p className="evidence-capture-example-label">A made-up example. Nothing is added to your sources.</p>
-                <dl>
-                  <dt>Where to find it</dt>
-                  <dd>{capture.exampleReference}</dd>
-                  <dt>Source detail</dt>
-                  <dd>{capture.exampleDetail}</dd>
-                </dl>
-              </>}
-              <p>Keep passwords and whole chat histories out.</p>
-            </div>
-          )}
-        </div>
-        {rawOpen ? (
-          rawField
-        ) : (
+        <TextArea
+          label="Exact words or numbers (optional)"
+          hint={capture?.detail}
+          value={values.raw_detail}
+          onChange={set('raw_detail')}
+          error={fieldErrors.raw_detail}
+          note={rawState === 'failed' ? 'The saved words could not be loaded, so they cannot be edited now.' : nearLimit(values.raw_detail, LIMITS.rawDetail)}
+          disabled={rawState === 'loading' || rawState === 'failed'}
+          rows={4}
+          spellCheck={false}
+        />
+        <div className="evidence-more">
           <div>
-            <Button
-              variant="ghost"
-              className="disclosure-button"
-              aria-expanded={false}
-              onClick={() => {
-                setRawOpen(true)
-                setFocusRaw(true)
-              }}
-            >
-              <ChevronDown className="disclosure-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-              Add source detail
+            <Button variant="ghost" className="disclosure-button" aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
+              <ChevronDown className={['disclosure-icon', moreOpen ? 'is-open' : ''].filter(Boolean).join(' ')} size={16} strokeWidth={1.75} aria-hidden="true" />
+              More
             </Button>
           </div>
-        )}
-        <div className="evidence-advanced">
-          <div>
-            <Button
-              variant="ghost"
-              className="disclosure-button"
-              aria-expanded={advancedOpen}
-              onClick={() => setAdvancedOpen((v) => !v)}
-            >
-              <ChevronDown
-                className={['disclosure-icon', advancedOpen ? 'is-open' : ''].filter(Boolean).join(' ')}
-                size={16}
-                strokeWidth={1.75}
-                aria-hidden="true"
+          {moreOpen && (
+            <div className="evidence-dialog-row">
+              <Select
+                label="Kind of source"
+                value={values.source_type}
+                onChange={(v) => set('source_type')(v as SourceType)}
+                options={typeOptions.map((t) => ({ value: t, label: sourceTypeLabels[t] }))}
+                error={fieldErrors.source_type}
               />
-              For your AI
-            </Button>
-          </div>
-          {advancedOpen && (
-            <TextArea
-              label="Extra details (optional)"
-              hint={'Your AI keeps extra details here as JSON, like {"customers": 1900}. Leave it as it is unless you know the format.'}
-              value={values.metadata}
-              onChange={set('metadata')}
-              error={fieldErrors.metadata}
-              note={nearLimit(values.metadata, LIMITS.metadata)}
-              spellCheck={false}
-            />
+              <TextField
+                label="Date of the source (optional)"
+                hint={existing ? 'Leave empty for the day it was added' : 'Leave empty for today'}
+                type="datetime-local"
+                value={values.captured}
+                onChange={set('captured')}
+                error={fieldErrors.captured_at}
+              />
+            </div>
           )}
         </div>
       </div>

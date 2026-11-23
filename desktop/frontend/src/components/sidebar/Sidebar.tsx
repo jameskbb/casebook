@@ -13,7 +13,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { CircleAlert, Plus, Search, X } from 'lucide-react'
 import { api } from '../../api/api'
-import { cleanMessage, errorCopy, toApiError } from '../../api/errors'
+import { errorCopy, toApiError } from '../../api/errors'
 import type { SearchHit } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { useNow } from '../../hooks/useNow'
@@ -38,6 +38,7 @@ export const TO_CHECK_LABEL = 'To check'
 export const NO_ANSWER_GROUP = 'No answer yet'
 export const ANSWERED_GROUP = 'Answered'
 export const LIST_ERROR_COPY = 'Casebook could not load the list.'
+export const SEARCH_ERROR_COPY = 'Casebook cannot search for that. Try different words.'
 export const LIST_CAPPED_COPY = `Showing the ${LIST_LIMIT.toLocaleString('en-US')} most recently updated questions. Search to find older ones.`
 
 export interface SidebarProps {
@@ -103,7 +104,7 @@ export function Sidebar({ onNew }: SidebarProps) {
       (e) => {
         if (seq !== searchSeq.current) return
         const err = toApiError(e)
-        setSearchError(err.kind === 'validation' ? cleanMessage(err.message) : errorCopy(err).message)
+        setSearchError(err.kind === 'validation' ? SEARCH_ERROR_COPY : errorCopy(err).message)
         setResult(null)
       },
     )

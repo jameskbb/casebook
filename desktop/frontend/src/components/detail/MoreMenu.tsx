@@ -1,13 +1,12 @@
-// The header's More menu: Edit question..., Copy question as
-// text (what Copy for your AI copies, without the framing meant for an AI,
-// for notes and documents; the readable write-up is Share the answer),
-// Save as a file..., and Archive or Unarchive question. Saving runs the native save
-// dialog in Go; a cancelled dialog shows nothing. Archiving is reversible and deletes
-// nothing, so it has no confirmation, only a toast with Undo. An archived
-// investigation also offers Delete question..., which says
-// what it removes and cannot be undone.
+// The header's More menu: Edit question..., Check findings one by one, Copy
+// to paste into your AI, Save a copy to send to someone..., and Archive
+// question or Put back in the list. Saving runs the native save window in Go;
+// a cancelled one shows nothing. Archiving can be undone and deletes nothing,
+// so it has no confirmation, only a toast with Undo. An archived question
+// also offers Delete question..., which says what it removes and cannot be
+// undone.
 import { useState } from 'react'
-import { Archive, ArchiveRestore, Download, Ellipsis, FileText, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ClipboardCopy, Download, Ellipsis, ListChecks, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { Investigation, InvestigationDetail, RecordCounts } from '../../api/types'
@@ -23,16 +22,20 @@ import { useToast } from '../ui/Toaster'
 
 export const ARCHIVED_COPY = 'Archived this question. It is hidden from the list and nothing was deleted.'
 
-export const UNARCHIVED_COPY = 'Unarchived this question. It is back in the list.'
+export const BACK_IN_LIST_COPY = 'This question is back in the list.'
+export const PUT_BACK_LABEL = 'Put back in the list'
+export const CHECK_FINDINGS_LABEL = 'Check findings one by one'
+export const COPY_FOR_AI_LABEL = 'Copy to paste into your AI'
+export const SAVE_COPY_LABEL = 'Save a copy to send to someone...'
 
 export const deleteInvestigationBody = (inv: Investigation, counts: RecordCounts | null) => {
   const what = counts
     ? `everything in it: ${countPhrase(counts.evidence, 'source', 'sources')}, ${countPhrase(counts.claims + counts.hypotheses, 'finding', 'findings')}, ${countPhrase(counts.questions, 'follow-up question', 'follow-up questions')} and its history`
     : 'everything in it and its history'
-  return `"${inv.title}" will be removed with ${what}. Save it as a file first if you might need it again.`
+  return `"${inv.title}" will be removed with ${what}. Save a copy first if you might need it again.`
 }
 
-export function MoreMenu({ investigation: inv }: { investigation: Investigation }) {
+export function MoreMenu({ investigation: inv, onCheckFindings }: { investigation: Investigation; onCheckFindings?: () => void }) {
   const write = useWrite()
   const toast = useToast()
   const { detail, investigations, select } = useAppData()
@@ -48,16 +51,16 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
     try {
       const res = await api.exportInvestigation(ref)
       if (res.cancelled) return
-      toast.success(`Saved this question as ${res.file_name}.`)
+      toast.success(`Saved a copy as ${res.file_name}.`)
     } catch (e) {
       showError(e)
     }
   }
 
-  const unarchive = async () => {
+  const putBack = async () => {
     try {
       const done = await write(() => api.unarchiveInvestigation(ref))
-      if (done) toast.success(UNARCHIVED_COPY)
+      if (done) toast.success(BACK_IN_LIST_COPY)
     } catch (e) {
       showError(e)
     }
@@ -80,14 +83,15 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
 
   const items: MenuItem[] = [
     { label: 'Edit question...', icon: Pencil, onSelect: () => setEditOpen(true) },
-    { label: 'Copy question as text', icon: FileText, onSelect: () => void copy(ref, { plain: true }) },
-    { label: 'Save as a file...', icon: Download, onSelect: () => void exportJson() },
+    ...(onCheckFindings ? [{ label: CHECK_FINDINGS_LABEL, icon: ListChecks, onSelect: onCheckFindings }] : []),
+    { label: COPY_FOR_AI_LABEL, icon: ClipboardCopy, onSelect: () => void copy(ref) },
+    { label: SAVE_COPY_LABEL, icon: Download, onSelect: () => void exportJson() },
     archived
-      ? { label: 'Unarchive question', icon: ArchiveRestore, onSelect: () => void unarchive() }
+      ? { label: PUT_BACK_LABEL, icon: ArchiveRestore, onSelect: () => void putBack() }
       : { label: 'Archive question', icon: Archive, onSelect: () => void archive() },
   ]
   // Delete is offered only once archived (the engine refuses otherwise), so
-  // archive stays the everyday way to put an investigation away.
+  // archive stays the everyday way to put a question away.
   if (archived) {
     items.push({ label: 'Delete question...', icon: Trash2, separatorBefore: true, onSelect: () => setDeleteOpen(true) })
   }
@@ -96,10 +100,10 @@ export function MoreMenu({ investigation: inv }: { investigation: Investigation 
   return (
     <>
       <Menu
-        label="More actions"
+        label="More"
         align="end"
         items={items}
-        trigger={(p) => <IconButton {...p} icon={Ellipsis} label="More actions" />}
+        trigger={(p) => <IconButton {...p} icon={Ellipsis} label="More" />}
       />
       {editOpen && <EditInvestigationDialog investigation={inv} onClose={() => setEditOpen(false)} />}
       {deleteOpen && (

@@ -102,7 +102,7 @@ describe('Sidebar', () => {
     await user.click((await within(nav).findByText('Why did calls go up 30% in October when sales stayed the same?')).closest('button')!)
     const first = await within(nav).findByRole('button', { current: true })
     expect(first).toHaveTextContent('Why did calls go up 30% in October when sales stayed the same?')
-    expect(first).toHaveTextContent("Your AI's current question")
+    expect(first).toHaveTextContent('Your AI is working on this')
     expect(first).toHaveTextContent('INV-0001')
     // No status and no confidence on a row: the title and what is checked.
     expect(within(first).queryByRole('img')).toBeNull()
@@ -111,7 +111,7 @@ describe('Sidebar', () => {
     const archived = within(nav).getByText('Why was March payroll $18k over budget?').closest('button')!
     expect(archived).toHaveTextContent('Archived')
     expect(archived).not.toHaveAttribute('aria-current')
-    expect(archived).not.toHaveTextContent("Your AI's current question")
+    expect(archived).not.toHaveTextContent('Your AI is working on this')
     expect(archived).toHaveClass('is-archived')
 
     const blocked = within(nav).getByText('Why are help desk tickets taking longer to close this month?').closest('button')!

@@ -57,10 +57,11 @@ function Shell() {
   let content = null
   if (selectedRef) {
     content = <DetailView focusTitle={focusTitleRef === selectedRef} onTitleFocused={titleFocused} />
-  } else if (listStatus === 'ready' && investigations.length === 0) {
-    content = <EmptyMain onNew={openNew} onImport={() => void dataOps.importInvestigation()} />
-  } else if (listStatus === 'ready') {
+  } else if (investigations.length > 0) {
+    // Home stays up while there are questions, even when a reload just failed.
     content = <Home />
+  } else if (listStatus === 'ready') {
+    content = <EmptyMain onNew={openNew} onImport={() => void dataOps.importInvestigation()} />
   }
 
   return (
@@ -69,7 +70,7 @@ function Shell() {
       <main className="main-pane">
         {pollTrouble && (
           <Banner tone="warning" layout="bar">
-            Casebook can't check for changes right now. It will keep trying.
+            Casebook cannot see new changes right now. It will keep trying.
           </Banner>
         )}
         <div className="main-scroll">{content}</div>

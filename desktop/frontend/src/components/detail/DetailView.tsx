@@ -1,9 +1,9 @@
 // The question page: sticky header, then the reading column in this exact
 // order: the question, the answer, What backs this up, Where sources
-// disagree, Ruled out, Not tested yet, Other sources, How we got here.
+// disagree, Ruled out, Still to find out, Other sources, How we got here.
 // Findings (claims and hypotheses) are grouped by what happened to them and
-// each one lists its own sources; Other sources holds the ones no finding
-// uses yet.
+// each one lists its own sources; Other sources holds the ones no finding on
+// the page uses.
 //
 // Reloads keep the previous content on screen (the column is never keyed on
 // dataVersion, so scroll position and open editors survive). A first load
@@ -15,13 +15,14 @@
 // its drawer once the matching detail is loaded; a question hit focuses its
 // row instead.
 //
-// Adding and questions: each section's add
-// action opens its dialog; open follow-up questions offer Answer, Set aside
-// and Edit, answered and set-aside ones Reopen. Focus moves to a new row.
+// Still to find out holds findings not tested yet and follow-up questions in
+// one list with one add button. A follow-up question offers Answer and
+// Later; answered ones collapse under Show N answered. Focus moves to a new
+// row.
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, CircleQuestionMark, CircleX, FileText, Lightbulb, Pencil, Quote, Trash2 } from 'lucide-react'
+import { CircleAlert, CircleQuestionMark, CircleX, FileText, Pencil, Quote, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
-import { cleanMessage } from '../../api/errors'
+import { plainError } from '../../api/errors'
 import type { Evidence, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { evidenceByRef, groupFindings, partitionQuestions, type Finding } from '../../lib/records'
@@ -74,7 +75,7 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
           <p>
             {detailError.kind === 'not_found' && selectedRef
               ? DETAIL_GONE_COPY
-              : cleanMessage(detailError.message)}
+              : plainError(detailError)}
           </p>
         </div>
       )
@@ -90,11 +91,11 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
   return (
     <DrawerStackProvider>
       <div className="detail">
-        <DetailHeader investigation={inv} focusTitle={focusTitle} onTitleFocused={onTitleFocused} />
+        <DetailHeader investigation={inv} focusTitle={focusTitle} onTitleFocused={onTitleFocused} onCheckFindings={() => requestNavigate(() => setReviewRef(inv.ref), 'detail')} />
         {reviewRef === inv.ref ? <ReviewFindings key={inv.ref} detail={detail} onClose={() => setReviewRef(null)} /> : <div className="reading-column">
           {detailStatus === 'error' && <StaleDetailBanner />}
           {inv.archived && <ArchivedBanner investigationRef={inv.ref} />}
-          <QuestionBlock investigation={inv} onEdit={() => setEditOpen(true)} actions={<Button variant="secondary" onClick={() => requestNavigate(() => setReviewRef(inv.ref), 'detail')}>Review findings</Button>} />
+          <QuestionBlock investigation={inv} onEdit={() => setEditOpen(true)} />
           <Answer detail={detail} />
           <ReadingSections detail={detail} />
         </div>}
@@ -112,10 +113,10 @@ function Answer({ detail }: { detail: InvestigationDetail }) {
 }
 
 export const deleteQuestionBody = (q: Question) =>
-  `This follow-up question will be removed${q.status === 'resolved' ? ' with its answer' : ''}. Use this for one asked by mistake. To keep it for later, choose Set aside instead.`
+  `This follow-up question will be removed${q.status === 'resolved' ? ' with its answer' : ''}. Use this for one asked by mistake. To keep it for later, choose Later instead.`
 
-export const DETAIL_GONE_COPY = 'Casebook could not find this question. It may have changed in another app. Choose a question from the list.'
-export const DETAIL_STALE_COPY = 'Casebook could not reload this question. Showing the last loaded version.'
+export const DETAIL_GONE_COPY = 'Casebook could not find this question. Your AI may have changed it. Choose a question from the list.'
+export const DETAIL_STALE_COPY = 'Casebook could not load this question again. This is how it looked last time.'
 
 /** Shown when a background reload failed and the last loaded detail stays on screen. */
 function StaleDetailBanner() {
@@ -170,10 +171,13 @@ function usePendingOpen(detail: InvestigationDetail) {
 }
 
 export const OTHER_SOURCES_HEADING = 'Other sources'
-export const ALL_SOURCES_USED_COPY = 'Every source is under the finding it backs or contradicts.'
+export const ALL_SOURCES_USED_COPY = 'Every source is under the finding it backs or goes against.'
+
+/** A row under Still to find out: a finding not tested yet, or a follow-up question. */
+type ToFind = { finding: Finding } | { question: Question }
 
 type RecordDialog =
-  | { type: 'evidence' | 'claim' | 'hypothesis' | 'question' }
+  | { type: 'evidence' | 'claim' | 'question' }
   | { type: 'editQuestion' | 'resolve' | 'defer' | 'delete'; question: Question }
 
 /**
@@ -221,31 +225,40 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
     }
   }
 
+  const deleteButton = (q: Question) => (
+    <IconButton icon={Trash2} label={`Delete follow-up question: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
+  )
   const questionActions = (q: Question) =>
-    q.status === 'open' ? (
+    q.status === 'resolved' ? (
+      <>
+        <Button variant="ghost" busy={reopening === q.ref} busyLabel="Asking again..." onClick={() => void reopen(q)}>
+          Ask again
+        </Button>
+        {deleteButton(q)}
+      </>
+    ) : (
       <>
         <Button variant="ghost" onClick={() => setDialog({ type: 'resolve', question: q })}>
           Answer
         </Button>
-        <Button variant="ghost" onClick={() => setDialog({ type: 'defer', question: q })}>
-          Set aside
-        </Button>
-        <IconButton icon={Pencil} label="Edit follow-up question" onClick={() => setDialog({ type: 'editQuestion', question: q })} />
-        <IconButton icon={Trash2} label={`Delete follow-up question: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
-      </>
-    ) : (
-      <>
-        <Button variant="ghost" busy={reopening === q.ref} busyLabel="Reopening..." onClick={() => void reopen(q)}>
-          Reopen
-        </Button>
-        <IconButton icon={Trash2} label={`Delete follow-up question: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
+        {q.status === 'open' && (
+          <>
+            <Button variant="ghost" onClick={() => setDialog({ type: 'defer', question: q })}>
+              Later
+            </Button>
+            <IconButton icon={Pencil} label="Edit follow-up question" onClick={() => setDialog({ type: 'editQuestion', question: q })} />
+          </>
+        )}
+        {deleteButton(q)}
       </>
     )
 
   const findings = groupFindings(detail.claims, detail.hypotheses)
   const sources = evidenceByRef(detail)
-  // Sources under a finding are read there; only the rest are listed on their own.
-  const otherSources = detail.evidence.filter((e) => e.claim_links.length + e.hypothesis_links.length === 0)
+  // Sources under a finding are read there; the rest are listed on their own,
+  // and so is one whose only findings sit behind Show replaced findings.
+  const hidden = new Set(findings.replaced.map((f) => f.record.ref))
+  const otherSources = detail.evidence.filter((e) => [...e.claim_links, ...e.hypothesis_links].every((l) => hidden.has(l.ref)))
   const names = new Map<string, string>([
     ...detail.evidence.map((e) => [e.ref, e.title] as const),
     ...detail.claims.map((c) => [c.ref, c.statement] as const),
@@ -260,6 +273,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       <RecordRow kind="hypothesis" record={f.record} sources={sources} onOpen={open} />
     )
   const findingKey = (f: Finding) => f.record.ref
+  const toFind: ToFind[] = [...findings.notTested.map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
   return (
     <div className="reading-sections" ref={sectionsRef}>
       {caseHasNoRecords(detail) && !detail.investigation.archived && <FirstFindingGuide onAddEvidence={() => setDialog({ type: 'evidence' })} />}
@@ -275,7 +289,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
             What the labels mean
           </button>
         }
-        emptyText="No findings yet. Add one when a source backs a clear statement."
+        emptyText="No findings yet. Your AI adds them here, or you can add one."
         items={findings.backing}
         ruledOut={findings.replaced}
         ruledOutNoun={['replaced finding', 'replaced findings']}
@@ -306,40 +320,20 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
           renderItem={findingRow}
         />
       )}
-      <SectionList<Question>
+      <SectionList<ToFind>
         id="questions"
         icon={CircleQuestionMark}
         kind="question"
-        heading="Not tested yet"
-        addLabel="Add follow-up question"
+        heading="Still to find out"
+        addLabel="Add something to find out"
         onAdd={() => setDialog({ type: 'question' })}
-        headingExtra={
-          <Button variant="ghost" icon={Lightbulb} onClick={() => setDialog({ type: 'hypothesis' })}>
-            Add finding to test
-          </Button>
-        }
-        emptyText="Nothing is waiting to be tested."
+        emptyText="Nothing is left to find out."
         emptyWithRuledOut
-        lead={
-          findings.notTested.length > 0 ? (
-            <>
-              <div className="section-lead">
-                <h3 className="section-subheading" id="findings-to-test">Findings to test</h3>
-                <ul className="section-rows" aria-labelledby="findings-to-test">
-                  {findings.notTested.map((f) => (
-                    <li key={findingKey(f)}>{findingRow(f)}</li>
-                  ))}
-                </ul>
-              </div>
-              {questions.visible.length > 0 && <h3 className="section-subheading section-subheading-rows">Follow-up questions</h3>}
-            </>
-          ) : undefined
-        }
-        items={questions.visible}
-        ruledOut={questions.ruledOut}
-        ruledOutNoun={['answered follow-up question', 'answered follow-up questions']}
-        itemKey={(q) => q.ref}
-        renderItem={(q) => <QuestionRow question={q} actions={questionActions(q)} />}
+        items={toFind}
+        ruledOut={questions.ruledOut.map((question) => ({ question }))}
+        ruledOutNoun={['answered', 'answered']}
+        itemKey={(x) => ('finding' in x ? findingKey(x.finding) : x.question.ref)}
+        renderItem={(x) => ('finding' in x ? findingRow(x.finding) : <QuestionRow question={x.question} actions={questionActions(x.question)} />)}
       />
       <SectionList<Evidence>
         id="evidence"
@@ -365,9 +359,8 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       {dialog?.type === 'evidence' && (
         <EvidenceDialog mode="add" invRef={invRef} onClose={close} onSaved={(e) => setFocusRef(e.ref)} />
       )}
-      {(dialog?.type === 'claim' || dialog?.type === 'hypothesis') && (
+      {dialog?.type === 'claim' && (
         <StatementDialog
-          kind={dialog.type}
           invRef={invRef}
           evidence={detail.evidence}
           onClose={close}

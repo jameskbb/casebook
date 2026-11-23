@@ -1,16 +1,15 @@
-// Data operations: import an investigation, back
-// up all data, and restore a backup. Every file is chosen in a native dialog
-// in Go; a cancelled dialog shows nothing. The provider owns the flows and
-// their dialogs so the sidebar footer and the empty main pane run the same
-// ones.
+// Files in and out: open a question someone sent, save a backup, and bring
+// one back. Every file is chosen in a native window in Go; a cancelled one
+// shows nothing. The provider owns the flows and their dialogs so the
+// sidebar footer and the first-open screen run the same ones.
 //
-// Restore is two-step: PickBackupToRestore validates the chosen file, the
-// confirmation shows what it holds, and only "Replace all data" calls
-// RestoreBackup with the pinned path. The result names the safety copy, then
-// the app reloads and reselects as at launch.
+// Bringing back a backup is two-step: PickBackupToRestore validates the
+// chosen file, the confirmation shows what it holds, and only "Replace
+// everything" calls RestoreBackup with the pinned path. The result names the
+// backup of what was there before, then the app reloads as at launch.
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api } from '../../api/api'
-import { asSentence, CLIPBOARD_COPY, cleanMessage, errorCopy, toApiError } from '../../api/errors'
+import { CLIPBOARD_COPY, errorCopy, FILE_COPY, NOT_SAVED_COPY, plainError, toApiError } from '../../api/errors'
 import type { RestorePick } from '../../api/types'
 import { useAppData } from '../../state/appData'
 import { useRequestNavigate } from '../../state/dirtyGuard'
@@ -27,17 +26,12 @@ export interface DataOps {
 }
 
 export const BACKUP_EXISTS_COPY = 'A file with that name already exists. Choose a new name.'
-export const PATH_COPIED = 'Location copied to the clipboard'
+export const PATH_COPIED = 'Location copied'
+export const BAD_BACKUP_COPY = 'Casebook cannot use this backup. It may not be a Casebook backup. Nothing was changed.'
 
 type Problem = { kind: 'import' | 'restore'; body: string }
 
 const DataOpsContext = createContext<DataOps | null>(null)
-
-/** "{message}." without doubling a closing period. */
-function withPeriod(msg: string): string {
-  const m = msg.trim()
-  return /[.!?]$/.test(m) ? m : `${m}.`
-}
 
 export function DataOpsProvider({ children }: { children: ReactNode }) {
   const { refresh, select, includeArchived } = useAppData()
@@ -73,8 +67,9 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const err = toApiError(e)
       if (err.kind === 'validation') {
-        const what = err.field ? `${err.field}: ${err.message}` : cleanMessage(err.message)
-        setProblem({ kind: 'import', body: `${withPeriod(what)} Nothing was added.` })
+        // A reason this version does not know still reads as a problem with the file.
+        const why = plainError(err)
+        setProblem({ kind: 'import', body: `${why === NOT_SAVED_COPY ? FILE_COPY : why} Nothing was added.` })
       } else {
         showError(err)
       }
@@ -100,7 +95,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     }
     if (out.cancelled) return
     const path = out.info.path
-    toast.success(`Backup saved to ${path}.`, { label: 'Copy location', onClick: () => void copyPath(path) })
+    toast.success(`Backup saved as ${path.split(/[\\/]/).pop()}.`, { label: 'Copy location', onClick: () => void copyPath(path) })
   }, [toast, copyPath])
 
   const restore = useCallback(async () => {
@@ -110,7 +105,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const err = toApiError(e)
       if (err.kind === 'conflict' || err.kind === 'not_found') {
-        setProblem({ kind: 'restore', body: `${asSentence(err.message)} Nothing was changed.` })
+        setProblem({ kind: 'restore', body: BAD_BACKUP_COPY })
       } else {
         showError(err)
       }
@@ -120,8 +115,8 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
     setPick(picked)
   }, [showError])
 
-  // The only call site of RestoreBackup: the "Replace all data" handler. A
-  // restore replaces what every editor shows, so unsaved input is offered
+  // The only call site of RestoreBackup: the "Replace everything" handler. It
+  // replaces what every editor shows, so unsaved input is offered
   // for discarding first; keeping it leaves the data untouched.
   const confirmRestore = () => {
     if (!pick || restoring) return
@@ -136,7 +131,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
       setResult({ fileName: pick.file_name, safetyCopyPath: res.safety_copy_path })
     } catch (e) {
       const err = toApiError(e)
-      toast.error(err.kind === 'validation' ? `${asSentence(err.message)} Nothing was changed.` : errorCopy(err).message)
+      toast.error(err.kind === 'validation' ? BAD_BACKUP_COPY : errorCopy(err).message)
       return
     } finally {
       setRestoring(false)
@@ -161,7 +156,7 @@ export function DataOpsProvider({ children }: { children: ReactNode }) {
       {children}
       {problem && (
         <FileProblemDialog
-          title={problem.kind === 'import' ? "This file can't be added" : "This file can't be restored"}
+          title={problem.kind === 'import' ? 'Casebook cannot open this file' : 'Casebook cannot use this backup'}
           body={problem.body}
           onChooseAnother={chooseAnother}
           onClose={() => setProblem(null)}

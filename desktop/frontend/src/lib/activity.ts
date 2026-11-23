@@ -4,13 +4,13 @@
 // data, so they are only ever rendered as text; the stored kind and name stay
 // in the actor tooltip.
 import type { Activity, Actor, ClaimStatus, HypothesisStatus, Verification } from '../api/types'
-import { actorKindLabels, claimStatusLabels, hypothesisStatusLabels, verificationLabels } from './labels'
+import { actorKindLabels, claimStatusLabels, hypothesisStatusLabels } from './labels'
 
 const ANY_AI = 'Your AI'
 
 const FRIENDLY_CLIENT: Record<string, string> = {
   'casebook-ui': 'Casebook',
-  'casebook-cli': 'Casebook command line',
+  'casebook-cli': 'Casebook',
   'claude-code': 'Claude Code',
   codex: 'Codex',
 }
@@ -19,31 +19,26 @@ function friendlyClient(client: string): string {
   return FRIENDLY_CLIENT[client] ?? client
 }
 
-/** "You", "Claude Code", "Codex", "Your AI", ... */
+/** "You", "Claude Code", "Codex", "Your AI", "Your AI (name)". */
 export function actorPhrase(actor: Actor): string {
   const { kind, client } = actor
   switch (kind) {
     case 'human':
-      if (client === 'casebook-ui' || !client) return 'You'
-      if (client === 'casebook-cli') return 'You (command line)'
-      return `You (${client})`
+      return 'You'
     case 'ai':
       if (client === 'claude-code') return 'Claude Code'
       if (client === 'codex') return 'Codex'
       if (client === 'mcp-client' || !client) return ANY_AI
-      return `${client} (AI)`
-    case 'import':
-    case 'system':
-      return 'Casebook'
+      return `${ANY_AI} (${client})`
     default:
-      return client ? `${client} (${kind})` : String(kind)
+      return 'Casebook'
   }
 }
 
-/** "{kind label}, {client}", for example "AI, claude-code". */
+/** "{kind}, {name}", for example "AI, Claude Code". */
 export function actorTooltip(actor: Actor): string {
-  const kind = actorKindLabels[actor.kind] ?? actor.kind
-  return actor.client ? `${kind}, ${actor.client}` : kind
+  const kind = actorKindLabels[actor.kind] ?? 'Casebook'
+  return actor.client ? `${kind}, ${friendlyClient(actor.client)}` : kind
 }
 
 // One entry per activity verb. "{T}" is the target's code. Each phrase still
@@ -52,7 +47,7 @@ const VERBS: Record<string, string> = {
   'investigation.create': 'created this question',
   'investigation.update': 'edited the question',
   'investigation.archive': 'archived this question',
-  'investigation.unarchive': 'unarchived this question',
+  'investigation.unarchive': 'put this question back in the list',
   'conclusion.update': 'updated the answer',
   'evidence.add': 'added the source {T}',
   'evidence.update': 'updated the source {T}',
@@ -63,47 +58,35 @@ const VERBS: Record<string, string> = {
   'hypothesis.update': 'updated the finding {T}',
   'hypothesis.supersede': 'replaced the finding {T}',
   'link.add': 'added a source to the finding {T}',
-  'link.update': 'changed whether a source supports the finding {T}',
+  'link.update': 'changed whether a source backs the finding {T}',
   'link.remove': 'removed a source from the finding {T}',
   'question.add': 'asked a follow-up question {T}',
   'question.update': 'reworded a follow-up question {T}',
   'question.resolve': 'answered a follow-up question {T}',
-  'question.defer': 'set aside a follow-up question {T}',
-  'question.reopen': 'reopened a follow-up question {T}',
+  'question.defer': 'left a follow-up question for later {T}',
+  'question.reopen': 'asked a follow-up question again {T}',
   'investigation.delete': 'deleted a question {T}',
   'evidence.delete': 'deleted a source {T}',
   'claim.delete': 'deleted a finding {T}',
   'hypothesis.delete': 'deleted a finding {T}',
   'question.delete': 'deleted a follow-up question {T}',
-  'active.set': "made this your AI's current question",
-  'active.clear': "cleared your AI's current question",
+  'active.set': 'chose this question for your AI to work on',
+  'active.clear': 'stopped your AI working on this question',
   checkpoint: 'saved its progress',
   import: 'added this question from a file',
-  restore: 'restored all data from a backup',
+  restore: 'brought back a backup',
 }
 
-function template(action: string, targetRef: string): string {
-  const known = VERBS[action]
-  if (known !== undefined) return known
-  return targetRef ? `recorded ${action} on {T}` : `recorded ${action}`
-}
+/** An action this version does not know reads "made a change", never its engine name. */
+const UNKNOWN_VERB = 'made a change'
 
-function fill(tpl: string, targetRef: string): string {
-  return targetRef ? tpl.replace('{T}', targetRef) : tpl.replace(/ ?\{T\}/, '')
-}
-
-/** "added the source E-005", "answered a follow-up question Q-001", "recorded x.y on T". */
-export function verbPhrase(action: string, targetRef: string): string {
-  return fill(template(action, targetRef), targetRef)
-}
-
-/** Text, a record a click opens (ref), or a code that is only shown when codes are on (id). */
+/** Text, a source or finding a click opens (ref), or a code that is only shown when codes are on (id). */
 export type SentenceSegment = { text: string } | { ref: string } | { id: string }
 
 export interface ActivitySentence {
   actor: string
   tooltip: string
-  /** The row came from an imported file: the actor is the file's, not someone here. */
+  /** The row came from a file: the actor is the file's, not someone here. */
   imported: boolean
   /** The verb phrase; a source or finding that can be opened is a ref segment, any other code an id segment. */
   segments: SentenceSegment[]
@@ -113,25 +96,19 @@ const OPENABLE_REF = /^[ECH]-\d+$/
 
 /**
  * The actor of a row that came from a file. Nobody here did it, so a person
- * is never "You": "james (a person, the file says)".
+ * is never "You": "james, according to the file".
  */
 export function importedActorPhrase(actor: Actor): string {
   const client = actor.client ? friendlyClient(actor.client) : ''
-  switch (actor.kind) {
-    case 'human':
-      return client ? `${client} (a person, the file says)` : 'A person (the file says)'
-    case 'ai':
-      return `${client || 'An AI'} (AI, the file says)`
-    default:
-      return `${actorPhrase(actor)} (the file says)`
-  }
+  const who = actor.kind === 'human' ? client || 'A person' : actor.kind === 'ai' ? client || 'An AI' : actorPhrase(actor)
+  return `${who}, according to the file`
 }
 
 export function activitySentence(activity: Activity): ActivitySentence {
   const target = activity.target_ref
-  const tpl = template(activity.action, target)
+  const tpl = VERBS[activity.action] ?? UNKNOWN_VERB
   let segments: SentenceSegment[]
-  // A deleted record has no drawer to open.
+  // A deleted finding or source has nothing to open.
   const deleted = activity.action.endsWith('.delete')
   if (target && !deleted && OPENABLE_REF.test(target) && tpl.includes('{T}')) {
     const [before, after] = tpl.split('{T}')
@@ -139,7 +116,7 @@ export function activitySentence(activity: Activity): ActivitySentence {
   } else if (target && tpl.endsWith(' {T}')) {
     segments = [{ text: tpl.slice(0, -' {T}'.length) }, { id: target }]
   } else {
-    segments = [{ text: fill(tpl, target) }]
+    segments = [{ text: tpl.replace(/ ?\{T\}/, '') }]
   }
   const imported = activity.imported === true
   return {
@@ -150,119 +127,115 @@ export function activitySentence(activity: Activity): ActivitySentence {
   }
 }
 
-// The second line of a row. The engine writes one summary for every surface,
-// so it keeps its own wording; this rewrites the shapes a person meets most
-// often into plain sentences with no stored values and no engine nouns. Any
-// other summary is shown as stored. A line that only repeats the first one
-// comes back empty. The stored summary stays in the row's title attribute.
+// The second line of a row. The engine writes one summary for every surface
+// and its wording has changed between versions, so this reads both the old
+// and the new stored shapes and writes its own plain sentence. A shape it
+// does not know gives no second line: the stored text is never shown as it
+// is, and no sentence here carries a code that could be hidden.
 
-const RESET_NOTE = /; verification reset to ai_generated after \w+ edit$/
-
-function verificationWord(v: string): string {
-  return verificationLabels[v as Verification] ?? v
+/** A stored check value as a sentence about what was done. */
+const CHECK_SENTENCE: Record<Verification, string> = {
+  human_verified: 'Checked this.',
+  source_verified: 'Compared this with its source.',
+  ai_generated: 'Set this back to Not checked.',
+  disputed: 'Said sources disagree.',
+  superseded: 'Said a newer one replaces this.',
 }
 
-function statusWord(rec: string, v: string): string {
-  if (rec === 'claim') return claimStatusLabels[v as ClaimStatus] ?? v
-  if (rec === 'hypothesis') return hypothesisStatusLabels[v as HypothesisStatus] ?? v
-  return v
+/** A stored state as a sentence about what was done. */
+function stateSentence(kind: string, value: string): string {
+  if (value === 'rejected' || value === 'disproven') return 'Ruled this out.'
+  if (value === 'disputed') return CHECK_SENTENCE.disputed
+  if (value === 'active' || value === 'open') return 'Brought this back.'
+  const word = kind === 'hypothesis' ? hypothesisStatusLabels[value as HypothesisStatus] : claimStatusLabels[value as Exclude<ClaimStatus, 'active'>]
+  return word ? `Now: ${word}.` : ''
 }
 
-/** The engine's record noun, as a person reads it. */
-const RECORD_WORD: Record<string, string> = { claim: 'finding', hypothesis: 'finding', evidence: 'source' }
-
-/** The engine's field names, as a person reads them. */
+/** The engine's field names, as a person reads them. A field not listed (how sure the AI is) is never shown. */
 const FIELD_WORD: Record<string, string> = {
-  statement: 'wording',
+  title: 'the question',
+  problem_statement: 'the background',
+  statement: 'the wording',
   rationale: 'why',
   confidence_rationale: 'why',
-  source_type: 'kind of source',
+  summary: 'what it shows',
+  source_type: 'the kind of source',
   source_label: 'where it came from',
   source_ref: 'where to find it',
-  captured_at: 'as of date',
-  raw_detail: 'source detail',
+  captured_at: 'its date',
+  raw_detail: 'the exact words or numbers',
   metadata: 'extra details',
-  superseded_by: 'replaced by',
-  problem_statement: 'background',
 }
 
-/** "statement", "status rejected" -> "wording", "now Ruled out". */
-function fieldWord(rec: string, item: string): string {
-  const [field, value] = item.split(' ', 2)
-  if (value === undefined) return FIELD_WORD[field] ?? field.replace(/_/g, ' ')
-  if (field === 'status') return `now ${statusWord(rec, value)}`
-  if (field === 'verification') return `marked ${verificationWord(value)}`
-  return `${FIELD_WORD[field] ?? field.replace(/_/g, ' ')} ${value}`
-}
+const NEEDS_CHECKING_AGAIN = 'It changed after it was checked, so it needs checking again.'
+const RESET_NOTE = /; \w+ reset to \w+ after \w+ edit$/
 
-/** The edited fields in plain words. Confidence is stored but never shown. */
-function fieldWords(rec: string, items: string[]): string[] {
-  return items.filter((f) => !f.startsWith('confidence')).map((f) => fieldWord(rec, f))
-}
-
-/** "Edited finding C-002 (wording)", or without the list when nothing shown changed. */
-function editedSentence(rec: string, target: string, items: string[]): string {
-  const fields = fieldWords(rec, items)
-  const noun = RECORD_WORD[rec] ?? rec
-  return fields.length ? `Edited ${noun} ${target} (${fields.join(', ')})` : `Edited ${noun} ${target}`
-}
-
-/** "Marked C-002: You checked this", with the new status when it reads differently. */
-function markedSentence(rec: string, target: string, verification: string, status?: string): string {
-  const label = verificationWord(verification)
-  const statusText = status && statusWord(rec, status)
-  return statusText && statusText !== label && statusText !== 'Current' ? `Marked ${target}: ${label}; now ${statusText}` : `Marked ${target}: ${label}`
+/** "statement, status rejected" as sentences: what was decided, then which parts changed. */
+function changeSentences(kind: string, items: string[]): string {
+  const out: string[] = []
+  const fields: string[] = []
+  let state = ''
+  let check = ''
+  for (const item of items) {
+    const [field, value] = item.split(' ', 2)
+    if (field === 'status' && value) state = stateSentence(kind, value)
+    else if (field === 'verification' && value) check = CHECK_SENTENCE[value as Verification] ?? ''
+    else {
+      // A source's title is its name; a question's title is the question.
+      const word = field === 'title' && kind === 'evidence' ? 'its name' : FIELD_WORD[field]
+      if (word && !fields.includes(word)) fields.push(word)
+    }
+  }
+  // A person's own check says the most; otherwise ruling out or bringing back
+  // says more than the check value that rides along with it.
+  if (check === CHECK_SENTENCE.human_verified || !state) out.push(check)
+  else out.push(state)
+  if (fields.length) out.push(`Changed ${fields.join(', ')}.`)
+  return out.filter(Boolean).join(' ')
 }
 
 export interface SummaryContext {
-  /** The question's conclusion_reviewed_at: the answer row written at that instant is the review. */
+  /** The question's conclusion_reviewed_at: the answer row written at that instant is the person's check. */
   conclusionReviewedAt?: string
 }
 
-/** The people-facing second line for an activity row; the stored summary when no rule applies. */
+/** The second line for an activity row; "" when the first line already says it or the shape is not known. */
 export function activitySummary(activity: Activity, ctx: SummaryContext = {}): string {
-  const sum = activity.summary.trim()
-  // An AI edit to a checked record: the summary names only the new value, so
-  // the sentence does not claim which label was lost.
-  const reset = RESET_NOTE.exec(sum)
-  if (reset) {
-    const m = /^Updated (claim|hypothesis|evidence) (\S+): (.*)$/.exec(sum.slice(0, reset.index))
-    if (m) {
-      const [, rec, target, list] = m
-      const edited = editedSentence(rec, target, list.split(', ').filter((f) => f !== 'verification'))
-      const back = rec === 'evidence' ? '' : ' and is back in Review findings'
-      return `${edited}. It changed after it was checked, so it reads Not checked again${back}.`
-    }
+  let sum = activity.summary.trim()
+  const action = activity.action
+  const kind = action.split('.')[0]
+  // A note an AI wrote for the next reader, not engine text.
+  if (action === 'checkpoint') return sum
+  // An AI edit to something checked: the stored text names only the new value.
+  const reset = RESET_NOTE.test(sum)
+  if (reset) sum = sum.replace(RESET_NOTE, '')
+  const again = (s: string) => (reset ? [s, NEEDS_CHECKING_AGAIN].filter(Boolean).join(' ') : s)
+
+  if (action === 'conclusion.update') {
+    if (reset) return NEEDS_CHECKING_AGAIN
+    if (/^Cleared /.test(sum)) return 'Cleared the answer.'
+    const checked = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
+    return checked ? 'Checked the answer.' : ''
   }
-  let m = /^Set verification of (\S+) to ([a-z_]+)(?:; status ([a-z_]+))?$/.exec(sum)
-  if (m) {
-    const rec = activity.action.split('.')[0]
-    return markedSentence(rec, m[1], m[2], m[3])
+  let m = /^Set \w+ of \S+ to ([a-z_]+)(?:; status ([a-z_]+))?$/.exec(sum)
+  if (m) return changeSentences(kind, [`verification ${m[1]}`, ...(m[2] ? [`status ${m[2]}`] : [])])
+  if (kind === 'claim' || kind === 'hypothesis' || kind === 'evidence' || action === 'investigation.update') {
+    m = /^Updated \w+ \S+: (.+)$/.exec(sum)
+    if (m) return again(changeSentences(kind, m[1].split(', ')))
   }
-  // An edit with no reset, such as I checked this from Review findings
-  // ("Updated claim C-002: verification human_verified").
-  m = /^Updated (claim|hypothesis|evidence) (\S+): (.+)$/.exec(sum)
-  if (m) {
-    const [, rec, target, list] = m
-    const items = list.split(', ')
-    const verification = items.find((f) => f.startsWith('verification '))
-    const status = items.find((f) => f.startsWith('status '))
-    const others = items.filter((f) => f !== verification && f !== status)
-    if (verification && others.length === 0) {
-      return markedSentence(rec, target, verification.slice('verification '.length), status?.slice('status '.length))
-    }
-    return editedSentence(rec, target, items)
+  // The words of a follow-up question, or of its answer.
+  if (action === 'question.add' || action === 'question.update' || action === 'question.resolve') {
+    m = /^\w+ question \S+: (.+)$/.exec(sum)
+    if (m) return m[1]
   }
-  // The first line already says it.
-  if (/^Set active investigation to \S+$/.test(sum) || /^Cleared active investigation \(was \S+\)$/.test(sum)) return ''
-  m = /^Made \S+ the active investigation for (.+)$/.exec(sum)
-  if (m) return `For work in ${m[1]}`
-  m = /^Created investigation (\S+) /.exec(sum)
-  if (m) return m[1] === activity.investigation_ref ? '' : `Created question ${m[1]}`
-  m = /^Updated conclusion of \S+ \(confidence [a-z]+\)$/.exec(sum)
-  if (m && activity.action === 'conclusion.update') {
-    const review = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
-    return review ? 'Reviewed the answer' : ''
+  // What was deleted has no other name left on the page.
+  if (action.endsWith('.delete')) {
+    m = /^Deleted \w+ \S+ (".*?")/.exec(sum)
+    if (m) return m[1]
   }
-  return sum
+  if (action === 'restore') {
+    m = /^Restored backup (.+?) \(/.exec(sum)
+    if (m) return m[1]
+  }
+  return ''
 }

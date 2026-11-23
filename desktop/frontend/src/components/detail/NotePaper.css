@@ -1,20 +1,10 @@
-/* The summary sheet: the report on a light sheet in both themes (it is the
-   page someone receives, not Casebook's chrome). */
+/* The sheet the shared answer is read on. It follows the theme. */
 
-:root,
-:root[data-theme='light'] {
-  --note-paper: #ffffff;
-  --note-ink: #1d2126;
-  --note-edge: #d3d9de;
-  --note-desk: #e9edec;
-}
-
-:root[data-theme='dark'] {
-  /* A slightly dimmed sheet, so the page does not glare in a dark window. */
-  --note-paper: #eef1f3;
-  --note-ink: #1d2126;
-  --note-edge: #3a4550;
-  --note-desk: #10151a;
+:root {
+  --note-paper: var(--surface);
+  --note-ink: var(--ink);
+  --note-edge: var(--rule);
+  --note-desk: var(--bg);
 }
 
 /* The sheet sits on a quiet desk; the scroll box holds the sheet. */

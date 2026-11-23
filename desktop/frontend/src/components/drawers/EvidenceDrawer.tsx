@@ -1,24 +1,23 @@
-// Evidence drawer body: the
-// title, verification and full summary; the source as a definition list
-// that omits missing fields; raw detail fetched on demand through GetEvidence
-// with include_raw_detail; metadata behind a disclosure; and the claims and
-// hypotheses that use it, each opening its drawer.
+// Source drawer body: the name, its check label and what it shows; about
+// this source as a list that leaves out what is missing; the exact words or
+// numbers, fetched on demand through GetEvidence with include_raw_detail; the
+// extra details an AI stored, shown only when codes are on; and the findings
+// that use it, each opening its drawer.
 //
-// Raw detail and metadata are engine text written by people, AI clients and
-// imports, so they render as text inside a pre block (never markup), and
-// references are plain selectable text (never links).
+// The exact words and the extra details are text written by people, AI tools
+// and files, so they render as text inside a pre block (never markup), and
+// where to find it is plain selectable text (never a link).
 //
-// Actions: Edit evidence opens the evidence dialog over the
-// drawer; Verify, Dispute and the More menu (Mark superseded, after a
-// confirmation, and Mark source verified) set the verification, and Delete
-// evidence... removes it.
+// Actions: Edit source opens the source dialog over the drawer; I checked
+// this and Sources disagree set the check label; the More menu holds A newer
+// source replaces this (after a confirmation) and Delete source...
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BadgeCheck, ChevronDown, Ellipsis, Minus, Pencil, Replace, Trash2 } from 'lucide-react'
+import { ChevronDown, Ellipsis, Minus, Pencil, Replace, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { Claim, Evidence, Hypothesis, InvestigationDetail, Verification } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
-import { claimStatusLabels, sourceTypeLabels, verificationLabels } from '../../lib/labels'
+import { claimStatusLabels, relationLabels, sourceTypeLabels } from '../../lib/labels'
 import { prettyMetadata } from '../../lib/metadata'
 import { usedBy } from '../../lib/records'
 import { formatAbsolute } from '../../lib/relativeTime'
@@ -35,7 +34,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { IconButton } from '../ui/IconButton'
 import { Menu } from '../ui/Menu'
 import { useToast } from '../ui/Toaster'
-import { CHECKED_ACTION, DrawerGroup } from './StatementDrawer'
+import { CHECKED_ACTION, DISAGREE_ACTION, DrawerGroup } from './StatementDrawer'
 import './EvidenceDrawer.css'
 
 const RETIRED = new Set(['superseded', 'rejected', 'disproven'])
@@ -58,7 +57,6 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
     ...detail.claims.map((c) => [c.ref, c] as const),
     ...detail.hypotheses.map((h) => [h.ref, h] as const),
   ])
-  const [showMetadata, setShowMetadata] = useState(false)
 
   return (
     <>
@@ -77,7 +75,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
         />
       </div>
 
-      <DrawerGroup title="Where it came from">
+      <DrawerGroup title="About this source">
         <dl className="source-list">
           <div className="source-row">
             <dt>Kind of source</dt>
@@ -99,7 +97,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
           )}
           {captured && (
             <div className="source-row">
-              <dt>As of</dt>
+              <dt>Dated</dt>
               <dd className="tabular">{captured}</dd>
             </div>
           )}
@@ -109,26 +107,8 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
       {e.has_raw_detail && <RawDetail evidence={e} invRef={detail.investigation.ref} />}
 
       {metadata !== '' && (
-        <DrawerGroup
-          title="Extra details"
-          action={
-            <Button
-              variant="ghost"
-              className="disclosure-button"
-              aria-expanded={showMetadata}
-              onClick={() => setShowMetadata((v) => !v)}
-            >
-              <ChevronDown
-                className={['disclosure-icon', showMetadata ? 'is-open' : ''].filter(Boolean).join(' ')}
-                size={16}
-                strokeWidth={1.75}
-                aria-hidden="true"
-              />
-              {showMetadata ? 'Hide extra details' : 'Show extra details'}
-            </Button>
-          }
-        >
-          {showMetadata && <pre className="raw-detail">{metadata}</pre>}
+        <DrawerGroup title="Extra details" className="codes-only">
+          <pre className="raw-detail">{metadata}</pre>
         </DrawerGroup>
       )}
 
@@ -153,7 +133,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                         {u.relation === 'contradicts' && (
                           <Minus className="used-by-minus" size={12} strokeWidth={1.75} aria-hidden="true" />
                         )}
-                        {u.relation === 'supports' ? 'Supports' : 'Contradicts'}
+                        {relationLabels[u.relation]}
                       </span>
                       {retired && rec && (
                         <span className="used-by-status">
@@ -181,12 +161,13 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
   )
 }
 
-export const supersedeEvidenceBody = `The source stays in this question, crossed out, and your AI is told it was replaced. Add the newer source and say there what it replaces. ${CHECKED_ACTION} brings this one back.`
+export const REPLACED_SOURCE_LABEL = 'A newer source replaces this'
+export const supersedeEvidenceBody = `This source stays here, crossed out. Add the newer source. To bring this one back, choose "${CHECKED_ACTION}".`
 
 export const deleteEvidenceBody = (e: Evidence) =>
   `"${e.title}" will be removed from this question with everything saved about it.`
 export const evidenceLinkedBlocker = (linkedBy: string[]) =>
-  `${linkedBy.length === 1 ? 'A finding uses' : `${linkedBy.length} findings use`} this source. Open ${linkedBy.length === 1 ? 'it' : 'each one'}, choose Remove from this finding, then delete the source. ${linkedBy.length === 1 ? 'It is' : 'They are'} listed under Findings that use this source.`
+  `To delete this source, first open ${linkedBy.length === 1 ? 'the finding' : `each of the ${linkedBy.length} findings`} listed under Findings that use this source and choose Remove from this finding.`
 
 function EvidenceActions({
   evidence: e,
@@ -205,7 +186,7 @@ function EvidenceActions({
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [superseding, setSuperseding] = useState(false)
-  const verified = e.verification === 'human_verified' || e.verification === 'source_verified'
+  const checked = e.verification === 'human_verified'
 
   const setVerification = async (v: Verification) => {
     if (busy) return
@@ -222,13 +203,9 @@ function EvidenceActions({
   return (
     <div className="evidence-actions">
       <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
-        Edit source
+        Edit
       </Button>
-      {verified ? (
-        <Button variant="secondary" icon={BadgeCheck} disabled>
-          {verificationLabels.human_verified}
-        </Button>
-      ) : (
+      {!checked && (
         <Button variant="secondary" disabled={busy} onClick={() => void setVerification('human_verified')}>
           {CHECKED_ACTION}
         </Button>
@@ -238,23 +215,17 @@ function EvidenceActions({
         disabled={busy || e.verification === 'disputed'}
         onClick={() => void setVerification('disputed')}
       >
-        {verificationLabels.disputed}
+        {DISAGREE_ACTION}
       </Button>
       <Menu
-        label="More actions"
+        label="More"
         align="end"
         items={[
           {
-            label: 'Mark replaced',
+            label: REPLACED_SOURCE_LABEL,
             icon: Replace,
             disabled: busy || e.verification === 'superseded',
             onSelect: () => setSuperseding(true),
-          },
-          {
-            label: 'Mark as checked by AI',
-            icon: BadgeCheck,
-            disabled: busy || e.verification === 'source_verified',
-            onSelect: () => void setVerification('source_verified'),
           },
           {
             label: 'Delete source...',
@@ -263,14 +234,14 @@ function EvidenceActions({
             onSelect: () => setDeleting(true),
           },
         ]}
-        trigger={(p) => <IconButton {...p} icon={Ellipsis} label="More actions" />}
+        trigger={(p) => <IconButton {...p} icon={Ellipsis} label="More" />}
       />
       {editing && <EvidenceDialog mode="edit" evidence={e} invRef={invRef} onClose={() => setEditing(false)} />}
       {superseding && (
         <ConfirmDialog
-          title="Mark this source as replaced?"
+          title="Did a newer source replace this one?"
           body={supersedeEvidenceBody}
-          confirmLabel="Mark replaced"
+          confirmLabel="Yes, it was replaced"
           confirmVariant="primary"
           onConfirm={() => {
             setSuperseding(false)
@@ -284,6 +255,7 @@ function EvidenceActions({
           title="Delete this source?"
           body={deleteEvidenceBody(e)}
           blocker={linkedBy.length > 0 ? evidenceLinkedBlocker(linkedBy) : null}
+          blockerTitle={linkedBy.length === 1 ? 'This source is used by a finding' : 'This source is used by findings'}
           confirmLabel="Delete source"
           onConfirm={async () => {
             const done = await write(() => api.deleteEvidence(invRef, e.ref).then(() => true), { rethrowConflict: true })
@@ -301,12 +273,12 @@ function EvidenceActions({
 }
 
 /**
- * Raw detail on demand: nothing is fetched until "Show raw detail". While the
- * fetch runs nothing changes for 300 ms, then a quiet loading line appears.
- * When the record changes elsewhere while the text is shown (the detail's
+ * The exact words on demand: nothing is fetched until "Show the exact words".
+ * While the fetch runs nothing changes for 300 ms, then a quiet loading line
+ * appears. When the source changes while the text is shown (the detail's
  * updated_at moves), it is fetched again and the previous text stays until
  * the new one arrives. The cache is keyed on the detail's updated_at at
- * request time, not on GetEvidence's: when the record changed between the
+ * request time, not on GetEvidence's: when the source changed between the
  * detail load and GetEvidence the two differ, and comparing them would
  * refetch in a loop until the detail reloads.
  */
@@ -350,7 +322,7 @@ function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string
 
   return (
     <DrawerGroup
-      title="Source detail"
+      title="Exact words or numbers"
       action={
         <Button variant="ghost" className="disclosure-button" aria-expanded={shown} onClick={toggle}>
           <ChevronDown
@@ -359,11 +331,11 @@ function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string
             strokeWidth={1.75}
             aria-hidden="true"
           />
-          {shown ? 'Hide source detail' : 'Show source detail'}
+          {shown ? 'Hide the exact words' : 'Show the exact words'}
         </Button>
       }
     >
-      {shown && slow && !raw && <p className="drawer-empty">Loading source detail...</p>}
+      {shown && slow && !raw && <p className="drawer-empty">Loading the exact words...</p>}
       {shown && raw && <pre className="raw-detail">{raw.text}</pre>}
     </DrawerGroup>
   )

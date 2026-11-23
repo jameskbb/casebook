@@ -96,14 +96,14 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
         />
         <TextArea
           label="Background (optional)"
-          hint="The period, the numbers, and where the data lives."
+          hint="Which months, the numbers, and which reports to look at."
           value={question}
           onChange={setQuestion}
           error={fieldErrors.problem_statement}
           note={nearLimit(question, LIMITS.problemStatement)}
           spellCheck
         />
-        <Checkbox label="Make this your AI's current question" checked={makeActive} onChange={setMakeActive} />
+        <Checkbox label="Have my AI work on this question" checked={makeActive} onChange={setMakeActive} />
       </div>
     </Dialog>
   )

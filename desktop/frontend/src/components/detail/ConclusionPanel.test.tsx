@@ -3,14 +3,17 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
-import { ApiError } from '../../api/errors'
-import type { Investigation, InvestigationDetail } from '../../api/types'
+import { ApiError, NOT_SAVED_COPY } from '../../api/errors'
+import type { Claim, Investigation, InvestigationDetail } from '../../api/types'
+import { formatDate } from '../../lib/relativeTime'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { detail, investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
+import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_NEXT_SOURCE, ConclusionPanel, nextSourceToCheck } from './ConclusionPanel'
+import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, NOT_CHECKED_ANSWER, nextSourceToCheck, SHARE_THE_ANSWER } from './ConclusionPanel'
+import { ANSWER_COPIED } from './ShareSummaryDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -21,8 +24,8 @@ const providers = (ui: ReactNode) => (
   </ToastProvider>
 )
 
-function renderPanel(inv: Investigation = investigation) {
-  return render(providers(<ConclusionPanel investigation={inv} />))
+function renderPanel(inv: Investigation = investigation, claims?: Claim[]) {
+  return render(providers(<ConclusionPanel investigation={inv} claims={claims} />))
 }
 
 const panel = () => screen.getByRole('region', { name: 'The answer' })
@@ -32,15 +35,18 @@ describe('ConclusionPanel editing', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('opens inline edit with the current text and rationale, and no confidence control', async () => {
+  it('opens inline edit with only Answer and How you know: no Label select and no per-finding pickers', async () => {
     const user = userEvent.setup()
     renderPanel()
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
       'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.',
     )
-    expect(within(panel()).queryByRole('radiogroup', { name: 'Confidence' })).toBeNull()
-    expect(within(panel()).getByLabelText('Why (optional)')).toHaveValue(
+    expect(within(panel()).queryByRole('radiogroup')).toBeNull()
+    expect(within(panel()).queryByRole('combobox')).toBeNull()
+    expect(within(panel()).queryByLabelText('Label')).toBeNull()
+    expect(within(panel()).getAllByRole('textbox')).toHaveLength(2)
+    expect(within(panel()).getByLabelText('How you know (optional)')).toHaveValue(
       investigation.conclusion_rationale,
     )
     expect(within(panel()).getByLabelText('Answer')).toHaveFocus()
@@ -53,7 +59,7 @@ describe('ConclusionPanel editing', () => {
     const text = within(panel()).getByLabelText('Answer')
     await user.clear(text)
     await user.type(text, 'Different definitions.')
-    const why = within(panel()).getByLabelText('Why (optional)')
+    const why = within(panel()).getByLabelText('How you know (optional)')
     await user.clear(why)
     await user.type(why, 'Two sources.')
     await user.click(within(panel()).getByRole('button', { name: 'Save answer' }))
@@ -61,9 +67,8 @@ describe('ConclusionPanel editing', () => {
       conclusion: 'Different definitions.',
       confidence: investigation.conclusion_confidence,
       rationale: 'Two sources.',
-      verification: investigation.conclusion_verification,
-      supporting_claims: investigation.conclusion_supporting_claims,
-      contradicting_claims: investigation.conclusion_contradicting_claims,
+      supporting_claims: [],
+      contradicting_claims: [],
     })
     await waitFor(() => expect(within(panel()).queryByLabelText('Answer')).toBeNull())
     expect(document.querySelector('.toast')).toBeNull()
@@ -114,7 +119,7 @@ describe('ConclusionPanel editing', () => {
     const confirm = screen.getByRole('dialog', { name: 'Clear the answer?' })
     expect(
       within(confirm).getByText(
-        'This removes the answer and its notes. The history still shows that it changed.',
+        'This removes the answer and how you know. The history still shows that it changed.',
       ),
     ).toBeInTheDocument()
     expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveFocus()
@@ -128,7 +133,7 @@ describe('ConclusionPanel editing', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  it('saves an emptied answer with no confidence, and shows an engine error on a hidden field as a summary', async () => {
+  it('saves an emptied answer with no confidence, and shows a plain sentence, never the engine text, for an error on a hidden field', async () => {
     const user = userEvent.setup()
     Object.assign(
       mocks.api,
@@ -143,7 +148,9 @@ describe('ConclusionPanel editing', () => {
     await user.clear(within(panel()).getByLabelText('Answer'))
     await user.click(within(panel()).getByRole('button', { name: 'Save answer' }))
     expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', { conclusion: '', confidence: '', rationale: investigation.conclusion_rationale })
-    expect(await within(panel()).findByRole('alert')).toHaveTextContent('must be empty or unknown when the conclusion is empty')
+    const alert = await within(panel()).findByRole('alert')
+    expect(alert).toHaveTextContent(NOT_SAVED_COPY)
+    expect(alert).not.toHaveTextContent('must be empty')
     expect(within(panel()).getByLabelText('Answer')).toBeInTheDocument()
   })
 
@@ -165,13 +172,13 @@ describe('ConclusionPanel edit-in-place safety', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('keeps unsaved text when the stored conclusion changes elsewhere and offers Show latest', async () => {
+  it('keeps unsaved text when the stored conclusion changes elsewhere and offers Show the new version', async () => {
     const user = userEvent.setup()
     const { rerender } = renderPanel()
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
     const text = within(panel()).getByLabelText('Answer')
     await user.type(text, ' Mine.')
-    expect(within(panel()).queryByText('This changed in another app.')).toBeNull()
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
 
     const elsewhere: Investigation = {
       ...investigation,
@@ -183,12 +190,12 @@ describe('ConclusionPanel edit-in-place safety', () => {
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
       'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same. Mine.',
     )
-    expect(within(panel()).getByText('This changed in another app.')).toBeInTheDocument()
+    expect(within(panel()).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
 
-    await user.click(within(panel()).getByRole('button', { name: 'Show latest' }))
+    await user.click(within(panel()).getByRole('button', { name: SHOW_NEW_VERSION }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('Claude Code found a third definition.')
-    expect(within(panel()).getByLabelText('Why (optional)')).toHaveValue('E-005.')
-    expect(within(panel()).queryByText('This changed in another app.')).toBeNull()
+    expect(within(panel()).getByLabelText('How you know (optional)')).toHaveValue('E-005.')
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })
 
   it('shows no notice when an unrelated field of the investigation changes', async () => {
@@ -197,7 +204,7 @@ describe('ConclusionPanel edit-in-place safety', () => {
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
     await user.type(within(panel()).getByLabelText('Answer'), ' Mine.')
     rerender(providers(<ConclusionPanel investigation={{ ...investigation, title: 'Renamed', status: 'blocked' }} />))
-    expect(within(panel()).queryByText('This changed in another app.')).toBeNull()
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
     expect(within(panel()).getByLabelText('Answer')).toHaveValue(
       'The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same. Mine.',
     )
@@ -209,7 +216,7 @@ describe('ConclusionPanel edit-in-place safety', () => {
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
     rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: 'Updated by Codex.' }} />))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('Updated by Codex.')
-    expect(within(panel()).queryByText('This changed in another app.')).toBeNull()
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })
 })
 
@@ -248,7 +255,7 @@ describe('ConclusionPanel with live polling (backstop)', () => {
     })
     expect(mocks.api.getInvestigationDetail).toHaveBeenCalledTimes(2)
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('My draft.')
-    expect(within(panel()).getByText('This changed in another app.')).toBeInTheDocument()
+    expect(within(panel()).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
   })
 })
 
@@ -270,7 +277,7 @@ describe('Check the next source and Share the answer', () => {
     render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onOpenSource={onOpenSource} share />))
     const next = within(panel()).getByRole('button', { name: CHECK_NEXT_SOURCE })
     expect(next).toHaveClass('btn-primary')
-    expect(within(panel()).getByRole('button', { name: 'Share the answer' })).toHaveClass('btn-secondary')
+    expect(within(panel()).getByRole('button', { name: SHARE_THE_ANSWER })).toHaveClass('btn-secondary')
     await user.click(next)
     expect(onOpenSource).toHaveBeenCalledWith('E-001')
   })
@@ -287,7 +294,7 @@ describe('Check the next source and Share the answer', () => {
     expect(mocks.api.sharePreview).toHaveBeenCalledWith('INV-0001', { mode: 'brief' })
     await user.click(within(dialog).getByRole('button', { name: 'Copy' }))
     expect(mocks.api.copySharePreview).toHaveBeenCalledWith('reviewed-1')
-    expect(await screen.findByText('Copied the summary. Paste it into an email or a document.')).toBeInTheDocument()
+    expect(await screen.findByText(ANSWER_COPIED)).toBeInTheDocument()
   })
 
   it('offers both while there is no answer yet, and neither unless asked for', () => {
@@ -301,45 +308,132 @@ describe('Check the next source and Share the answer', () => {
   })
 })
 
-describe('Conclusion accountability', () => {
+describe('The findings an answer is saved with', () => {
   beforeEach(() => { Object.assign(mocks.api, mockApi()) })
 
-  it('keeps the historical statement verification visible when the basis changed', () => {
-    renderPanel({ ...investigation, conclusion_verification: 'human_verified', conclusion_reviewed_at: '2026-10-20T12:00:00.000Z', conclusion_review_basis: 'Compared the call log.', conclusion_needs_review: true })
-    expect(within(panel()).getByText('You checked this')).toBeInTheDocument()
-    expect(within(panel()).getByText(/The findings behind this answer, or their sources, changed since your review/)).toBeInTheDocument()
-    expect(within(panel()).getByText(/Compared the call log/)).toBeInTheDocument()
-  })
-
-  it('saves selected contradicting claim refs with the conclusion', async () => {
+  const edit = async (inv: Investigation, claims?: Claim[]) => {
     const user = userEvent.setup()
-    render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} />))
+    renderPanel(inv, claims)
     await user.click(within(panel()).getByRole('button', { name: 'Edit answer' }))
-    await user.selectOptions(within(panel()).getByRole('combobox', { name: /^A billing mistake on October 3 charged some customers twice\./ }), 'contradicts')
+    await user.type(within(panel()).getByLabelText('Answer'), ' More.')
     await user.click(within(panel()).getByRole('button', { name: 'Save answer' }))
-    expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ supporting_claims: [], contradicting_claims: ['C-001'] }))
+    return vi.mocked(mocks.api.updateConclusion).mock.calls[0][1]
+  }
+
+  it('sends the findings that stand as supporting and the ones where sources disagree as contradicting', async () => {
+    // C-001 and C-002 stand, C-003 was replaced, C-004 has sources that disagree, C-005 is ruled out.
+    const ruledOut: Claim = { ...detail.claims[1], id: 5, ref: 'C-005', status: 'rejected' }
+    const sent = await edit(investigation, [...detail.claims, ruledOut])
+    expect(sent.supporting_claims).toEqual(['C-001', 'C-002'])
+    expect(sent.contradicting_claims).toEqual(['C-004'])
+    expect(sent.confidence).toBe(investigation.conclusion_confidence)
   })
 
-  it('records an explicit review with the token of the displayed records', async () => {
+  it('marks an answer the person had checked as not checked any more when it changes', async () => {
+    const sent = await edit({ ...investigation, conclusion_verification: 'human_verified' })
+    expect(sent.verification).toBe('ai_generated')
+  })
+
+  it('sends no verification when the person had not checked the answer', async () => {
+    const sent = await edit(investigation)
+    expect(sent).not.toHaveProperty('verification')
+  })
+})
+
+describe('Checking the answer', () => {
+  beforeEach(() => { Object.assign(mocks.api, mockApi()) })
+
+  const checkButton = () => within(panel()).queryByRole('button', { name: CHECKED_ANSWER_ACTION })
+  const checkedAt = '2026-10-20T12:00:00.000Z'
+
+  it('says the answer is not checked yet and offers I checked this answer', () => {
+    renderPanel()
+    expect(within(panel()).getByRole('status')).toHaveTextContent(NOT_CHECKED_ANSWER)
+    expect(checkButton()).toBeInTheDocument()
+  })
+
+  it('asks for another check when something changed after the check', () => {
+    renderPanel({ ...investigation, conclusion_verification: 'human_verified', conclusion_reviewed_at: checkedAt, conclusion_review_basis: 'Compared the call log.', conclusion_needs_review: true })
+    expect(within(panel()).getByRole('status')).toHaveTextContent(CHECK_ANSWER_AGAIN)
+    expect(checkButton()).toBeInTheDocument()
+  })
+
+  it('says when the person checked the answer, shows what they checked and offers no check button', () => {
+    renderPanel({ ...investigation, conclusion_verification: 'human_verified', conclusion_reviewed_at: checkedAt, conclusion_review_basis: 'Compared the call log.', conclusion_needs_review: false })
+    expect(within(panel()).getByRole('status')).toHaveTextContent(`You checked this answer on ${formatDate(checkedAt)}.`)
+    expect(within(panel()).getByText(/Compared the call log/)).toBeInTheDocument()
+    expect(checkButton()).toBeNull()
+  })
+
+  it('opens What did you check?, needs words, and sends the check with the token of what is shown', async () => {
     const user = userEvent.setup()
     renderPanel()
-    await user.click(within(panel()).getByRole('button', { name: 'Review the answer' }))
-    const record = within(panel()).getByRole('button', { name: 'I checked this answer' })
+    await user.click(checkButton()!)
+    const basis = within(panel()).getByLabelText('What did you check?')
+    expect(basis).toHaveFocus()
+    const record = within(panel()).getByRole('button', { name: CHECKED_ANSWER_ACTION })
     expect(record).toBeDisabled()
-    await user.type(within(panel()).getByLabelText('What did you check?'), 'Matched the selected claims to the original export.')
+    await user.type(basis, 'Matched the findings to the original export.')
     await user.click(record)
-    expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ verification: 'human_verified', review: true, review_basis: 'Matched the selected claims to the original export.', expected_review_token: investigation.conclusion_review_token }))
+    expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', {
+      conclusion: investigation.conclusion,
+      confidence: investigation.conclusion_confidence,
+      rationale: investigation.conclusion_rationale,
+      verification: 'human_verified',
+      review: true,
+      review_basis: 'Matched the findings to the original export.',
+      expected_review_token: investigation.conclusion_review_token,
+    })
   })
 
-  it('keeps a stale review draft and prevents endorsing changed material', async () => {
+  it('Cancel closes the form without saving and returns focus to the button', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+    await user.click(checkButton()!)
+    await user.type(within(panel()).getByLabelText('What did you check?'), 'Half a thought')
+    await user.click(within(panel()).getByRole('button', { name: 'Cancel' }))
+    expect(within(panel()).queryByLabelText('What did you check?')).toBeNull()
+    expect(checkButton()).toHaveFocus()
+    expect(mocks.api.updateConclusion).not.toHaveBeenCalled()
+  })
+
+  it('keeps the words but stops the check when the answer changes while the form is open', async () => {
     const user = userEvent.setup()
     const { rerender } = renderPanel()
-    await user.click(within(panel()).getByRole('button', { name: 'Review the answer' }))
+    await user.click(checkButton()!)
     await user.type(within(panel()).getByLabelText('What did you check?'), 'Original export.')
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
     rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion_review_token: 'changed-basis' }} />))
     expect(within(panel()).getByLabelText('What did you check?')).toHaveValue('Original export.')
-    expect(within(panel()).getByText(/This answer or the findings behind it changed/)).toBeInTheDocument()
-    expect(within(panel()).getByRole('button', { name: 'I checked this answer' })).toBeDisabled()
+    expect(within(panel()).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
+    expect(within(panel()).getByRole('button', { name: CHECKED_ANSWER_ACTION })).toBeDisabled()
     expect(mocks.api.updateConclusion).not.toHaveBeenCalled()
+
+    await user.click(within(panel()).getByRole('button', { name: SHOW_NEW_VERSION }))
+    expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
+    await user.click(within(panel()).getByRole('button', { name: CHECKED_ANSWER_ACTION }))
+    expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ review_basis: 'Original export.', expected_review_token: 'changed-basis' }))
+  })
+})
+
+describe('Share the answer and codes in the text', () => {
+  beforeEach(() => { Object.assign(mocks.api, mockApi()) })
+
+  it('keeps the Share the answer dialog open when the answer goes away while it is open', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(providers(<ConclusionPanel investigation={investigation} share />))
+    await user.click(within(panel()).getByRole('button', { name: SHARE_THE_ANSWER }))
+    await screen.findByRole('dialog', { name: 'Share the answer' })
+    rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '' }} share />))
+    expect(screen.getByRole('dialog', { name: 'Share the answer' })).toBeInTheDocument()
+    expect(mocks.api.sharePreview).toHaveBeenCalledTimes(1)
+  })
+
+  it('wraps a code in brackets in the answer and in How you know in a record-id element', () => {
+    renderPanel({ ...investigation, conclusion: 'A billing mistake charged customers twice (E-007).', conclusion_rationale: 'The notice says so (E-001, C-002).' })
+    const codes = (selector: string) => Array.from(panel().querySelectorAll(`${selector} .record-id`), (el) => el.textContent)
+    expect(codes('.conclusion-text')).toEqual([' (E-007)'])
+    expect(codes('.conclusion-rationale')).toEqual([' (E-001, C-002)'])
+    expect(panel().querySelector('.conclusion-text')).toHaveTextContent('A billing mistake charged customers twice (E-007).')
   })
 })

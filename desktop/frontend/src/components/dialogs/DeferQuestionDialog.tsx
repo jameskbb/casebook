@@ -1,5 +1,5 @@
-// Defer a question: an optional note
-// on why it can wait.
+// Leave a follow-up question for later, with an optional note on why it
+// can wait.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
 import type { Question } from '../../api/types'
@@ -36,7 +36,7 @@ export function DeferQuestionDialog({ invRef, question, onClose }: DeferQuestion
       })
       if (saved) onClose()
     } catch (e) {
-      // The engine names the defer note field "note".
+      // The engine calls this field "note".
       const split = splitFieldErrors(e, ['note'])
       setError(split.fieldErrors.note)
       setSummary(split.summary)
@@ -49,11 +49,11 @@ export function DeferQuestionDialog({ invRef, question, onClose }: DeferQuestion
 
   return (
     <Dialog
-      title="Set this follow-up question aside"
+      title="Come back to this later"
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Set aside"
+      submitLabel="Later"
       busyLabel="Saving..."
       busy={busy}
       dirty={note !== ''}
@@ -67,8 +67,7 @@ export function DeferQuestionDialog({ invRef, question, onClose }: DeferQuestion
     >
       <p className="dialog-text dialog-quote">{question.question}</p>
       <TextArea
-        label="Note (optional)"
-        hint="Why it can wait"
+        label="Why it can wait (optional)"
         value={note}
         onChange={setNote}
         error={error}
