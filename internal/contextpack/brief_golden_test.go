@@ -62,7 +62,7 @@ func TestGoldenBriefDemo(t *testing.T) {
 	}
 	for _, want := range []string{
 		"# Why did calls go up 30% in October when sales stayed the same?\n\nAsked on October 29, 2026. Last changed on November 1, 2026.\n\n## Background\n",
-		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.\n\nA person checked this answer on November 1, 2026.\n",
+		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.\n\nNobody has checked this answer yet.\n",
 		"\nHow we know: The billing team's notice, the call log and the billing team lead agree.",
 		"- A billing mistake on October 3 charged some customers twice. (2 of 4 sources checked by a person)\n",
 		"## Where sources disagree\n\n- Callers waited too long and hung up before buying.\n",

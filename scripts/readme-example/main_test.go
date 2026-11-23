@@ -25,7 +25,8 @@ func TestReadmeExample(t *testing.T) {
 	for _, want := range []string{
 		"Question: " + demo.FeaturedRef + "\nTitle: " + demo.FeaturedTitle + "\n",
 		"Answer so far:\n" + demo.Conclusion + "\n",
-		"Answer marked: A person checked this",
+		"Answer marked: Not checked",
+		"Answer checked by a person: not yet.",
 		"C-003 [2 of 4 sources checked by a person]",
 		"E-007 [A person checked this]",
 		"Findings where sources disagree:\nC-001 [Sources disagree]",

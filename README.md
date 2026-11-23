@@ -12,7 +12,7 @@ It runs on your own computer. There is no account and nothing to host.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/detail-dark.png">
-  <img src="docs/screenshots/main.png" alt="Casebook with the question &quot;Why did calls go up 30% in October when sales stayed the same?&quot; open. Under the question and its background is the answer, with &quot;2 of 9 sources checked by you, 1 checked by AI, 6 not checked&quot;, the date you checked the answer, and the buttons Check the next source and Share the answer. The list on the left shows Home and groups the questions under No answer yet and Answered." width="100%">
+  <img src="docs/screenshots/main.png" alt="Casebook with the question &quot;Why did calls go up 30% in October when sales stayed the same?&quot; open. Under the question and its background is the answer, with &quot;2 of 9 sources checked by you, 1 checked by AI, 6 not checked&quot;, &quot;You have not checked this answer yet.&quot;, and the buttons Check the next source and Share the answer. The list on the left shows Home and groups the questions under No answer yet and Answered." width="100%">
 </picture>
 
 <p align="center">
@@ -91,7 +91,7 @@ If your AI rewrites something you checked, the label goes back to Not checked an
 
 Choose **Share the answer** on a question. Pick **Short version** for the answer and the findings behind it, or **Everything** to add the full history. **Copy** puts the text on the clipboard for an email or a document. **Save as a file** writes a web page that opens in any browser.
 
-![The Share the answer window for the call center question with Short version picked under How much to share. Below it, the start of the answer as the reader will see it: the question, when it was asked, the background, and the answer with how many sources were checked. At the bottom, Close, Save as a file and Copy.](docs/screenshots/share-summary.png)
+![The Share the answer window for the call center question with Short version picked under How much to share. Below it, the start of the answer as the reader will see it: the question, when it was asked, the background, and the answer with how many sources were checked and a line saying nobody has checked the answer yet. At the bottom, Close, Save as a file and Copy.](docs/screenshots/share-summary.png)
 
 The reader does not need Casebook. The shared answer names each finding and source in its own words, says which ones a person checked, and always includes findings where sources disagree. The short version ends by saying what it left out. Casebook builds the text from what is saved and does not ask an AI to rewrite it.
 
@@ -161,11 +161,10 @@ Calls to the call center went from 2,400 in September to 3,120 in October. Sales
 Answer so far:
 The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
-Answer marked: A person checked this
+Answer marked: Not checked
 Findings behind the answer: C-002 [0 of 2 sources checked by a person], C-003 [2 of 4 sources checked by a person]
 Findings against the answer: C-001 [Sources disagree]
-Answer checked by a person: 2026-11-05 14:55 UTC
-What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
+Answer checked by a person: not yet.
 
 Why this answer:
 The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.

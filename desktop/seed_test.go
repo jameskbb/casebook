@@ -28,8 +28,8 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list) != 5 {
-		t.Fatalf("seeded %d investigations, want 5", len(list))
+	if len(list) != 6 {
+		t.Fatalf("seeded %d investigations, want 6", len(list))
 	}
 	if list[0].Ref != demo.FeaturedRef || !list[0].IsActive || list[0].Title != demo.FeaturedTitle {
 		t.Fatalf("top of the list = %+v, want the active featured question", list[0])
@@ -45,17 +45,27 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	// The list carries what the sidebar and Home show: the answer, the
 	// count of sources checked, the findings where sources disagree and
 	// whether the answer is checked. Between them the questions show each
-	// thing Home can ask for: INV-0001 an answer to check, the featured one
-	// sources to check and a finding to decide, INV-0003 an answer to write.
-	if s := byRef[demo.FeaturedRef]; s.Conclusion != demo.Conclusion || s.SourcesTotal != 9 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 1 || !s.AnswerCheckedByYou {
+	// thing Home can ask for: the featured one sources to check, INV-0006 a
+	// finding to decide, INV-0003 an answer to write and INV-0001 an answer
+	// to check. INV-0004 needs nothing. No answer is checked while a source
+	// is not checked or sources disagree.
+	if s := byRef[demo.FeaturedRef]; s.Conclusion != demo.Conclusion || s.SourcesTotal != 9 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 1 || s.AnswerCheckedByYou {
 		t.Fatalf("%s = %+v", demo.FeaturedRef, s)
 	}
 	if s := byRef["INV-0003"]; s.Title != "Why are help desk tickets taking longer to close this month?" || s.Status != app.InvestigationStatusBlocked ||
 		s.Conclusion != "" || s.SourcesTotal != 2 || s.SourcesCheckedByYou != 2 || s.Counts.OpenQuestions != 2 {
 		t.Fatalf("INV-0003 = %+v", s)
 	}
-	if s := byRef["INV-0004"]; s.Status != app.InvestigationStatusResolved || s.Archived || s.Conclusion == "" || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 0 {
+	if s := byRef["INV-0004"]; s.Status != app.InvestigationStatusResolved || s.Archived || s.Conclusion == "" || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 || s.FindingsDisagree != 0 || !s.AnswerCheckedByYou {
 		t.Fatalf("INV-0004 = %+v", s)
+	}
+	if s := byRef["INV-0006"]; s.Title != "Why did staff take more sick days in October?" || s.Archived || s.Conclusion != "" || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 || s.FindingsDisagree != 1 {
+		t.Fatalf("INV-0006 = %+v", s)
+	}
+	for _, s := range list {
+		if s.AnswerCheckedByYou && (s.SourcesCheckedByYou < s.SourcesTotal || s.FindingsDisagree > 0) {
+			t.Errorf("%s has its answer checked with sources left or sources that disagree: %+v", s.Ref, s)
+		}
 	}
 	if s := byRef["INV-0005"]; !s.Archived {
 		t.Fatalf("INV-0005 = %+v", s)
@@ -114,10 +124,11 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	}
 	clients := map[string]bool{}
 	var prev string
-	reviewed := false
+	reviewed, reviewedLost := false, false
 	for i := len(rows) - 1; i >= 0; i-- {
 		r := rows[i]
 		reviewed = reviewed || (r.InvestigationRef == demo.FeaturedRef && r.Action == "conclusion.update" && r.Summary == "Recorded a review of the answer")
+		reviewedLost = reviewedLost || (r.InvestigationRef == "INV-0004" && r.Action == "conclusion.update" && r.Summary == "Recorded a review of the answer")
 		if r.Actor.Kind == app.ActorAI {
 			clients[r.Actor.Client] = true
 		}
@@ -133,8 +144,11 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 			t.Errorf("activity at %s falls outside the demo window", r.CreatedAt)
 		}
 	}
-	if !reviewed {
-		t.Error("no history row records the person's review of the answer")
+	if reviewed {
+		t.Errorf("a history row records a review of the %s answer, which nobody checked", demo.FeaturedRef)
+	}
+	if !reviewedLost {
+		t.Error("no history row records the person's review of the INV-0004 answer")
 	}
 	if !clients["claude-code"] || !clients["codex"] {
 		t.Errorf("AI activity clients = %v, want claude-code and codex", clients)
@@ -142,7 +156,7 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 }
 
 // checkFeatured checks INV-0002 against the canonical scenario; full says
-// whether Thursday (Claude Code's checkpoint and the person's check) was
+// whether Thursday (Claude Code's checkpoint and the person's answer) was
 // seeded.
 func checkFeatured(t *testing.T, a *app.App, full bool) {
 	t.Helper()

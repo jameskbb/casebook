@@ -12,9 +12,7 @@ The extra calls were customers asking about a bill. A billing mistake on October
 
 2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.
 
-A person checked this answer on November 1, 2026.
-
-What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
+Nobody has checked this answer yet.
 
 How we know: The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
 

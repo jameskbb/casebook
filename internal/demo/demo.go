@@ -4,10 +4,13 @@
 // calls go up 30% in October when sales stayed the same?": three sessions
 // over four days, Claude Code (Monday, Thursday) and Codex (Tuesday), and
 // one person who reads the billing team's notice, talks to the billing team
-// lead and checks the answer. INV-0001 is the March cancellations question, answered
-// last week (its answer is not checked yet); INV-0003 is the help desk
-// question, every source checked and still without an answer;
-// the others fill the list with an answered and an archived question.
+// lead and writes the answer; most of its sources are not checked yet.
+// Between them the questions give Home one of each thing it can ask for:
+// INV-0002 sources to check, INV-0006 (sick days) a finding to decide,
+// INV-0003 (help desk) an answer to write and INV-0001 (March
+// cancellations) an answer to check. INV-0004 (customers who stopped
+// ordering) is answered with every source and the answer checked, and
+// INV-0005 is archived.
 //
 // Everything is written through public internal/app methods with the
 // actors a real session would use, so "How we got here" reads as it would
@@ -34,8 +37,7 @@ const FeaturedTitle = "Why did calls go up 30% in October when sales stayed the 
 type Stage string
 
 const (
-	// StageFull writes the whole story, ending with the person's check of
-	// the answer.
+	// StageFull writes the whole story, ending with the person's answer.
 	StageFull Stage = "full"
 	// StageBeforeThursday stops before Thursday's Claude Code session, so
 	// ThursdayCheckpoint can be written live from another process (the
@@ -217,8 +219,9 @@ const (
 // run writes the scenes in time order (the clock never moves back). Refs
 // follow creation order: INV-0001 March cancellations (last week, answered),
 // INV-0002 the call center calls (Monday), INV-0003 help desk tickets (no
-// answer yet), INV-0004 customers who stopped ordering (answered), INV-0005
-// the office supplies order (archived).
+// answer yet), INV-0004 customers who stopped ordering (answered and
+// checked), INV-0005 the office supplies order (archived), INV-0006 sick
+// days (sources disagree).
 func (s *seeder) run(stage Stage) {
 	s.cancellations()
 	s.callsMonday()
@@ -227,6 +230,7 @@ func (s *seeder) run(stage Stage) {
 	s.lostCustomers()
 	s.helpDeskStuck()
 	s.suppliesOrder()
+	s.sickDays()
 	if s.err != nil || stage == StageBeforeThursday {
 		return
 	}
@@ -508,7 +512,8 @@ func (s *seeder) callsTuesday() {
 // person is the person's part on Thursday afternoon: two things to find
 // out (one left for later), a check of the billing team's notice (E-007),
 // the billing team lead's word as E-009 linked to C-003
-// and a check of the answer.
+// and the answer in their own words. They have not checked the answer:
+// most sources are not checked yet.
 func (s *seeder) person() {
 	a, ctx := s.a, s.ctx
 	s.at(80 * time.Minute)
@@ -549,26 +554,14 @@ func (s *seeder) person() {
 		return
 	}
 	s.at(65 * time.Minute)
-	conclusion, err := a.UpdateConclusion(ctx, Person, FeaturedRef, app.ConclusionInput{
+	_, err = a.UpdateConclusion(ctx, Person, FeaturedRef, app.ConclusionInput{
 		Conclusion:          Conclusion,
 		Confidence:          app.ConfidenceHigh,
 		Rationale:           PersonRationale,
 		SupportingClaims:    []string{"C-002", "C-003"},
 		ContradictingClaims: []string{"C-001"},
 	})
-	if !s.check(FeaturedRef+" answer by the person", err) {
-		return
-	}
-	_, err = a.UpdateConclusion(ctx, Person, FeaturedRef, app.ConclusionInput{
-		Conclusion:          Conclusion,
-		Confidence:          app.ConfidenceHigh,
-		Rationale:           PersonRationale,
-		Verification:        app.VerificationHumanVerified,
-		Review:              true,
-		ReviewBasis:         "Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.",
-		ExpectedReviewToken: conclusion.ConclusionReviewToken,
-	})
-	s.check(FeaturedRef+" answer reviewed", err)
+	s.check(FeaturedRef+" answer by the person", err)
 }
 
 // helpDesk opens INV-0003 on Monday afternoon.
@@ -654,7 +647,7 @@ func (s *seeder) helpDeskStuck() {
 }
 
 // lostCustomers is INV-0004, asked and answered within a few hours on
-// Tuesday. Nobody has checked its sources.
+// Tuesday. The person checked its three sources, then the answer.
 func (s *seeder) lostCustomers() {
 	a, ctx := s.a, s.ctx
 	if s.err != nil {
@@ -710,12 +703,27 @@ func (s *seeder) lostCustomers() {
 		return
 	}
 	s.at(2*day - 6*hour)
-	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
+	for _, ref := range refs {
+		_, err = a.SetEvidenceVerification(ctx, Person, inv.Ref, ref, app.VerificationHumanVerified)
+		if !s.check("INV-0004 check "+ref, err) {
+			return
+		}
+	}
+	answer := app.ConclusionInput{
 		Conclusion: "Eleven small customers, together 2% of sales.",
 		Confidence: app.ConfidenceHigh,
 		Rationale:  "The order list names the eleven customers and the sales numbers give what they bought.",
-	})
+	}
+	written, err := a.UpdateConclusion(ctx, Person, inv.Ref, answer)
 	if !s.check("INV-0004 answer", err) {
+		return
+	}
+	answer.Verification = app.VerificationHumanVerified
+	answer.Review = true
+	answer.ReviewBasis = "Read the order list and the sales numbers by customer."
+	answer.ExpectedReviewToken = written.ConclusionReviewToken
+	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, answer)
+	if !s.check("INV-0004 answer checked", err) {
 		return
 	}
 	_, err = a.UpdateInvestigation(ctx, Person, inv.Ref, app.InvestigationPatch{Status: ptr(app.InvestigationStatusResolved)})
@@ -772,4 +780,68 @@ func (s *seeder) suppliesOrder() {
 	s.at(26 * hour)
 	_, err = a.ArchiveInvestigation(ctx, Person, inv.Ref)
 	s.check("INV-0005 archive", err)
+}
+
+// sickDays is INV-0006, opened yesterday: the person checked all three
+// sources, and one goes against the office manager's view, so a finding
+// where sources disagree is left to decide. No answer yet.
+func (s *seeder) sickDays() {
+	a, ctx := s.a, s.ctx
+	if s.err != nil {
+		return
+	}
+	s.at(25 * hour)
+	inv, err := a.CreateInvestigation(ctx, CLI, app.CreateInvestigationInput{
+		Title:            "Why did staff take more sick days in October?",
+		ProblemStatement: "Staff took 60 sick days in September and 110 in October. Why?",
+		Status:           app.InvestigationStatusInvestigating,
+	})
+	if !s.check("INV-0006", err) {
+		return
+	}
+	var refs []string
+	for _, e := range []app.EvidenceInput{
+		{
+			Title:       "Sick days: 60 in September, 110 in October",
+			Summary:     "The list of sick days shows staff took 60 sick days in September and 110 in October.",
+			SourceType:  app.SourceTypeFile,
+			SourceRef:   "List of sick days, September and October",
+			SourceLabel: "List of sick days",
+		},
+		{
+			Title:       "Office manager: a cold went round the sales team in October",
+			Summary:     "The office manager said a cold went round the sales team in the middle of October.",
+			SourceType:  app.SourceTypeUserStatement,
+			SourceLabel: "Office manager, in person",
+		},
+		{
+			Title:       "The sales team took 20 of the 110 sick days in October",
+			Summary:     "The list of sick days by team shows the sales team took 20 sick days in October and 18 in September.",
+			SourceType:  app.SourceTypeFile,
+			SourceRef:   "List of sick days, by team",
+			SourceLabel: "List of sick days",
+		},
+	} {
+		ev, err := a.AddEvidence(ctx, Codex, inv.Ref, e)
+		if !s.check("INV-0006 source", err) {
+			return
+		}
+		refs = append(refs, ev.Ref)
+	}
+	_, err = a.AddClaim(ctx, Codex, inv.Ref, app.ClaimInput{
+		Statement:           "A cold that went round the sales team caused the extra sick days.",
+		Confidence:          app.ConfidenceLow,
+		ConfidenceRationale: "This is the office manager's view. The list of sick days by team does not show it.",
+		Links:               []app.EvidenceLinkInput{supports(refs[1]), contradicts(refs[2])},
+	})
+	if !s.check("INV-0006 C-001", err) {
+		return
+	}
+	s.at(24 * hour)
+	for _, ref := range refs {
+		_, err = a.SetEvidenceVerification(ctx, Person, inv.Ref, ref, app.VerificationHumanVerified)
+		if !s.check("INV-0006 check "+ref, err) {
+			return
+		}
+	}
 }
