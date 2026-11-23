@@ -1,9 +1,9 @@
 package contextpack
 
 import (
-	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jameskbb/casebook/internal/domain"
 )
@@ -18,253 +18,363 @@ type ReportOptions struct {
 	MoreActivity  bool
 }
 
-// RenderReport renders a snapshot as the full shared answer in Markdown,
-// in the words a person reads (question, answer, finding, source): the
-// title, the question, the answer with the count of sources checked, its
-// check and review labels and why, the findings with their sources (source
-// label and ref), where sources disagree, what was ruled out (disproven
-// hypotheses and rejected claims with the sources that contradicted them),
-// findings still being tested, answered and open follow-up questions, every
-// source, and a dated list (UTC) of how the answer was reached, oldest
-// first. Confidence is never printed.
+// answerFooter ends both versions of a shared answer.
+const answerFooter = "_Made with Casebook. These are the saved findings and sources, word for word._"
+
+// RenderReport renders a snapshot as the full shared answer ("Everything")
+// in Markdown: the body every shared answer has (see answerDoc.body), then a
+// dated list of how the answer was reached, oldest first.
 //
 // Like Build, it is pure and deterministic: inputs are copied and sorted by
 // ref number (activity by id), no clock is read and no map is iterated.
-// Superseded claims and hypotheses are left out (their replacements carry
-// the story); the timeline still records the change. Every user text value
-// is rendered on one line, and a value that would start a line with a
-// Markdown block marker is escaped, so stored text cannot add headings or
-// list items of its own.
+// Every user text value is rendered on one line, and a value that would
+// start a line with a Markdown block marker is escaped, so stored text
+// cannot add headings or list items of its own.
 func RenderReport(s Snapshot, o ReportOptions) string {
+	d := answerDoc{full: true}
+	d.body(s, s.Evidence)
+
+	timeline, earlier := reportTimeline(s.Activity, o)
+	if len(timeline) > 0 || earlier {
+		d.para("## How we got here")
+		if earlier {
+			d.para("Earlier changes are not shown.")
+		}
+		name := s.names()
+		day := "\x00"
+		var lines []string
+		for _, a := range timeline {
+			if on := longDate(a.CreatedAt); on != day {
+				d.para(lines...)
+				lines, day = nil, on
+				d.para("### " + orText(on, "No date"))
+			}
+			who := actorWords(a.Actor)
+			if a.Imported {
+				who += " (from a file)"
+			}
+			phrase := "made a change"
+			if _, known := timelineVerbs[a.Action]; known {
+				phrase = timelinePhrase(a, name)
+			}
+			lines = append(lines, "- "+who+" "+phrase)
+		}
+		d.para(lines...)
+	}
+
+	d.para(answerFooter)
+	return d.b.String()
+}
+
+// answerDoc collects the paragraphs of a shared answer, one blank line
+// between them.
+type answerDoc struct {
+	b strings.Builder
+	// full is the version with everything: it also dates each source.
+	full bool
+}
+
+func (d *answerDoc) para(lines ...string) {
+	if len(lines) == 0 {
+		return
+	}
+	if d.b.Len() > 0 {
+		d.b.WriteString("\n")
+	}
+	for _, l := range lines {
+		d.b.WriteString(l)
+		d.b.WriteString("\n")
+	}
+}
+
+// section writes a heading and its list, or nothing when the list is empty.
+func (d *answerDoc) section(heading string, lines []string) {
+	if len(lines) > 0 {
+		d.para("## " + heading)
+		d.para(lines...)
+	}
+}
+
+// body writes what both versions of a shared answer have, in the words the
+// desktop uses and with no record codes: the question as the title, when it
+// was asked, the background, the answer with the count of sources checked
+// and who checked it, then the findings by state (each with why and the
+// sources that back it up or go against it), the follow-up questions and the
+// sources. A section with nothing in it is left out. Confidence is never
+// printed. allEvidence is every source of the question, for the count.
+func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	inv := s.Investigation
-	var b strings.Builder
-	para := func(lines ...string) {
-		if b.Len() > 0 {
-			b.WriteString("\n")
+	d.para("# " + oneLine(inv.Title))
+	if asked := longDate(inv.CreatedAt); asked != "" {
+		line := "Asked on " + asked + "."
+		if changed := longDate(inv.UpdatedAt); changed != "" && changed != asked {
+			line += " Last changed on " + changed + "."
 		}
-		for _, l := range lines {
-			b.WriteString(l)
-			b.WriteString("\n")
-		}
+		d.para(line)
+	}
+	if background := mdText(inv.ProblemStatement); background != "" {
+		d.para("## Background")
+		d.para(background)
+	}
+	d.para("## Answer")
+	for _, block := range answerBlocks(s, allEvidence) {
+		d.para(block...)
 	}
 
 	evidence := slices.Clone(s.Evidence)
 	sortByRef(evidence, domain.RecordEvidence, func(e domain.Evidence) string { return e.Ref })
-	evByRef := func(ref string) (domain.Evidence, bool) {
-		for _, e := range evidence {
-			if e.Ref == ref {
-				return e, true
-			}
-		}
-		return domain.Evidence{}, false
-	}
-	// evidenceLines renders "Supported by E-001: title (source)" bullets.
-	evidenceLines := func(links []domain.EvidenceLink) []string {
-		supporting, contradicting := linkRefs(links)
+	sources := func(links []domain.EvidenceLink) []string {
+		backs, against := linkRefs(links)
 		var out []string
 		for _, group := range []struct {
-			verb string
-			refs []string
-		}{{"Supported by", supporting}, {"Contradicted by", contradicting}} {
+			label string
+			refs  []string
+		}{{"Backed by", backs}, {"Goes against it", against}} {
 			for _, ref := range group.refs {
-				line := "  - " + group.verb + " " + ref
-				if e, ok := evByRef(ref); ok {
-					line += ": " + oneLine(e.Title) + " (" + sourceText(e) + "; " + verificationLabel(e.Verification) + ")"
-				} else {
-					line += " (" + checkUnknown + ")"
+				line := "  - " + group.label + ": a source that is not included here"
+				for _, e := range evidence {
+					if e.Ref == ref {
+						line = "  - " + group.label + ": " + oneLine(e.Title) + " (" + verificationLabel(e.Verification) + ")"
+						break
+					}
 				}
 				out = append(out, line)
 			}
 		}
 		return out
 	}
-	why := func(rationale string) []string {
-		if r := oneLine(rationale); r != "" {
-			return []string{"  - Why: " + r}
+	// hide is the state the section heading already says.
+	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, hide string, states ...string) []string {
+		lines := []string{"- " + oneLine(statement) + stateWords(hide, imported, states...)}
+		if w := oneLine(why); w != "" {
+			lines = append(lines, "  - Why: "+w)
 		}
-		return nil
+		return append(lines, sources(links)...)
 	}
 
-	para("# " + oneLine(inv.Ref) + ": " + oneLine(inv.Title))
-	para("- Opened: "+datePart(inv.CreatedAt),
-		"- Last updated: "+datePart(inv.UpdatedAt))
-
-	para("## Question")
-	para(orText(mdText(inv.ProblemStatement), "Not recorded."))
-
-	para("## Answer")
-	for _, line := range answerLines(s, evidence) {
-		para(line)
-	}
-
+	// The same groups as the question page: a finding sits under what
+	// happened to it, claims before hypotheses, each in ref order.
+	var found, disagree, untested, ruledOut, replaced []string
 	claims := slices.Clone(s.Claims)
 	sortByRef(claims, domain.RecordClaim, func(c domain.Claim) string { return c.Ref })
-	claimItem := func(c domain.Claim, tail string) []string {
-		lines := []string{fmt.Sprintf("- **%s** %s (%s)", refTag(c.Ref, c.Imported), oneLine(c.Statement), tail)}
-		lines = append(lines, why(c.ConfidenceRationale)...)
-		return append(lines, evidenceLines(c.Links)...)
-	}
-	var established, disputed, rejected []string
 	for _, c := range claims {
+		item := func(hide string) []string {
+			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, hide, c.Status.PlainLabel(), verificationLabel(c.Verification))
+		}
 		switch {
+		case c.Status == domain.ClaimStatusSuperseded || c.Verification == domain.VerificationSuperseded:
+			replaced = append(replaced, item("Replaced")...)
 		case c.Status == domain.ClaimStatusRejected:
-			rejected = append(rejected, claimItem(c, BriefStateLabel(c.Status.PlainLabel(), c.Verification))...)
+			ruledOut = append(ruledOut, item("Ruled out")...)
+		case c.Status == domain.ClaimStatusDisputed || c.Verification == domain.VerificationDisputed:
+			disagree = append(disagree, item("Sources disagree")...)
 		default:
-			switch claimState(c) {
-			case domain.ClaimStatusActive:
-				established = append(established, claimItem(c, verificationLabel(c.Verification))...)
-			case domain.ClaimStatusDisputed:
-				disputed = append(disputed, claimItem(c, verificationLabel(c.Verification))...)
-			}
+			found = append(found, item("")...)
 		}
 	}
-
 	hyps := slices.Clone(s.Hypotheses)
 	sortByRef(hyps, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
-	var standing, disproven []string
 	for _, h := range hyps {
-		if h.Verification == domain.VerificationSuperseded {
-			continue
+		item := func(hide string) []string {
+			return finding(h.Statement, h.Rationale, h.Imported, h.Links, hide, h.Status.PlainLabel(), verificationLabel(h.Verification))
 		}
-		head := fmt.Sprintf("- **%s** %s", refTag(h.Ref, h.Imported), oneLine(h.Statement))
-		switch h.Status {
-		case domain.HypothesisStatusOpen, domain.HypothesisStatusSupported:
-			standing = append(standing, head+" ("+BriefStateLabel(h.Status.PlainLabel(), h.Verification)+")")
-			standing = append(standing, why(h.Rationale)...)
-			standing = append(standing, evidenceLines(h.Links)...)
-		case domain.HypothesisStatusDisproven:
-			disproven = append(disproven, head+" ("+BriefStateLabel(h.Status.PlainLabel(), h.Verification)+")")
-			disproven = append(disproven, why(h.Rationale)...)
-			disproven = append(disproven, evidenceLines(h.Links)...)
+		switch {
+		case h.Status == domain.HypothesisStatusSuperseded || h.Verification == domain.VerificationSuperseded:
+			replaced = append(replaced, item("Replaced")...)
+		case h.Status == domain.HypothesisStatusDisproven:
+			ruledOut = append(ruledOut, item("Ruled out")...)
+		case h.Verification == domain.VerificationDisputed:
+			disagree = append(disagree, item("Sources disagree")...)
+		case h.Status == domain.HypothesisStatusOpen:
+			untested = append(untested, item("Not tested yet")...)
+		default:
+			found = append(found, item("")...)
 		}
 	}
-
-	para("## Findings")
-	if len(established) > 0 {
-		para(established...)
-	} else {
-		para("None yet.")
-	}
-	if len(disputed) > 0 {
-		para("## Where sources disagree")
-		para(disputed...)
-	}
-	if ruledOut := slices.Concat(disproven, rejected); len(ruledOut) > 0 {
-		para("## Ruled out")
-		para(ruledOut...)
-	}
-	if len(standing) > 0 {
-		para("## Still being tested")
-		para(standing...)
-	}
+	d.section("Findings", found)
+	d.section("Where sources disagree", disagree)
+	d.section("Not tested yet", untested)
+	d.section("Ruled out", ruledOut)
+	d.section("Replaced", replaced)
 
 	questions := slices.Clone(s.Questions)
 	sortByRef(questions, domain.RecordQuestion, func(q domain.Question) string { return q.Ref })
-	var answered, open []string
+	var followUps []string
 	for _, q := range questions {
-		head := fmt.Sprintf("- **%s** %s", refTag(q.Ref, q.Imported), oneLine(q.Question))
-		switch q.Status {
-		case domain.QuestionStatusResolved:
-			answer := "  - Answer: " + orText(oneLine(q.Resolution), "(none recorded)")
-			if d := datePart(q.ResolvedAt); d != "" {
-				answer += " (" + d + ")"
-			}
-			answered = append(answered, head, answer)
-		case domain.QuestionStatusOpen:
-			open = append(open, head)
-		case domain.QuestionStatusDeferred:
-			line := head + " (deferred"
-			if note := oneLine(q.DeferNote); note != "" {
-				line += ": " + note
-			}
-			open = append(open, line+")")
+		followUps = append(followUps, "- "+oneLine(q.Question)+stateWords("", q.Imported, q.Status.PlainLabel()))
+		if answer := oneLine(q.Resolution); answer != "" {
+			followUps = append(followUps, "  - Answer: "+answer)
+		}
+		if note := oneLine(q.DeferNote); note != "" {
+			followUps = append(followUps, "  - Why it can wait: "+note)
 		}
 	}
-	if len(answered) > 0 {
-		para("## Answered follow-up questions")
-		para(answered...)
-	}
-	para("## Open follow-up questions")
-	if len(open) > 0 {
-		para(open...)
-	} else {
-		para("None.")
-	}
+	d.section("Follow-up questions", followUps)
 
-	if len(evidence) > 0 {
-		para("## Sources")
-		var lines []string
-		for _, e := range evidence {
-			lines = append(lines, fmt.Sprintf("- **%s** %s", refTag(e.Ref, e.Imported), oneLine(e.Title)))
-			detail := "  - " + sourceText(e)
-			if d := datePart(e.CapturedAt); d != "" {
-				detail += ", captured " + d
-			}
-			lines = append(lines, detail+", "+verificationLabel(e.Verification))
-			if sum := oneLine(e.Summary); sum != "" {
-				lines = append(lines, "  - "+sum)
-			}
+	var list []string
+	for _, e := range evidence {
+		list = append(list, "- "+oneLine(e.Title)+stateWords("", e.Imported, verificationLabel(e.Verification)))
+		from := oneLine(e.SourceLabel)
+		if from == "" {
+			from = e.SourceType.PlainLabel()
 		}
-		para(lines...)
-	}
-
-	timeline, earlier := reportTimeline(s.Activity, o)
-	if len(timeline) > 0 || earlier {
-		para("## How we got here (UTC)")
-		if earlier {
-			para("Earlier changes are not shown.")
+		if on := longDate(e.CapturedAt); d.full && on != "" {
+			from += ", dated " + on
 		}
-		day := ""
-		var lines []string
-		for _, a := range timeline {
-			if d := datePart(a.CreatedAt); d != day {
-				if len(lines) > 0 {
-					para(lines...)
-					lines = nil
-				}
-				day = d
-				para("### " + orText(d, "Undated"))
-			}
-			who := actorWords(a.Actor)
-			if a.Imported {
-				who += " (imported)"
-			}
-			lines = append(lines, fmt.Sprintf("- %s %s: %s", timePart(a.CreatedAt), who, timelinePhrase(a, verificationLabel)))
+		list = append(list, "  - "+from)
+		if where := oneLine(e.SourceRef); where != "" {
+			list = append(list, "  - Where to find it: "+where)
 		}
-		if len(lines) > 0 {
-			para(lines...)
+		if sum := oneLine(e.Summary); sum != "" {
+			list = append(list, "  - "+sum)
 		}
 	}
-
-	para("_Generated by Casebook from " + oneLine(inv.Ref) + "._")
-	return b.String()
+	d.section("Sources", list)
 }
 
-// actorWords names who made a change for a reader of the shared answer:
-// "A person", "Claude Code (AI)". The reader is not the person who did the
-// checking, so a person is never "You".
-func actorWords(a domain.Actor) string {
-	client := oneLine(a.Client)
-	switch client {
-	case "claude-code":
-		client = "Claude Code"
-	case "codex":
-		client = "Codex"
+// stateWords writes a record's state after its text, " (Looks right so far;
+// Not checked)": each state once, without Current and without hide, then
+// "From a file" for a record copied from an imported file. It is "" when
+// nothing is left to say.
+func stateWords(hide string, imported bool, states ...string) string {
+	var words []string
+	for _, s := range states {
+		if s != "" && s != "Current" && s != hide && !slices.Contains(words, s) {
+			words = append(words, s)
+		}
 	}
+	if imported {
+		words = append(words, "From a file")
+	}
+	if len(words) == 0 {
+		return ""
+	}
+	return " (" + strings.Join(words, "; ") + ")"
+}
+
+// answerBlocks renders the paragraphs of the Answer section: the answer,
+// the count of sources checked (in place of a confidence rating), who
+// checked the answer and what they checked, why, and the findings the
+// answer rests on, named by their own text. evidence is every source of the
+// question.
+func answerBlocks(s Snapshot, evidence []domain.Evidence) [][]string {
+	inv := s.Investigation
+	if inv.Conclusion == "" {
+		return [][]string{{"No answer yet."}}
+	}
+	out := [][]string{{mdText(inv.Conclusion)}}
+	if count := sourcesCheckedLine(evidence); count != "" {
+		out = append(out, []string{count})
+	}
+	out = append(out, []string{answerCheckLine(inv)})
+	if basis := oneLine(inv.ConclusionReviewBasis); basis != "" && inv.ConclusionReviewedAt != "" {
+		out = append(out, []string{"What was checked: " + basis})
+	}
+	if why := oneLine(inv.ConclusionRationale); why != "" {
+		out = append(out, []string{"Why: " + why})
+	}
+	for _, group := range []struct {
+		heading string
+		refs    []string
+	}{{"Findings that back the answer:", inv.ConclusionSupportingClaims}, {"Findings that go against the answer:", inv.ConclusionContradictingClaims}} {
+		if len(group.refs) == 0 {
+			continue
+		}
+		lines := []string{group.heading}
+		for _, ref := range group.refs {
+			line := "- A finding that is no longer here"
+			for _, c := range s.Claims {
+				if c.Ref == ref {
+					line = "- " + oneLine(c.Statement) + stateWords("", false, c.Status.PlainLabel(), verificationLabel(c.Verification))
+					break
+				}
+			}
+			lines = append(lines, line)
+		}
+		out = append(out, lines)
+	}
+	return out
+}
+
+// answerCheckLine says who has checked the answer, from its check label and
+// the day a person last checked it. It always states the label, so a reader
+// never takes an unchecked answer for a checked one.
+func answerCheckLine(inv domain.Investigation) string {
+	on := longDate(inv.ConclusionReviewedAt)
+	last := ""
+	if on != "" {
+		last = " A person last checked it on " + on + "."
+	}
+	switch inv.ConclusionVerification {
+	case domain.VerificationHumanVerified:
+		line := "A person checked this answer."
+		if on != "" {
+			line = "A person checked this answer on " + on + "."
+		}
+		if inv.ConclusionNeedsReview && on != "" { // without a dated check, NeedsReview only means none was recorded
+			line += " Something changed after that. It needs checking again."
+		}
+		return line
+	case domain.VerificationDisputed:
+		return "Sources disagree about this answer." + last
+	case domain.VerificationSourceVerified:
+		if on == "" {
+			return "An AI compared this answer with its sources. No person has checked it yet."
+		}
+		return "An AI compared this answer with its sources." + last
+	case domain.VerificationSuperseded:
+		return "This answer was replaced." + last
+	}
+	if on != "" {
+		return "A person checked this answer on " + on + ". It changed after that, and nobody has checked it since."
+	}
+	return "Nobody has checked this answer yet."
+}
+
+// names returns the refNamer of a shared answer: a record is named by its
+// own text in quotes, cut to a readable length. The map is only looked up.
+func (s Snapshot) names() refNamer {
+	text := map[string]string{}
+	for _, e := range s.Evidence {
+		text[e.Ref] = e.Title
+	}
+	for _, c := range s.Claims {
+		text[c.Ref] = c.Statement
+	}
+	for _, h := range s.Hypotheses {
+		text[h.Ref] = h.Statement
+	}
+	for _, q := range s.Questions {
+		text[q.Ref] = q.Question
+	}
+	return func(ref string) string {
+		if t := domain.TruncateLine(text[ref], 90); t != "" {
+			return `"` + t + `"`
+		}
+		return ""
+	}
+}
+
+// actorWords names who made a change for a reader of the shared answer, in
+// the app's words: "A person", "Claude Code", "Your AI". The reader is not
+// the person who did the checking, so a person is never "You".
+func actorWords(a domain.Actor) string {
 	switch a.Kind {
 	case domain.ActorHuman:
 		return "A person"
 	case domain.ActorAI:
-		if client == "" || client == "mcp-client" {
-			return "An AI client (AI)"
+		switch client := oneLine(a.Client); client {
+		case "claude-code":
+			return "Claude Code"
+		case "codex":
+			return "Codex"
+		case "", "mcp-client":
+			return "Your AI"
+		default:
+			return "Your AI (" + client + ")"
 		}
-		return client + " (AI)"
-	case domain.ActorImport:
-		return "Import"
-	case domain.ActorSystem:
-		return "Casebook"
 	}
-	return strings.TrimSpace(string(a.Kind) + " " + client)
+	return "Casebook"
 }
 
 // reportTimeline returns the material activity rows the timeline shows,
@@ -294,35 +404,18 @@ func reportTimeline(rows []domain.Activity, o ReportOptions) ([]domain.Activity,
 	return material, earlier
 }
 
-// sourceText renders where evidence came from: its source label (or source
-// type label when it has none), then ": " and its source ref when set.
-func sourceText(e domain.Evidence) string {
-	s := oneLine(e.SourceLabel)
-	if s == "" {
-		s = e.SourceType.Label()
-	}
-	if ref := oneLine(e.SourceRef); ref != "" {
-		s += ": " + ref
-	}
-	return s
-}
-
-// datePart returns the YYYY-MM-DD prefix of an RFC 3339 timestamp, or ""
-// when the value is shorter.
-func datePart(ts string) string {
+// longDate writes the day of a stored timestamp (RFC 3339, UTC) as "October
+// 30, 2026", or "" when the value has no date. A time of day is never
+// printed: the reader's clock is not the one the records are stored in.
+func longDate(ts string) string {
 	if len(ts) < 10 {
 		return ""
 	}
-	return ts[:10]
-}
-
-// timePart returns the HH:MM of an RFC 3339 UTC timestamp, or "--:--" when
-// the value has no time.
-func timePart(ts string) string {
-	if len(ts) < 16 || ts[10] != 'T' {
-		return "--:--"
+	t, err := time.Parse(time.DateOnly, ts[:10])
+	if err != nil {
+		return ""
 	}
-	return ts[11:16]
+	return t.Format("January 2, 2006")
 }
 
 // orText returns s, or fallback when s is empty.

@@ -107,7 +107,7 @@ func (d *Desktop) PickBackupToRecover() (RestorePick, error) {
 	}
 	d.setPendingRestore("")
 	path, err := d.native.OpenFile(runtime.OpenDialogOptions{
-		Title:   "Restore from backup",
+		Title:   "Bring back a backup",
 		Filters: dbFilter,
 	})
 	if err != nil {

@@ -110,7 +110,7 @@ Nothing in your prompt has to mention Casebook. Claude learns when to use it fro
   casebook setup instructions >> CLAUDE.md
   ```
 
-To have Claude Code save a question summary in a notes or document app, connect Claude Code to that app as well, then ask it to save the brief or the report there; [Using a question summary in other apps](sharing.md#using-a-question-summary-in-other-apps) explains what to ask for and what to check.
+To have Claude Code save the answer to a question in a notes or document app, connect Claude Code to that app as well, then ask it to save the brief or the report there; [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) explains what to ask for and what to check.
 
 How well this works is measured, not assumed: `scripts/agent-eval` runs real headless Claude Code and Codex sessions on small buggy repositories, with ordinary prompts that never mention Casebook, and grades what lands in an isolated database (see its [README](../scripts/agent-eval/README.md)).
 

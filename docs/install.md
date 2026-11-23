@@ -29,7 +29,7 @@ casebook doctor
 
 The install script puts `casebook` in `~/.local/bin` after checking the download against the release's `SHA256SUMS.txt`; it never uses `sudo`. On Windows, download `casebook-cli-<version>-windows-amd64.zip` (or `-arm64`) from the Releases page, or install the desktop app, which includes the command line tool. [Updating Casebook](updating.md#command-line-only-linux-macos-windows) has the details for each method.
 
-On Linux the command line tool is the whole product: AI clients work through `casebook mcp`, and you read questions with `casebook context`, `casebook report` and `casebook search`. Checking individual sources and findings, and choosing which findings go into the leadership brief, need the desktop app today; export the question or a backup to a Mac or Windows machine for those. The CLI can record that you checked the answer.
+On Linux the command line tool is the whole product: AI clients work through `casebook mcp`, and you read questions with `casebook context`, `casebook report` and `casebook search`. Checking individual sources and findings, and choosing which findings go into the short version of a shared answer, need the desktop app today; export the question or a backup to a Mac or Windows machine for those. The CLI can record that you checked the answer.
 
 ## Desktop app
 
@@ -79,7 +79,7 @@ Command line tool only (also the MCP server):
 
 ## Which version am I running?
 
-The last item in the desktop app's **Data** menu shows the version; `casebook --version` prints it; and `casebook doctor` warns when the desktop app and the command line tool in the same folder are different versions. Casebook never checks for updates on its own: it asks GitHub for the latest release only when you choose **Check for updates...** in the **Data** menu or run `casebook update`, and it never downloads one. [Updating Casebook](updating.md) covers updates and going back to a pre-upgrade backup.
+**Technical...** in the desktop app's **Settings** menu shows the version; `casebook --version` prints it; and `casebook doctor` warns when the desktop app and the command line tool in the same folder are different versions. Casebook never checks for updates on its own: it asks GitHub for the latest release only when you choose **Look for updates...** in the **Settings** menu or run `casebook update`, and it never downloads one. [Updating Casebook](updating.md) covers updates and going back to a pre-upgrade backup.
 
 ## Check your download
 

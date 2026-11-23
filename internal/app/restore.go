@@ -55,7 +55,7 @@ func (a *App) Restore(ctx context.Context, actor Actor, srcPath string) (Restore
 		return RestoreResult{}, domain.NewValidationError("path", "is not a usable file path")
 	}
 	if a.isLiveDB(abs) {
-		return RestoreResult{}, fmt.Errorf("%w: cannot restore the live database onto itself", domain.ErrConflict)
+		return RestoreResult{}, fmt.Errorf("%w: this is the file Casebook is using, not a backup", domain.ErrConflict)
 	}
 	if _, err := a.ValidateBackup(ctx, abs); err != nil {
 		return RestoreResult{}, err

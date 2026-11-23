@@ -39,7 +39,7 @@ func wantNotRegular(t *testing.T, f *os.File, err error) {
 		f.Close()
 	}
 	ve, ok := IsValidation(err)
-	if !ok || ve.Field != "data" || ve.Message != "must be a regular file" {
+	if !ok || ve.Field != "data" || ve.Message != "this is not a file; choose a file to open" {
 		t.Fatalf("err = %v, want validation on data", err)
 	}
 }

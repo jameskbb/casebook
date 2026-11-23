@@ -563,13 +563,52 @@ func (s HypothesisStatus) PlainLabel() string {
 	case HypothesisStatusOpen:
 		return "Not tested yet"
 	case HypothesisStatusSupported:
-		return "Supported"
+		return "Looks right so far"
 	case HypothesisStatusDisproven:
 		return "Ruled out"
 	case HypothesisStatusSuperseded:
 		return "Replaced"
 	}
 	return string(s)
+}
+
+// PlainLabel returns the label a person reads for a follow-up question.
+func (s QuestionStatus) PlainLabel() string {
+	switch s {
+	case QuestionStatusOpen:
+		return "Open"
+	case QuestionStatusResolved:
+		return "Answered"
+	case QuestionStatusDeferred:
+		return "Later"
+	}
+	return string(s)
+}
+
+// PlainLabel returns the kind of source in the words the desktop uses
+// (sourceTypeLabels in desktop/frontend/src/lib/labels.ts).
+func (t SourceType) PlainLabel() string {
+	switch t {
+	case SourceTypeSQLQuery, SourceTypeAPIResponse:
+		return "Numbers your AI looked up"
+	case SourceTypeCode:
+		return "Something your AI read"
+	case SourceTypeFile:
+		return "Report or spreadsheet"
+	case SourceTypeJira, SourceTypeEvernoteNote, SourceTypeDocumentation:
+		return "Document or email"
+	case SourceTypeUserStatement:
+		return "Something a person said"
+	case SourceTypeAIToolOutput:
+		return "Something your AI found"
+	case SourceTypeManualObservation:
+		return "Something you saw"
+	case SourceTypeExternalURL:
+		return "Web page"
+	case SourceTypeCasebookArtifact:
+		return "Another question"
+	}
+	return string(t)
 }
 
 // PlainWord returns the noun a person reads for a record type: finding for

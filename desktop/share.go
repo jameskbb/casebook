@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/jameskbb/casebook/internal/app"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -42,10 +43,10 @@ func (d *Desktop) reviewedShare(id string) (app.SharePreview, error) {
 			return p, nil
 		}
 	}
-	return app.SharePreview{}, uiErr(kindConflict, "snapshot_id", "This preview is no longer available. Refresh and review it before sharing.")
+	return app.SharePreview{}, uiErr(kindConflict, "snapshot_id", "This is no longer the latest answer. Close this window and choose Share the answer again.")
 }
 
-// CopySharePreview copies the pinned Markdown, without rereading the case.
+// CopySharePreview copies the pinned Markdown, without rereading the question.
 func (d *Desktop) CopySharePreview(snapshotID string) error {
 	p, err := d.reviewedShare(snapshotID)
 	if err != nil {
@@ -54,14 +55,26 @@ func (d *Desktop) CopySharePreview(snapshotID string) error {
 	return nativeErr("clipboard", d.native.SetClipboard(p.Markdown))
 }
 
-// SaveSharePreview saves the pinned Markdown through the native dialog. Even a
-// case change while the save dialog is open cannot alter the reviewed bytes.
+// SaveSharePreview saves the pinned answer through the native dialog. Even a
+// change to the question while the save dialog is open cannot alter what the
+// person read.
 func (d *Desktop) SaveSharePreview(snapshotID string) (FileResult, error) {
 	p, err := d.reviewedShare(snapshotID)
 	if err != nil {
 		return FileResult{}, err
 	}
-	path, err := d.native.SaveFile(runtime.SaveDialogOptions{Title: "Save the answer", DefaultFilename: shareFileName(p.InvestigationRef, p.Mode), Filters: mdFilter, CanCreateDirectories: true})
+	return d.saveAnswer(p)
+}
+
+var htmlFilter = []runtime.FileFilter{{DisplayName: "Web page (*.html)", Pattern: "*.html"}}
+
+// saveAnswer asks where to save a shared answer and writes it as a web page
+// (app.AnswerPage around the HTML of the preview), which opens on a
+// double-click on any computer. The page title and the suggested file name
+// are the question, the first line of the Markdown.
+func (d *Desktop) saveAnswer(p app.SharePreview) (FileResult, error) {
+	title, _, _ := strings.Cut(strings.TrimPrefix(p.Markdown, "# "), "\n")
+	path, err := d.native.SaveFile(runtime.SaveDialogOptions{Title: "Save the answer", DefaultFilename: answerFileName(title, p.Mode), Filters: htmlFilter, CanCreateDirectories: true})
 	if err != nil {
 		return FileResult{}, nativeErr("dialog", err)
 	}
@@ -71,17 +84,38 @@ func (d *Desktop) SaveSharePreview(snapshotID string) (FileResult, error) {
 	if d.isCasebookFile(path) {
 		return FileResult{}, errExportOverData
 	}
-	if err := writePrivateFile(path, []byte(p.Markdown)); err != nil {
+	if err := writePrivateFile(path, []byte(app.AnswerPage(title, p.HTML))); err != nil {
 		return FileResult{}, mapErr(err)
 	}
 	return FileResult{Path: path, FileName: filepath.Base(path)}, nil
 }
 
-// shareFileName is the suggested file name of a saved answer:
-// "INV-0002-answer.md", or "INV-0002-full-answer.md" for the full version.
-func shareFileName(ref, mode string) string {
-	if mode == "report" {
-		return ref + "-full-answer.md"
+// answerFileName is the suggested file name of a saved answer: the question
+// with the characters a file name cannot hold removed, cut at a word to at
+// most 80 bytes ("Why did calls go up 30 percent in October.html"), then
+// " (everything)" for the full version. A question with nothing usable left
+// is "answer".
+// shortcut: a title that is a reserved Windows device name (CON, NUL) is not
+// renamed; the save dialog refuses it and the person types another name.
+func answerFileName(title, mode string) string {
+	clean := strings.Map(func(r rune) rune {
+		if r < ' ' || strings.ContainsRune(`<>:"/\|?*`, r) {
+			return -1
+		}
+		return r
+	}, strings.ReplaceAll(title, "%", " percent"))
+	name := ""
+	for _, word := range strings.Fields(clean) {
+		if len(name)+1+len(word) > 80 {
+			break
+		}
+		name = strings.TrimSpace(name + " " + word)
 	}
-	return ref + "-answer.md"
+	if name = strings.TrimRight(name, ". "); name == "" {
+		name = "answer"
+	}
+	if mode == "report" {
+		name += " (everything)"
+	}
+	return name + ".html"
 }

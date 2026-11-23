@@ -477,7 +477,7 @@ func TestCopyReport(t *testing.T) {
 	if err := d.CopyReport(inv.Ref); err != nil {
 		t.Fatal(err)
 	}
-	if fake.clipboard != want || !strings.HasPrefix(want, "# INV-0001: Reported\n") || strings.Contains(want, "CASEBOOK DATA") {
+	if fake.clipboard != want || !strings.HasPrefix(want, "# Reported\n") || strings.Contains(want, "CASEBOOK DATA") {
 		t.Fatalf("report copy = %q, want app.Report", fake.clipboard)
 	}
 	if ue := decodeUIError(t, d.CopyReport("INV-0099")); ue.Kind != kindNotFound {
@@ -567,7 +567,7 @@ func TestReportPreview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(p.Markdown, "# INV-0001: Nothing in it yet\n") || !strings.HasPrefix(p.HTML, "<h1>INV-0001: Nothing in it yet</h1>") {
+	if !strings.HasPrefix(p.Markdown, "# Nothing in it yet\n") || !strings.HasPrefix(p.HTML, "<h1>Nothing in it yet</h1>") {
 		t.Fatalf("preview = %+v", p)
 	}
 	_, err = d.ReportPreview("INV-0099")

@@ -228,7 +228,7 @@ func (a *App) ImportInvestigation(ctx context.Context, actor Actor, data []byte)
 		return ImportResult{}, a.fail(op, err)
 	}
 	if len(data) > domain.MaxImportBytes {
-		return ImportResult{}, domain.NewValidationError("data", "must be at most %d bytes (20 MiB)", domain.MaxImportBytes)
+		return ImportResult{}, domain.NewValidationError("data", "this file is too big to open; the limit is 20 MB")
 	}
 	doc, err := decodeExport(data)
 	if err != nil {
@@ -279,53 +279,37 @@ func decodeExport(data []byte) (domain.ExportDocument, error) {
 	}
 	hd := json.NewDecoder(bytes.NewReader(data))
 	if err := hd.Decode(&head); err != nil {
-		return domain.ExportDocument{}, jsonError(err, hd.InputOffset())
+		return domain.ExportDocument{}, unreadableImport()
 	}
 	if head.Format != domain.ExportFormat {
-		return domain.ExportDocument{}, domain.NewValidationError("format", "must be %q", domain.ExportFormat)
+		return domain.ExportDocument{}, domain.NewValidationError("format", "this is not a Casebook question file")
+	}
+	if head.Version > domain.ExportVersion {
+		return domain.ExportDocument{}, domain.NewValidationError("version",
+			"this file was saved by a newer Casebook; update Casebook to open it")
 	}
 	if head.Version != 1 && head.Version != domain.ExportVersion {
-		return domain.ExportDocument{}, domain.NewValidationError("version",
-			"unsupported export version %d; this Casebook reads versions 1 and %d", head.Version, domain.ExportVersion)
+		return domain.ExportDocument{}, domain.NewValidationError("version", "this is not a Casebook question file")
 	}
 
 	var doc domain.ExportDocument
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&doc); err != nil {
-		return domain.ExportDocument{}, jsonError(err, dec.InputOffset())
+		return domain.ExportDocument{}, unreadableImport()
 	}
 	var extra json.RawMessage
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		return domain.ExportDocument{}, domain.NewValidationError("data",
-			"has trailing data after the JSON document (byte offset %d)", dec.InputOffset())
+		return domain.ExportDocument{}, unreadableImport()
 	}
 	return doc, nil
 }
 
-// jsonError turns a decoder error into a ValidationError on data that names
-// a position but never echoes input text.
-func jsonError(err error, offset int64) error {
-	var (
-		syn *json.SyntaxError
-		typ *json.UnmarshalTypeError
-	)
-	switch {
-	case errors.As(err, &syn):
-		return domain.NewValidationError("data", "is not valid JSON (byte offset %d)", syn.Offset)
-	case errors.As(err, &typ):
-		field := typ.Field
-		if field == "" {
-			field = "the document"
-		}
-		return domain.NewValidationError("data", "has a value of the wrong JSON type for %s (byte offset %d)",
-			field, typ.Offset)
-	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
-		return domain.NewValidationError("data", "is not valid JSON: unexpected end of input")
-	case strings.HasPrefix(err.Error(), "json: unknown field "):
-		return domain.NewValidationError("data", "has an unknown field (byte offset %d)", offset)
-	}
-	return domain.NewValidationError("data", "is not a valid Casebook export (byte offset %d)", offset)
+// unreadableImport is the ValidationError on data for a file that does
+// not decode as an export: bad JSON, a wrong type, an unknown field or text
+// after the document. It never echoes input text.
+func unreadableImport() error {
+	return domain.NewValidationError("data", "Casebook cannot read this file; it may be damaged, or it is not a Casebook question file")
 }
 
 // importStmt is a validated claim or hypothesis.

@@ -450,7 +450,7 @@ func TestImportHostileInputs(t *testing.T) {
 	}
 
 	_, err = a.ImportInvestigation(ctx, apptest.Human, mutate(func(d *app.ExportDocument) { d.Version = 3 })(t))
-	if ve, _ := app.IsValidation(err); ve == nil || ve.Message != "unsupported export version 3; this Casebook reads versions 1 and 2" {
+	if ve, _ := app.IsValidation(err); ve == nil || ve.Message != "this file was saved by a newer Casebook; update Casebook to open it" {
 		t.Fatalf("version message = %v", err)
 	}
 	_, err = a.ImportInvestigation(ctx, app.Actor{Kind: "robot", Client: "x"}, baseData)
@@ -637,7 +637,7 @@ func TestImportMarksProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(md, "human james (imported): Added source E-099") {
+	if !strings.Contains(md, "human james (imported): Added the source E-099") {
 		t.Fatalf("pack does not attribute the imported row:\n%s", md)
 	}
 	// Verifying locally restores trust; the row stays marked imported.

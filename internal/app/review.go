@@ -78,9 +78,13 @@ func reviewFinding(k stmtKind, row store.StatementRow, evidence map[string]Evide
 		out.Evidence = append(out.Evidence, ReviewEvidence{Relation: link.Relation, Evidence: e})
 		if link.Relation == domain.RelationSupports {
 			supports++
+			// The source is named by its title: the screen hides codes.
+			name := `"` + domain.TruncateLine(e.Title, 80) + `"`
 			switch e.Verification {
-			case domain.VerificationDisputed, domain.VerificationSuperseded:
-				out.Warnings = append(out.Warnings, fmt.Sprintf("Source %s is marked %s.", e.Ref, e.Verification.PlainLabel()))
+			case domain.VerificationDisputed:
+				out.Warnings = append(out.Warnings, "Sources disagree about "+name+".")
+			case domain.VerificationSuperseded:
+				out.Warnings = append(out.Warnings, "A newer source replaced "+name+".")
 			}
 		}
 	}
@@ -167,7 +171,7 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 			return err
 		}
 		if !reviewCurrent(row) {
-			return fmt.Errorf("%w: finding %s was replaced or ruled out; check a current finding instead", domain.ErrConflict, row.Ref)
+			return fmt.Errorf("%w: this finding was replaced or ruled out; check another finding instead", domain.ErrConflict)
 		}
 		evidence, err := store.ListEvidenceRaw(ctx, tx, t.Inv.ID, true)
 		if err != nil {
@@ -179,7 +183,7 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 		}
 		current := reviewFinding(k, row, byRef)
 		if in.Basis == "" || in.Basis != current.Basis {
-			return fmt.Errorf("%w: this finding or its sources changed; show the latest version before checking it", domain.ErrConflict)
+			return fmt.Errorf("%w: this finding or its sources changed while you had it open; read the new version before checking it", domain.ErrConflict)
 		}
 		if row.Verification == domain.VerificationDisputed && in.Verification == domain.VerificationHumanVerified && !in.SettleDispute {
 			return domain.NewValidationError("settle_dispute", "confirm that you checked this even though its sources disagree")

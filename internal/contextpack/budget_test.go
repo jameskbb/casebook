@@ -12,7 +12,7 @@ import (
 var dropOrder = []string{"recent_changes", "statement_rationales", "evidence_index", "deferred_questions", "rationale", "disputed_claims", "disproven_hypotheses"}
 
 var headerParts = []string{
-	"Question: INV-0007\n", "Title: Widget count mismatch\n", "Status: In progress\n",
+	"Question: INV-0007\n", "Title: Widget count mismatch\n", "Status: Answered\n",
 	"The question:\nWhy do the two widget counts differ?\n",
 	"Answer so far:\nCounts use different cutoffs.\n",
 }

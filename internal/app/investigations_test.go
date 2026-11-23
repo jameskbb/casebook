@@ -277,7 +277,7 @@ func TestUnarchiveViaUpdateNonArchivedStatus(t *testing.T) {
 	if un.Status != app.InvestigationStatusInvestigating {
 		t.Fatalf("status = %q, want investigating", un.Status)
 	}
-	wantActions(t, a, inv.Ref, "investigation.create", "investigation.archive", "investigation.update",
+	wantActions(t, a, inv.Ref, "investigation.create", "investigation.archive", "investigation.unarchive",
 		"investigation.archive", "investigation.unarchive")
 }
 

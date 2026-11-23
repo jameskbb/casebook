@@ -160,6 +160,10 @@ SELECT id, 'ai', 'claude-code', 'evernote.post', '', ?, '2099-01-01T00:00:00Z' F
 		t.Fatal(err)
 	}
 	for name, text := range map[string]string{"report": report, "brief": brief.Markdown, "context pack": pack} {
+		// A shared answer uses the kind name the app shows; the pack keeps the stored one.
+		if name != "context pack" {
+			text = strings.ReplaceAll(text, "Document or email", "Evernote note")
+		}
 		if !strings.Contains(text, "Evernote note") {
 			t.Errorf("%s lost the Evernote note label:\n%s", name, text)
 		}

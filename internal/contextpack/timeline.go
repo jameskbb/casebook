@@ -8,108 +8,129 @@ import (
 
 // timelineVerbs holds the plain phrase for each activity action, the same
 // table the desktop "How we got here" list uses
-// (desktop/frontend/src/lib/activity.ts, VERBS), capitalised to start a line.
-// "{T}" is the target ref. It is only ever looked up by key, never iterated,
-// so output order cannot depend on it.
+// (desktop/frontend/src/lib/activity.ts, VERBS). A phrase follows the actor:
+// "Claude Code added the source E-005". "{T}" is the target, written by a
+// refNamer. The table is only ever looked up by key, never iterated, so
+// output order cannot depend on it.
 var timelineVerbs = map[string]string{
-	"investigation.create":    "Created this question",
-	"investigation.update":    "Edited the question",
-	"investigation.archive":   "Archived this question",
-	"investigation.unarchive": "Unarchived this question",
-	"conclusion.update":       "Updated the answer",
-	"evidence.add":            "Added source {T}",
-	"evidence.update":         "Updated source {T}",
-	"claim.add":               "Added finding {T}",
-	"claim.update":            "Updated finding {T}",
-	"claim.supersede":         "Replaced finding {T}",
-	"hypothesis.add":          "Added finding {T}",
-	"hypothesis.update":       "Updated finding {T}",
-	"hypothesis.supersede":    "Replaced finding {T}",
-	"link.add":                "Linked a source to {T}",
-	"link.update":             "Changed how a source relates to {T}",
-	"link.remove":             "Unlinked a source from {T}",
-	"question.add":            "Asked {T}",
-	"question.update":         "Reworded {T}",
-	"question.resolve":        "Resolved {T}",
-	"question.defer":          "Deferred {T}",
-	"question.reopen":         "Reopened {T}",
-	"investigation.delete":    "Deleted question {T}",
-	"evidence.delete":         "Deleted source {T}",
-	"claim.delete":            "Deleted finding {T}",
-	"hypothesis.delete":       "Deleted finding {T}",
-	"question.delete":         "Deleted {T}",
-	"active.set":              "Made this your AI's current question",
-	"active.clear":            "Cleared your AI's current question",
-	"checkpoint":              "Saved a checkpoint",
-	"import":                  "Imported this question",
-	"restore":                 "Restored all data from a backup",
+	"investigation.create":    "created this question",
+	"investigation.update":    "edited the question",
+	"investigation.archive":   "archived this question",
+	"investigation.unarchive": "put this question back in the list",
+	"conclusion.update":       "updated the answer",
+	"evidence.add":            "added the source {T}",
+	"evidence.update":         "updated the source {T}",
+	"claim.add":               "added the finding {T}",
+	"claim.update":            "updated the finding {T}",
+	"claim.supersede":         "replaced the finding {T}",
+	"hypothesis.add":          "added the finding {T}",
+	"hypothesis.update":       "updated the finding {T}",
+	"hypothesis.supersede":    "replaced the finding {T}",
+	"link.add":                "added a source to the finding {T}",
+	"link.update":             "changed whether a source backs the finding {T}",
+	"link.remove":             "removed a source from the finding {T}",
+	"question.add":            "asked the follow-up question {T}",
+	"question.update":         "reworded the follow-up question {T}",
+	"question.resolve":        "answered the follow-up question {T}",
+	"question.defer":          "left the follow-up question {T} for later",
+	"question.reopen":         "reopened the follow-up question {T}",
+	"investigation.delete":    "deleted a question {T}",
+	"evidence.delete":         "deleted a source {T}",
+	"claim.delete":            "deleted a finding {T}",
+	"hypothesis.delete":       "deleted a finding {T}",
+	"question.delete":         "deleted a follow-up question {T}",
+	"active.set":              "made this your AI's current question",
+	"active.clear":            "cleared your AI's current question",
+	"checkpoint":              "saved its progress",
+	"import":                  "added this question from a file",
+	"restore":                 "restored all data from a backup",
 }
 
-// timelinePhrase renders one activity row for the report's "How we got
-// here" list in plain words, from its action key and target ref: "Created
-// this question", "Marked C-001: A person checked this", "Ruled out H-001". When
-// the stored summary has a shape internal/app writes for that action (today's
-// or an older version's), the detail it carries (the new status, the
-// question text, the linked source) is kept, with stored enum values written
-// as the labels a person reads. Confidence is never shown. An action the
-// table does not know falls back to the stored summary. label writes a check
-// label: verificationLabel for anything shared, PlainLabel on the screen of
-// the person who did the checking.
-func timelinePhrase(a domain.Activity, label func(domain.Verification) string) string {
+// refNamer writes a record ref the way the reader meets the record: the ref
+// itself in a terminal or a pack an AI reads, the record's own text in a
+// shared answer ("" when the record is gone).
+type refNamer func(ref string) string
+
+func refItself(ref string) string { return ref }
+
+// with joins a noun and a name: "the source E-005", or "the source" when
+// the name is empty.
+func with(noun, name string) string {
+	if name == "" {
+		return noun
+	}
+	return noun + " " + name
+}
+
+// fill puts the target's name into a table phrase.
+func fill(phrase, name string) string {
+	if name == "" {
+		return strings.Replace(phrase, " {T}", "", 1)
+	}
+	return strings.Replace(phrase, "{T}", name, 1)
+}
+
+// timelinePhrase renders one activity row in plain words, from its action
+// key and target ref: "created this question", "checked the finding C-001",
+// "ruled out the finding H-001". When the stored summary has a shape
+// internal/app writes for that action (today's or an older version's), the
+// detail it carries (the new state, the answer to a follow-up question, the
+// source added to a finding) is kept, with stored enum values written as the
+// labels a person reads. Confidence is never shown. An action the table does
+// not know falls back to the stored summary.
+func timelinePhrase(a domain.Activity, name refNamer) string {
 	sum := oneLine(a.Summary)
 	ref := oneLine(a.TargetRef)
 	base, ok := timelineVerbs[a.Action]
 	if !ok {
 		if sum == "" {
-			return "Recorded " + oneLine(a.Action)
+			return "made a change"
 		}
 		return sum
 	}
-	if p := detailPhrase(a.Action, ref, sum, label); p != "" {
+	if p := detailPhrase(a.Action, ref, sum, name); p != "" {
 		return p
 	}
-	if ref == "" {
-		return strings.Replace(base, " {T}", "", 1)
-	}
-	return strings.Replace(base, "{T}", ref, 1)
+	return fill(base, name(ref))
 }
 
 // resetSentence says an edit lowered a checked record to Not checked.
-const resetSentence = "It changed after it was checked, so it reads Not checked again."
+const resetSentence = "It changed after it was checked, so it needs checking again."
 
 // detailPhrase reads the detail out of a summary written by internal/app
 // for action. It returns "" when the summary does not have an expected
 // shape (an imported file, a hand-written row), and the caller uses the
 // table.
-func detailPhrase(action, ref, sum string, label func(domain.Verification) string) string {
+func detailPhrase(action, ref, sum string, name refNamer) string {
 	switch action {
 	case "investigation.update":
 		return questionUpdatePhrase(ref, sum)
 	case "conclusion.update":
 		if strings.HasPrefix(sum, "Cleared conclusion") || strings.HasPrefix(sum, "Cleared the answer") {
-			return "Cleared the answer"
+			return "cleared the answer"
 		}
 		if strings.HasPrefix(sum, "Recorded a review of the answer") {
-			return "Recorded a review of the answer"
+			return "checked the answer"
 		}
 		if strings.Contains(sum, "; verification reset to ") {
-			return "Updated the answer. " + resetSentence
+			return "updated the answer. " + resetSentence
 		}
 	case "evidence.add":
+		// The stored title names a source whose code is all the reader has.
 		for _, prefix := range []string{"Added source ", "Added evidence "} {
-			if title, ok := strings.CutPrefix(sum, prefix+ref+" "); ok && ref != "" {
-				return "Added source " + ref + " " + title
+			if title, ok := strings.CutPrefix(sum, prefix+ref+" "); ok && ref != "" && name(ref) == ref {
+				return "added the source " + ref + " " + title
 			}
 		}
 	case "claim.add", "hypothesis.add":
-		return addFindingPhrase(recName(action), ref, sum)
+		return addFindingPhrase(recName(action), ref, sum, name)
 	case "claim.update", "hypothesis.update", "evidence.update":
-		return updateRecordPhrase(recName(action), ref, sum, label)
+		return updateRecordPhrase(recName(action), ref, sum, name)
 	case "claim.supersede", "hypothesis.supersede":
 		head, _, _ := strings.Cut(sum, "; ")
 		for _, mid := range []string{" was replaced by ", " superseded by "} {
-			if by, ok := strings.CutPrefix(head, ref+mid); ok && ref != "" && by != "" {
-				return "Replaced finding " + ref + " with " + by
+			if by, ok := strings.CutPrefix(head, ref+mid); ok && ref != "" && name(by) != "" {
+				return "replaced " + with("the finding", name(ref)) + " with " + name(by)
 			}
 		}
 	case "link.add":
@@ -118,13 +139,8 @@ func detailPhrase(action, ref, sum string, label func(domain.Verification) strin
 			ev, rest, ok1 := strings.Cut(rest, " to ")
 			to, rel, ok2 := strings.Cut(rest, " (")
 			rel, ok3 := strings.CutSuffix(rel, ")")
-			if ok1 && ok2 && ok3 && ev != "" && to != "" {
-				switch rel {
-				case string(domain.RelationSupports):
-					return "Linked source " + ev + " to " + to + ", which it supports"
-				case string(domain.RelationContradicts):
-					return "Linked source " + ev + " to " + to + ", which it contradicts"
-				}
+			if ok1 && ok2 && ok3 && ev != "" && to != "" && relationWords(rel) != "" {
+				return "added " + with("the source", name(ev)) + " to " + with("the finding", name(to)) + ", which it " + relationWords(rel)
 			}
 		}
 	case "link.update":
@@ -133,25 +149,29 @@ func detailPhrase(action, ref, sum string, label func(domain.Verification) strin
 			ev, rest, ok1 := strings.Cut(rest, " to ")
 			to, rest, ok2 := strings.Cut(rest, " from ")
 			from, now, ok3 := strings.Cut(rest, " to ")
-			if ok1 && ok2 && ok3 && ev != "" && to != "" && relationGerund(from) != "" && relationGerund(now) != "" {
-				return "Changed source " + ev + " from " + relationGerund(from) + " to " +
-					relationGerund(now) + " " + to
+			if ok1 && ok2 && ok3 && ev != "" && to != "" && relationWords(from) != "" && relationWords(now) != "" {
+				return "changed " + with("the source", name(ev)) + ": it now " + relationWords(now) + " " + with("the finding", name(to))
 			}
 		}
 	case "link.remove":
 		if rest, ok := strings.CutPrefix(sum, "Unlinked "); ok {
 			if ev, from, ok := strings.Cut(rest, " from "); ok && ev != "" && from != "" {
-				return "Unlinked source " + ev + " from " + from
+				return "removed " + with("the source", name(ev)) + " from " + with("the finding", name(from))
 			}
 		}
 	case "question.add":
-		return questionPhrase("Asked", "Added question ", ref, sum)
+		return questionPhrase(action, "Added question ", ref, sum, name, false)
 	case "question.update":
-		return questionPhrase("Reworded", "Updated question ", ref, sum)
+		return questionPhrase(action, "Updated question ", ref, sum, name, false)
 	case "question.resolve":
-		return questionPhrase("Resolved", "Resolved question ", ref, sum)
+		return questionPhrase(action, "Resolved question ", ref, sum, name, true)
 	case "question.defer":
-		return questionPhrase("Deferred", "Deferred question ", ref, sum)
+		return questionPhrase(action, "Deferred question ", ref, sum, name, true)
+	case "checkpoint":
+		// The stored summary is the note the AI saved with its progress.
+		if sum != "" {
+			return "saved its progress: " + sum
+		}
 	}
 	return ""
 }
@@ -162,25 +182,34 @@ func recName(action string) string {
 	return rec
 }
 
-// questionPhrase turns "Added question Q-001: text" into "Asked Q-001: text".
-func questionPhrase(verb, prefix, ref, sum string) string {
+// questionPhrase turns "Added question Q-001: text" into "asked the
+// follow-up question Q-001: text". For a new or reworded question the text
+// is the question itself, so it is left out when the name already is that
+// text; for an answered question it is the answer (detail true) and is
+// always kept.
+func questionPhrase(action, prefix, ref, sum string, name refNamer, detail bool) string {
 	rest, ok := strings.CutPrefix(sum, prefix+ref)
 	if !ok || ref == "" {
 		return ""
 	}
+	phrase := fill(timelineVerbs[action], name(ref))
 	if rest == "" {
-		return verb + " " + ref
+		return phrase
 	}
-	if text, ok := strings.CutPrefix(rest, ": "); ok && text != "" {
-		return verb + " " + ref + ": " + text
+	text, ok := strings.CutPrefix(rest, ": ")
+	if !ok || text == "" {
+		return ""
 	}
-	return ""
+	if !detail && name(ref) != ref && name(ref) != "" {
+		return phrase
+	}
+	return phrase + ": " + text
 }
 
 // addFindingPhrase turns "Added finding C-001 with 3 sources", or the older
-// "Added claim C-001 [high] with 3 evidence links", into "Added finding
-// C-001 (3 sources)".
-func addFindingPhrase(rec, ref, sum string) string {
+// "Added claim C-001 [high] with 3 evidence links", into "added the finding
+// C-001 with 3 sources".
+func addFindingPhrase(rec, ref, sum string, name refNamer) string {
 	rest, ok := strings.CutPrefix(sum, "Added finding "+ref)
 	if !ok {
 		if rest, ok = strings.CutPrefix(sum, "Added "+rec+" "+ref+" ["); ok {
@@ -190,8 +219,9 @@ func addFindingPhrase(rec, ref, sum string) string {
 	if !ok || ref == "" {
 		return ""
 	}
+	out := "added " + with("the finding", name(ref))
 	if rest == "" {
-		return "Added finding " + ref
+		return out
 	}
 	links, ok := strings.CutPrefix(rest, " with ")
 	n, _, found := strings.Cut(links, " ")
@@ -199,28 +229,42 @@ func addFindingPhrase(rec, ref, sum string) string {
 		return ""
 	}
 	if n == "1" {
-		return "Added finding " + ref + " (1 source)"
+		return out + " with 1 source"
 	}
-	return "Added finding " + ref + " (" + n + " sources)"
+	return out + " with " + n + " sources"
+}
+
+// checkPhrase says a record was given a check label: "checked the finding
+// C-001", "said sources disagree about the finding C-001", "marked the
+// source E-002: AI checked the source". The actor is written before it, so a
+// person's check needs neither "You" nor "A person".
+func checkPhrase(what string, v domain.Verification) string {
+	switch v {
+	case domain.VerificationHumanVerified:
+		return "checked " + what
+	case domain.VerificationDisputed:
+		return "said sources disagree about " + what
+	}
+	return "marked " + what + ": " + v.PlainLabel()
 }
 
 // updateRecordPhrase renders a claim, hypothesis or evidence update. These
 // summaries keep the engine's field list: "Set verification of C-001 to
-// human_verified" becomes "Marked C-001: A person checked this"; "Updated
-// hypothesis H-001: rationale, status disproven" becomes "Ruled out H-001;
-// edited the why".
-func updateRecordPhrase(rec, ref, sum string, check func(domain.Verification) string) string {
+// human_verified" becomes "checked the finding C-001"; "Updated hypothesis
+// H-001: rationale, status disproven" becomes "ruled out the finding H-001
+// (also changed: why)".
+func updateRecordPhrase(rec, ref, sum string, name refNamer) string {
 	if ref == "" {
 		return ""
 	}
+	what := with("the "+domain.RecordType(rec).PlainWord(), name(ref))
 	if rest, ok := strings.CutPrefix(sum, "Set verification of "+ref+" to "); ok {
 		v, status, hasStatus := strings.Cut(rest, "; status ")
 		if v == "" {
 			return ""
 		}
-		label := check(domain.Verification(v))
-		out := "Marked " + ref + ": " + label
-		if s := statusLabel(rec, status); hasStatus && s != label && s != "Current" {
+		out := checkPhrase(what, domain.Verification(v))
+		if s := statusLabel(rec, status); hasStatus && s != domain.Verification(v).PlainLabel() && s != "Current" {
 			out += "; now " + s
 		}
 		return out
@@ -240,36 +284,38 @@ func updateRecordPhrase(rec, ref, sum string, check func(domain.Verification) st
 		case field == "confidence":
 			// stored, never shown
 		case field == "status" && hasValue:
-			if s := statusLabel(rec, value); s == "Ruled out" {
-				primary = "Ruled out " + ref
-			} else {
-				primary = "Marked " + ref + ": " + s
+			switch s := statusLabel(rec, value); s {
+			case "Ruled out":
+				primary = "ruled out " + what
+			case "Current":
+				primary = "brought back " + what
+			default:
+				primary = "marked " + what + ": " + s
 			}
 		case field == "verification" && !hasValue && hasNote:
 			// a reset: the note below names the new value
 		case field == "verification" && hasValue && primary == "":
-			primary = "Marked " + ref + ": " + check(domain.Verification(value))
+			primary = checkPhrase(what, domain.Verification(value))
 		case field == "verification" && hasValue:
-			others = append(others, "now marked "+check(domain.Verification(value)))
-		case field == "source_type" && hasValue:
-			others = append(others, "source type now "+domain.SourceType(value).Label())
-		case hasValue:
-			others = append(others, fieldName(field)+" now "+value)
+			if domain.Verification(value) == domain.VerificationHumanVerified {
+				others = append(others, "checked")
+			} else {
+				others = append(others, domain.Verification(value).PlainLabel())
+			}
 		default:
-			others = append(others, "edited the "+fieldName(field))
+			others = append(others, fieldName(field))
 		}
 	}
-	noun := domain.RecordType(rec).PlainWord()
 	out := ""
 	switch {
 	case primary == "" && len(others) == 0:
-		out = "Updated " + noun + " " + ref
+		out = "updated " + what
 	case primary == "":
-		out = "Updated " + noun + " " + ref + ": " + strings.Join(others, ", ")
+		out = "updated " + what + " (" + strings.Join(others, ", ") + ")"
 	case len(others) == 0:
 		out = primary
 	default:
-		out = primary + "; " + strings.Join(others, ", ")
+		out = primary + " (also changed: " + strings.Join(others, ", ") + ")"
 	}
 	if hasNote {
 		if !strings.HasPrefix(note, "verification reset to ") {
@@ -280,9 +326,9 @@ func updateRecordPhrase(rec, ref, sum string, check func(domain.Verification) st
 	return out
 }
 
-// questionUpdatePhrase renders "Updated question INV-0002: title, status
-// (status resolved)", or the older "Updated investigation ...", as "Marked
-// the question Resolved; edited the title".
+// questionUpdatePhrase renders "Updated question INV-0002: title, question
+// text", or the older "Updated investigation ...", as "edited the title and
+// the background". A status is the engine's bookkeeping and is not shown.
 func questionUpdatePhrase(ref, sum string) string {
 	rest, ok := strings.CutPrefix(sum, "Updated question "+ref+": ")
 	if !ok {
@@ -291,11 +337,10 @@ func questionUpdatePhrase(ref, sum string) string {
 	if !ok || ref == "" {
 		return ""
 	}
-	status, unarchived := "", false
-	if list, st, ok := strings.Cut(rest, " (status "); ok {
-		rest, status = list, strings.TrimSuffix(st, ")")
-	} else if list, _, ok := strings.Cut(rest, " (unarchived to "); ok {
-		rest, unarchived = list, true
+	if list, _, ok := strings.Cut(rest, " (status "); ok {
+		rest = list
+	} else if _, _, ok := strings.Cut(rest, " (unarchived to "); ok {
+		return timelineVerbs["investigation.unarchive"]
 	}
 	var edits []string
 	for _, field := range strings.Split(rest, ", ") {
@@ -304,45 +349,43 @@ func questionUpdatePhrase(ref, sum string) string {
 		case "title":
 			edits = append(edits, "the title")
 		case "question text", "problem_statement":
-			edits = append(edits, "the question")
+			edits = append(edits, "the background")
 		default:
 			return ""
 		}
 	}
-	var parts []string
-	switch {
-	case unarchived:
-		parts = append(parts, "Unarchived this question")
-	case status != "":
-		parts = append(parts, "Marked the question "+questionStatusWord(domain.InvestigationStatus(status)))
+	if len(edits) == 0 {
+		return ""
 	}
-	if len(edits) > 0 {
-		verb := "Edited "
-		if len(parts) > 0 {
-			verb = "edited "
-		}
-		parts = append(parts, verb+strings.Join(edits, " and "))
-	}
-	return strings.Join(parts, "; ")
+	return "edited " + strings.Join(edits, " and ")
 }
 
-// questionStatusWord is the stored status of a question (an investigation)
-// in plain words.
-func questionStatusWord(s domain.InvestigationStatus) string {
-	if s == domain.InvestigationStatusInvestigating {
-		return "In progress"
-	}
-	return s.Label()
-}
-
-// fieldName is the plain name of a stored field: "confidence_rationale"
-// reads "why", "raw_detail" reads "raw detail".
+// fieldName is the plain name of a stored field, in the words the desktop
+// uses for it.
 func fieldName(field string) string {
 	switch field {
+	case "statement":
+		return "wording"
 	case "confidence_rationale", "rationale":
 		return "why"
 	case "superseded_by":
-		return "replacement"
+		return "replaced by"
+	case "source_type":
+		return "kind of source"
+	case "source_label":
+		return "name of the source"
+	case "source_ref":
+		return "where to find it"
+	case "captured_at":
+		return "date of the source"
+	case "raw_detail":
+		return "exact words"
+	case "metadata":
+		return "extra details"
+	case "title":
+		return "name"
+	case "summary":
+		return "what it shows"
 	}
 	return strings.ReplaceAll(field, "_", " ")
 }
@@ -359,19 +402,27 @@ func statusLabel(rec, value string) string {
 	return value
 }
 
-// relationGerund is "supporting" or "contradicting", or "" for anything else.
-func relationGerund(rel string) string {
+// relationWords is "backs up" or "goes against", or "" for anything else.
+func relationWords(rel string) string {
 	switch rel {
 	case string(domain.RelationSupports):
-		return "supporting"
+		return "backs up"
 	case string(domain.RelationContradicts):
-		return "contradicting"
+		return "goes against"
 	}
 	return ""
 }
 
-// TimelinePhrase is timelinePhrase for the screen of the person who did the
-// checking (the terminal): "Marked C-001: You checked this".
+// TimelinePhrase is timelinePhrase for a terminal: a line of its own, so it
+// starts with a capital, and records are named by their codes.
 func TimelinePhrase(a domain.Activity) string {
-	return timelinePhrase(a, domain.Verification.PlainLabel)
+	return upperFirst(timelinePhrase(a, refItself))
+}
+
+// upperFirst capitalises a leading ASCII letter.
+func upperFirst(s string) string {
+	if s != "" && s[0] >= 'a' && s[0] <= 'z' {
+		return string(s[0]-'a'+'A') + s[1:]
+	}
+	return s
 }

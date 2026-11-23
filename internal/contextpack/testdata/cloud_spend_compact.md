@@ -1,6 +1,6 @@
 Question: INV-0001
 Title: September cloud bill up 38%
-Status: In progress
+Status: Answered
 
 The question:
 Why did the cloud bill rise 38% in September when traffic was flat?
@@ -11,7 +11,7 @@ Debug logging requested for payments only reached every service and drove most o
 Answer marked: A person checked this
 Findings behind the answer: none selected.
 Findings against the answer: none selected.
-Answer review: not reviewed yet.
+Answer checked by a person: not yet.
 
 Findings:
 C-001 [A person checked this]

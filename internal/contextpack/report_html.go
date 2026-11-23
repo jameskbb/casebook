@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-// ReportHTML turns the Markdown RenderReport produces into HTML for the
-// desktop app's Share summary preview and for saving as a file. It knows
-// only the shapes the report emits: "# ", "## " and "### " headings, "- "
-// bullets with one nested "  - " level, a leading **bold** run on a bullet,
+// ReportHTML turns the Markdown of a shared answer into HTML for the
+// desktop preview and, inside AnswerPage, for a saved file. It knows
+// only the shapes a shared answer has: "# ", "## " and "### " headings, "- "
+// bullets with one nested "  - " level,
 // a paragraph that is one whole "_..._" line (the footer) as emphasis, and
 // paragraphs separated by blank lines, with the backslash mdText puts
 // before a leading block marker removed. Every character of stored text is
@@ -34,14 +34,6 @@ func ReportHTML(markdown string) string {
 		if to == 0 && strings.HasSuffix(b.String(), "</ul>") {
 			b.WriteString("\n")
 		}
-	}
-	bullet := func(text string) string {
-		if rest, ok := strings.CutPrefix(text, "**"); ok {
-			if bold, after, found := strings.Cut(rest, "**"); found {
-				return "<strong>" + html.EscapeString(bold) + "</strong>" + html.EscapeString(after)
-			}
-		}
-		return html.EscapeString(text)
 	}
 
 	for _, line := range strings.Split(markdown, "\n") {
@@ -70,7 +62,7 @@ func ReportHTML(markdown string) string {
 			} else {
 				b.WriteString("</li>")
 			}
-			b.WriteString("<li>" + bullet(line[4:]))
+			b.WriteString("<li>" + html.EscapeString(line[4:]))
 		case strings.HasPrefix(line, "- "):
 			flushPara()
 			if depth == 2 {
@@ -82,7 +74,7 @@ func ReportHTML(markdown string) string {
 				b.WriteString("<ul>")
 				depth = 1
 			}
-			b.WriteString("<li>" + bullet(line[2:]))
+			b.WriteString("<li>" + html.EscapeString(line[2:]))
 		case strings.TrimSpace(line) == "":
 			flushPara()
 		case len(para) == 0 && len(line) > 2 && line[0] == '_' && line[len(line)-1] == '_':
@@ -116,3 +108,23 @@ func unescapeBlockMarker(line string) string {
 	}
 	return line
 }
+
+// AnswerPage wraps the HTML of a shared answer (ReportHTML) in a whole page,
+// so the saved file opens in a browser on a double-click and reads well when
+// printed or pasted into a document. The title is escaped; nothing is loaded
+// from the network.
+func AnswerPage(title, body string) string {
+	return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n" +
+		"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+		"<title>" + html.EscapeString(title) + "</title>\n<style>\n" + answerPageCSS + "</style>\n</head>\n<body>\n" +
+		body + "</body>\n</html>\n"
+}
+
+const answerPageCSS = `body { font: 16px/1.5 "Segoe UI", system-ui, sans-serif; color: #1f2328; max-width: 44em; margin: 2em auto; padding: 0 1.25em; }
+h1 { font-size: 1.6em; line-height: 1.25; }
+h2 { font-size: 1.15em; margin-top: 1.8em; padding-bottom: 0.2em; border-bottom: 1px solid #d8dee4; }
+h3 { font-size: 1em; margin-top: 1.4em; }
+li { margin: 0.3em 0; }
+li li { color: #474d54; }
+em { color: #59636e; font-size: 0.9em; }
+`

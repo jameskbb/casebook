@@ -22,7 +22,7 @@ func TestImportRefusesFIFO(t *testing.T) {
 	select {
 	case r := <-done:
 		wantCode(t, r, 2)
-		if r.Stderr != "casebook: invalid data: must be a regular file\n" {
+		if r.Stderr != "casebook: invalid data: this is not a file; choose a file to open\n" {
 			t.Errorf("stderr = %q", r.Stderr)
 		}
 	case <-time.After(10 * time.Second):

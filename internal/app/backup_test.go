@@ -254,7 +254,7 @@ func TestValidateBackupRejectsBadFiles(t *testing.T) {
 			}
 			_, err := a.ValidateBackup(ctx, p)
 			wantErrIs(t, err, app.ErrConflict)
-			if !strings.Contains(err.Error(), "not a valid Casebook backup (") {
+			if !strings.Contains(err.Error(), "this is not a Casebook backup (") {
 				t.Fatalf("message = %q", err)
 			}
 			assertNoRawSQLite(t, err)

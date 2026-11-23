@@ -180,7 +180,7 @@ func TestImportRefusesNonRegularFile(t *testing.T) {
 	_, db, _ := seededApp(t)
 	r := runCLI(t, "", "--db", db, "import", t.TempDir())
 	wantCode(t, r, 2)
-	if r.Stderr != "casebook: invalid data: must be a regular file\n" {
+	if r.Stderr != "casebook: invalid data: this is not a file; choose a file to open\n" {
 		t.Errorf("stderr = %q", r.Stderr)
 	}
 }

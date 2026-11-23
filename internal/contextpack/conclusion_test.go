@@ -25,7 +25,7 @@ func TestConclusionAccountabilitySurvivesAllRenderingsAndBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, text := range map[string]string{"markdown": RenderMarkdown(p), "json": string(js), "report": RenderReport(s, ReportOptions{})} {
+	for name, text := range map[string]string{"markdown": RenderMarkdown(p), "json": string(js)} {
 		for _, ref := range []string{"C-001", "C-002"} {
 			if !strings.Contains(text, ref) {
 				t.Errorf("%s lost selected ref %s", name, ref)
@@ -35,8 +35,20 @@ func TestConclusionAccountabilitySurvivesAllRenderingsAndBudget(t *testing.T) {
 			if !strings.Contains(text, `"verification": "human_verified"`) || !strings.Contains(text, `"needs_review": true`) {
 				t.Errorf("JSON lost labels: %s", text)
 			}
-		} else if !strings.Contains(text, "Answer marked: A person checked this") || !strings.Contains(text, "The answer needs a new review:") {
+		} else if !strings.Contains(text, "Answer marked: A person checked this") || !strings.Contains(text, "The answer needs checking again:") {
 			t.Errorf("%s lost conclusion label or attention", name)
+		}
+	}
+	// The shared answer names the same findings by their text.
+	shared := RenderReport(s, ReportOptions{})
+	for _, want := range []string{
+		"A person checked this answer on October 20, 2026. Something changed after that. It needs checking again.",
+		"What was checked: Checked the export against selected claims.",
+		"Findings that back the answer:\n- " + s.Claims[0].Statement + " (Sources disagree)\n",
+		"Findings that go against the answer:\n- " + s.Claims[1].Statement,
+	} {
+		if !strings.Contains(shared, want) {
+			t.Errorf("shared answer lost %q:\n%s", want, shared)
 		}
 	}
 }

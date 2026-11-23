@@ -1,31 +1,32 @@
 # Share a question
 
-There are two ways to share a question. **Share the answer** writes the answer up for someone who needs to read it; they do not need Casebook. Copy or save it, or ask your AI client to save it in a notes or document app you already use ([Using a question summary in other apps](#using-a-question-summary-in-other-apps), at the end of this page). An export file moves the question itself: to your own other computer, or as a copy for someone who wants to open it in their Casebook. Casebook is for one person, so a copy never stays linked to yours.
+There are two ways to share a question. **Share the answer** writes the answer up for someone who needs to read it; they do not need Casebook. Copy or save it, or ask your AI client to save it in a notes or document app you already use ([Using a shared answer in other apps](#using-a-shared-answer-in-other-apps), at the end of this page). An export file moves the question itself: to your own other computer, or as a copy for someone who wants to open it in their Casebook. Casebook is for one person, so a copy never stays linked to yours.
 
 ## Write the answer up with Share the answer
 
-Open the question and choose **Share the answer**. Pick **Leadership brief** for the answer and the findings behind it, or **Complete report** for everything in the question, including its history. The same complete report comes from `casebook report` and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the leadership brief with Casebook's default selection. Choosing the findings yourself is done in the desktop app.
+Open the question and choose **Share the answer**. Under **How much to share**, pick **Short version** for the answer and the findings behind it, or **Everything** for all of the question, including its history. The same text comes from `casebook report` (everything) and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the short version with the findings Casebook picks. Choosing the findings yourself is done in the desktop app.
 
-For a brief, open **Choose what to include** to pick what goes in from four groups: Findings, Findings not tested yet or supported, Follow-up questions and Ruled out. Casebook starts with up to three current findings, two findings still being tested, two unanswered follow-up questions and two ruled-out findings, and you can change the selection. Findings whose sources disagree, sources that go against a finding, and the findings behind the answer are always included and cannot be unticked. After changing the selection, choose **Update preview**.
+For the short version, open **Choose what to share** to pick what goes in from four groups: Findings, Findings not tested yet, Follow-up questions and Ruled out. Casebook starts with up to three findings, two findings not tested yet, two unanswered follow-up questions and two ruled-out findings, and you can change that. Findings where sources disagree, sources that go against a finding, and the findings behind the answer are always shared and cannot be unticked.
 
-The reader of a shared answer is not you, so it never says "You". A record you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.`
+The reader of a shared answer is not you, so it never says "You". A finding you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
 
-The brief has these sections, in this order:
+A shared answer has no record codes: the title is the question, and findings and sources are named by their own text. Dates are written out (`October 30, 2026`). A section with nothing in it is left out. The sections, in this order:
 
-- `## Question`: the question as you wrote it.
-- `## Answer`: the answer, the count of sources a person checked, the label saying who checked the answer, the findings behind it and against it with their labels, when it was reviewed and what was checked, and why the answer holds. `No answer yet.` when there is none.
-- `## Findings`: the chosen findings, each with the label saying who checked it, why it holds, and the sources for and against it by title and label.
-- `## Still being tested`: the chosen findings that are not tested yet or only supported so far, so the reader sees what the answer does not yet settle.
-- `## Ruled out`: the chosen findings that were ruled out, with the sources that ruled them out.
-- `## Follow-up questions`: the chosen follow-up questions, with the answer to an answered one and the reason a question was deferred.
-- `## Sources`: each cited source once, with where it came from, its label and the saved summary.
-- `## What is included`: a short paragraph saying what AI checked the source, Not checked, Sources disagree and Replaced mean, then a list of what was left out by ref (`Not included: Q-001 and Q-002.`), a note that the history is not included, and a line telling the reader to ask the person who shared it for the full version.
+- The question as the title, then when it was asked and last changed.
+- `## Background`: what you wrote under the question.
+- `## Answer`: the answer, the count of sources a person checked, who checked the answer and what they checked, why the answer holds, and the findings that back the answer and go against it. `No answer yet.` when there is none.
+- `## Findings`: each finding with the label saying who checked it, why it holds, and its sources by name: `Backed by: ...` and `Goes against it: ...`, each with its own label.
+- `## Where sources disagree`: findings a source goes against, until someone decides.
+- `## Not tested yet`: findings no source has backed or ruled out, so the reader sees what the answer does not yet settle.
+- `## Ruled out`: findings that were ruled out, with the sources that go against them.
+- `## Replaced`: findings a newer finding took the place of.
+- `## Follow-up questions`: each marked Open, Answered or Later, with the answer or why it can wait.
+- `## Sources`: each source once, with its label, its name, where to find it and what it shows. Everything also gives the date of each source.
+- `## How we got here` (Everything only): the history of changes, oldest first, one heading per day.
 
-It ends with `_Prepared by Casebook from the saved records of INV-0002. Casebook did not rewrite them or add to them._` Casebook builds the brief from your saved records without asking a model to write anything, so the same records and selection give the same text.
+The short version ends by saying what it leaves out, for example `This short version leaves out 2 follow-up questions and the history. Ask the person who shared this for the version with everything.` Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question and choices give the same text.
 
-The complete report has everything in the question: `## Question`, `## Answer`, `## Findings`, `## Where sources disagree`, `## Ruled out`, `## Still being tested`, `## Answered follow-up questions`, `## Open follow-up questions`, `## Sources` and `## How we got here (UTC)`, the dated history of changes. Sections with nothing in them are left out, except Findings and Open follow-up questions. Findings that were replaced are left out; the history still records the change.
-
-The preview does not change while the dialog is open, even if your AI changes the question. **Copy** and **Save as file...** use exactly the preview you reviewed; choose **Refresh preview** to bring in newer changes first. **Save as file...** suggests the name `INV-0002-answer.md` for the brief and `INV-0002-full-answer.md` for the complete report.
+**Copy** and **Save** use what you see in the window. **Copy** puts the text on the clipboard to paste into an email or a document. **Save** writes a web page (`.html`) that opens in any browser when the reader double-clicks it. The file is named after the question, for example `Why did calls go up 30 percent in October when sales stayed the same.html`, with ` (everything)` added for the full version.
 
 ## Move a question or hand over a copy
 
@@ -98,33 +99,33 @@ Each copy is its own question from then on:
 
 - `already exists; pass --force to overwrite`: the file is there from an earlier export. Add `--force` to replace it.
 - A diff shows changes you did not expect: check the activity entries at the end of the file. Every change to the question, by you or by an AI client, is recorded there with the actor and time.
-- `unsupported export version`: the file came from a newer Casebook. Update Casebook ([Updating Casebook](updating.md)).
+- `this file was saved by a newer Casebook`: update Casebook ([Updating Casebook](updating.md)).
 
-## Using a question summary in other apps
+## Using a shared answer in other apps
 
-A question summary is ordinary text that reads correctly anywhere: every finding keeps the label saying who checked it (A person checked this, AI checked the source, Not checked, Sources disagree), its source references and the caveats about what was left out. Casebook writes the summary. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
+A shared answer is ordinary text that reads correctly anywhere: every finding keeps the label saying who checked it (A person checked this, AI checked the source, Not checked, Sources disagree), its sources and the note of what was left out. Casebook writes the text. It does not connect to your notes or document app, and it does not need to: you, or your AI client, put the text there.
 
 ### Copy or save it yourself
 
-In the desktop app, choose **Share the answer** and pick the format and findings as described in [Write the answer up with Share the answer](#write-the-answer-up-with-share-the-answer). **Copy** puts the summary on the clipboard to paste into a note, a document, an email or a chat; **Save as file...** writes it as a Markdown file you can attach, import or keep. Both use exactly the preview you reviewed.
+In the desktop app, choose **Share the answer** and pick how much to share as described in [Write the answer up with Share the answer](#write-the-answer-up-with-share-the-answer). **Copy** puts the text on the clipboard to paste into a note, a document, an email or a chat; **Save** writes a web page you can attach or keep. Both use what you see in the window.
 
 From the command line:
 
 ```sh
-casebook report INV-0002                                       # the complete report
-casebook report INV-0002 --brief                               # the leadership brief
-casebook report INV-0002 --brief -o INV-0002-answer.md      # the brief, saved as a file
+casebook report INV-0002                                       # everything
+casebook report INV-0002 --brief                               # the short version
+casebook report INV-0002 --brief -o answer.md               # the short version, saved as a Markdown file
 ```
 
-`--brief` chooses findings the way the dialog does before you change its selection.
+`--brief` picks findings the way the app does before you change anything.
 
 ### Ask your AI client to save it
 
-If your AI client (Claude Code, Codex, Claude Desktop, Cursor or another client) is connected to both Casebook and a notes or document app, you can ask it to do the saving. **Share the answer** shows an example request for the open question, and **Copy example request** copies it so you can paste it into your AI client. For the featured question it reads:
+If your AI client (Claude Code, Codex, Claude Desktop, Cursor or another client) is connected to both Casebook and a notes or document app, you can ask it to do the saving. For example:
 
-> Save the leadership brief for INV-0002 in my connected notes app as a new note titled "Why did calls go up 30% in October when sales stayed the same?". Keep its labels, its sources and its notes on what is not checked.
+> Save the short version of the answer to "Why did calls go up 30% in October when sales stayed the same?" in my connected notes app as a new note. Keep its labels, its sources and its note of what is left out.
 
-Change the app, the title, or "leadership brief" to "complete report", as you need.
+Change the app, or ask for everything instead of the short version, as you need.
 
 What this needs:
 
@@ -134,23 +135,23 @@ What this needs:
 
 Who does what:
 
-- **Casebook** provides the summary text, and nothing else. (For developers: the client fetches it with the MCP tool `casebook_get_report`, with `mode` set to `brief` or `report`.)
-- **Your AI client** finds the app's tools in its session, fetches the summary from Casebook and calls the app's tool to write it, asking your permission the way it always does.
+- **Casebook** provides the text of the answer, and nothing else. (For developers: the client fetches it with the MCP tool `casebook_get_report`, with `mode` set to `brief` or `report`.)
+- **Your AI client** finds the app's tools in its session, fetches the text from Casebook and calls the app's tool to write it, asking your permission the way it always does.
 - **The app** creates or updates the note under your own sign-in and its own terms.
 
-**Updating an existing note.** Ask the client to read the note first, keep everything in it that is not part of the summary, and use the app's real update tool. For example: "Replace the Casebook summary in my note 'Why calls went up in October' with the current leadership brief for INV-0002, and leave the rest of the note as it is." If the app's tools can only create notes, the client should say so rather than quietly make a second copy.
+**Updating an existing note.** Ask the client to read the note first, keep everything in it that is not part of the shared answer, and use the app's real update tool. For example: "Replace the Casebook answer in my note 'Why calls went up in October' with the current short version of that answer, and leave the rest of the note as it is." If the app's tools can only create notes, the client should say so rather than quietly make a second copy.
 
-**When nothing writable is connected.** If your client has no tool that can write to that app, it should tell you. Copy or save the summary yourself instead.
+**When nothing writable is connected.** If your client has no tool that can write to that app, it should tell you. Copy or save the answer yourself instead.
 
-**What "done" means.** Your AI client reports what the app's tool actually returned. A successful write and reading the note back afterwards are different checks; ask the client to read the note back if you want the second one. Casebook records nothing about notes in other apps: it does not know where the summary went, and it never says a note was created or updated.
+**What "done" means.** Your AI client reports what the app's tool actually returned. A successful write and reading the note back afterwards are different checks; ask the client to read the note back if you want the second one. Casebook records nothing about notes in other apps: it does not know where the text went, and it never says a note was created or updated.
 
-**Snapshots.** A summary your AI client fetches is taken when it asks, with Casebook's default selection of findings. It matches the preview you reviewed in **Share the answer** only if the question has not changed since and you kept that selection. To share exactly what you reviewed, use Copy or Save in the dialog.
+**What your AI fetches.** The text your AI client fetches is taken when it asks, with the findings Casebook picks. It matches what you saw in **Share the answer** only if the question has not changed since and you kept those choices. To share exactly what you read, use Copy or Save in the app.
 
 ### If you used Evernote notes
 
 Casebook 0.6.0 and earlier had an Evernote-specific feature. It was removed on 2026-10-27:
 
 - Removed: the **Evernote block** panel with its setup steps, notebook field and "Last posted" line; the `casebook evernote` commands; the Evernote note tools for AI clients; ENEX import and export.
-- Instead: copy or save the summary, use `casebook report --brief`, or, if your AI client is connected to Evernote, ask it to save the brief there as described above. Running `casebook evernote` now prints a short pointer to these and exits with an error.
+- Instead: copy or save the answer, use `casebook report --brief`, or, if your AI client is connected to Evernote, ask it to save the short version there as described above. Running `casebook evernote` now prints a short pointer to these and exits with an error.
 - To record an Evernote note as a source, ask your AI client to add the note's text as a source with an accurate source reference (the note's title and link). Casebook does not fetch notes.
-- An existing source keeps its "Evernote note" label, old History entries about posts still show, and notes you posted earlier stay in your Evernote account unchanged. ENEX files you saved stay on disk; Casebook no longer reads them.
+- An existing source from Evernote reads "Document or email", old History entries about posts still show, and notes you posted earlier stay in your Evernote account unchanged. ENEX files you saved stay on disk; Casebook no longer reads them.

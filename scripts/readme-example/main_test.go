@@ -29,14 +29,14 @@ func TestReadmeExample(t *testing.T) {
 		"C-003 [A person checked this]",
 		"C-002 [Not checked]",
 		"Findings where sources disagree:\nC-001 [Sources disagree]",
-		"H-003 [Supported, Not checked]",
+		"H-003 [Looks right so far, Not checked]",
 		"H-004 [Not tested yet, Not checked]",
 		"Findings ruled out:\nH-001 A new ad brought in more callers.",
 		"Ruled out by: E-004",
-		"Deferred follow-up questions:\nQ-004",
+		"Follow-up questions for later:\nQ-004",
 		"E-001 Calls to buy: 2,000 in September, 2,050 in October.",
 		"[AI checked the source]",
-		"human casebook-ui: Marked C-003: A person checked this",
+		"human casebook-ui: Checked the finding C-003",
 	} {
 		if !strings.Contains(a.String(), want) {
 			t.Errorf("pack lacks %q:\n%s", want, a.String())

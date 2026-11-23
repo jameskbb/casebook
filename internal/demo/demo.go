@@ -105,9 +105,9 @@ func Seed(ctx context.Context, a *app.App, clock *Clock, now time.Time, stage St
 }
 
 // ThursdayNote is the note of Thursday's Claude Code checkpoint.
-const ThursdayNote = "The billing team's notice says 1,900 customers were charged twice on October 3 (E-007). " +
-	"Most October calls about a bill mention being charged twice (E-008). " +
-	"Added C-003, marked H-003 supported and resolved Q-002."
+const ThursdayNote = "The billing team's notice says 1,900 customers were charged twice on October 3. " +
+	"Most October calls about a bill mention being charged twice. " +
+	"That explains the extra calls."
 
 // ThursdayCheckpoint is Thursday's Claude Code session, saved in one
 // casebook_checkpoint call on INV-0002: E-007 (checked against the source),
@@ -119,7 +119,7 @@ func ThursdayCheckpoint() app.CheckpointInput {
 		Evidence: []app.CheckpointEvidence{
 			{Key: "notice", Evidence: app.EvidenceInput{
 				Title:        "Notice dated October 4: 1,900 customers were charged twice on October 3",
-				Summary:      "The billing team emailed all staff on October 4. A mistake in the October 3 billing run charged 1,900 customers twice. The team said refunds would go out within a week.",
+				Summary:      "The billing team emailed all staff on October 4. A mistake in the bills sent on October 3 charged 1,900 customers twice. The team said refunds would go out within a week.",
 				SourceType:   app.SourceTypeDocumentation,
 				SourceRef:    "Email to all staff, October 4, subject: Customers charged twice on October 3",
 				SourceLabel:  "Email from the billing team",
@@ -127,7 +127,7 @@ func ThursdayCheckpoint() app.CheckpointInput {
 				RawDetail: "From: Billing team\n" +
 					"Date: October 4\n" +
 					"Subject: Customers charged twice on October 3\n\n" +
-					"Yesterday's billing run charged 1,900 customers twice. We found the mistake this morning.\n" +
+					"The bills we sent yesterday charged 1,900 customers twice. We found the mistake this morning.\n" +
 					"Refunds will go out within a week. Customers may call about it.",
 				Metadata: `{"customers_charged_twice":1900,"date":"October 3"}`,
 			}},
@@ -158,12 +158,12 @@ func ThursdayCheckpoint() app.CheckpointInput {
 		}},
 		QuestionUpdates: []app.QuestionUpdate{{
 			Ref:        "Q-002",
-			Resolution: ptr("A mistake in the October 3 billing run charged 1,900 customers twice (E-007)."),
+			Resolution: ptr("A mistake in the bills sent on October 3 charged 1,900 customers twice."),
 		}},
 		Conclusion: &app.ConclusionInput{
 			Conclusion: Conclusion,
 			Confidence: app.ConfidenceMedium,
-			Rationale:  "C-002 shows calls to buy stayed the same. C-003 explains the extra calls. Nobody has checked the billing team's notice yet.",
+			Rationale:  "The call log and the sales report agree that calls to buy stayed the same. The billing mistake explains the extra calls. Nobody has checked the billing team's notice yet.",
 		},
 	}
 }
@@ -172,7 +172,7 @@ func ThursdayCheckpoint() app.CheckpointInput {
 const Conclusion = "The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same."
 
 // PersonRationale is the person's why when they review the answer.
-const PersonRationale = "The billing team's notice (E-007), the call log (E-006) and the billing team lead (E-009) agree. Whether those customers buy less later (H-004) is not tested yet."
+const PersonRationale = "The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet."
 
 // seeder carries the first error through the scenes so the script reads
 // top to bottom.
@@ -252,8 +252,8 @@ func (s *seeder) payroll() {
 		return
 	}
 	_, err = a.CheckpointBatch(ctx, ClaudeCode, inv.Ref, app.CheckpointInput{
-		Note: "March payroll was $418k against a budget of $400k (E-001). " +
-			"Overtime was the same in February and March (E-002), so H-001 is ruled out.",
+		Note: "March payroll was $418k against a budget of $400k. " +
+			"Overtime was the same in February and March, so extra overtime is ruled out.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "payroll", Evidence: app.EvidenceInput{
 				Title:       "March payroll: $418k paid, $400k in the budget",
@@ -330,7 +330,7 @@ func (s *seeder) payroll() {
 	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
 		Conclusion: answer,
 		Confidence: app.ConfidenceHigh,
-		Rationale:  "The two start dates explain the whole $18k (E-003).",
+		Rationale:  "The two start dates explain the whole $18k.",
 	})
 	if !s.check("INV-0001 answer by the person", err) {
 		return
@@ -362,10 +362,10 @@ func (s *seeder) callsMonday() {
 	}
 	s.at(3*day + hour)
 	_, err = a.CheckpointBatch(ctx, ClaudeCode, inv.Ref, app.CheckpointInput{
-		Note: "Read the call log and the October sales report. Calls grew 30% while calls to buy and sales stayed about the same (E-001). " +
-			"The sales manager thinks callers waited too long and hung up (E-002, C-001). " +
-			"Two more ideas to test: a new ad (H-001) and a price increase (H-002). " +
-			"Q-001 asks what the extra calls were about.",
+		Note: "Read the call log and the October sales report. Calls went from 2,400 to 3,120 while calls to buy and sales stayed about the same. " +
+			"The sales manager thinks callers waited too long and hung up. " +
+			"Two more ideas to test: a new ad and a price increase. " +
+			"Still to find out: what the extra calls were about.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "buying", Evidence: app.EvidenceInput{
 				Title:        "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October",
@@ -466,10 +466,10 @@ func (s *seeder) callsTuesday() {
 	}
 	s.at(2*day + hour)
 	_, err = a.CheckpointBatch(ctx, Codex, FeaturedRef, app.CheckpointInput{
-		Note: "Ruled out a new ad (E-004, H-001) and a price increase (E-005, H-002). " +
-			"The phone system report disagrees with the waiting finding (E-003, C-001). " +
-			"The call log by reason answers Q-001: the extra calls were about a bill (E-006). " +
-			"C-002 says calls to buy stayed about the same. H-003 suspects a billing problem and Q-002 asks what happened.",
+		Note: "Ruled out a new ad and a price increase. " +
+			"The phone system report disagrees with the sales manager about waiting. " +
+			"The call log by reason shows the extra calls were about a bill. " +
+			"Calls to buy stayed about the same. Something may have gone wrong with billing in early October. Still to find out: what happened.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "reasons", Evidence: app.EvidenceInput{
 				Title:       "Calls about a bill: 400 in September, 1,070 in October",
@@ -501,7 +501,7 @@ func (s *seeder) callsTuesday() {
 		},
 		QuestionUpdates: []app.QuestionUpdate{{
 			Ref:        "Q-001",
-			Resolution: ptr("They were about a bill: 400 calls in September, 1,070 in October (E-006)."),
+			Resolution: ptr("They were about a bill: 400 calls in September, 1,070 in October."),
 		}},
 		Questions: []app.QuestionInput{{
 			Question: "What happened with billing in early October?",
@@ -542,7 +542,7 @@ func (s *seeder) person() {
 	s.at(75 * time.Minute)
 	e9, err := a.AddEvidence(ctx, Person, FeaturedRef, app.EvidenceInput{
 		Title:       "Billing team lead: the mistake was fixed on October 5",
-		Summary:     "The billing team lead said in person that the October 3 billing run charged 1,900 customers twice, and that the mistake was fixed on October 5.",
+		Summary:     "The billing team lead said in person that the bills sent on October 3 charged 1,900 customers twice, and that the mistake was fixed on October 5.",
 		SourceType:  app.SourceTypeUserStatement,
 		SourceLabel: "Billing team lead, in person",
 	})
@@ -575,7 +575,7 @@ func (s *seeder) person() {
 		Rationale:           PersonRationale,
 		Verification:        app.VerificationHumanVerified,
 		Review:              true,
-		ReviewBasis:         "Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time (C-001). H-004 is not tested yet.",
+		ReviewBasis:         "Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.",
 		ExpectedReviewToken: conclusion.ConclusionReviewToken,
 	})
 	s.check(FeaturedRef+" answer reviewed", err)
@@ -714,7 +714,7 @@ func (s *seeder) lostCustomers() {
 	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
 		Conclusion: "Eleven small customers, together 2% of sales.",
 		Confidence: app.ConfidenceHigh,
-		Rationale:  "The order list names the eleven customers and the sales report gives what they bought (C-001).",
+		Rationale:  "The order list names the eleven customers and the sales report gives what they bought.",
 	})
 	if !s.check("INV-0004 answer", err) {
 		return

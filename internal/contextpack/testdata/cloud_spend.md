@@ -1,6 +1,6 @@
 Question: INV-0001
 Title: September cloud bill up 38%
-Status: In progress
+Status: Answered
 
 The question:
 Why did the cloud bill rise 38% in September when traffic was flat?
@@ -11,7 +11,7 @@ Debug logging requested for payments only reached every service and drove most o
 Answer marked: A person checked this
 Findings behind the answer: none selected.
 Findings against the answer: none selected.
-Answer review: not reviewed yet.
+Answer checked by a person: not yet.
 
 Why this answer:
 The change, the pricing page and the billing export agree; the remaining 29% is still open.
@@ -46,12 +46,12 @@ E-004 Head of platform: debug was requested for payments only (Head of platform,
 
 Recent changes:
 - 2026-01-15T09:00:00.000Z human casebook-ui: Updated the answer
-- 2026-01-15T09:00:00.000Z human casebook-ui: Asked Q-001: Can every service except payments go back to info level today?
-- 2026-01-15T09:00:00.000Z ai claude-code: Ruled out H-002
-- 2026-01-15T09:00:00.000Z ai claude-code: Added finding H-002 (1 source)
-- 2026-01-15T09:00:00.000Z ai claude-code: Added finding H-001
-- 2026-01-15T09:00:00.000Z ai claude-code: Replaced finding C-003 with C-002
-- 2026-01-15T09:00:00.000Z ai claude-code: Added finding C-003 (1 source)
-- 2026-01-15T09:00:00.000Z ai claude-code: Added finding C-002 (2 sources)
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added finding C-001 (2 sources)
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added source E-004 "Head of platform: debug was requested for payments only"
+- 2026-01-15T09:00:00.000Z human casebook-ui: Asked the follow-up question Q-001: Can every service except payments go back to info level today?
+- 2026-01-15T09:00:00.000Z ai claude-code: Ruled out the finding H-002
+- 2026-01-15T09:00:00.000Z ai claude-code: Added the finding H-002 with 1 source
+- 2026-01-15T09:00:00.000Z ai claude-code: Added the finding H-001
+- 2026-01-15T09:00:00.000Z ai claude-code: Replaced the finding C-003 with C-002
+- 2026-01-15T09:00:00.000Z ai claude-code: Added the finding C-003 with 1 source
+- 2026-01-15T09:00:00.000Z ai claude-code: Added the finding C-002 with 2 sources
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the finding C-001 with 2 sources
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-004 "Head of platform: debug was requested for payments only"

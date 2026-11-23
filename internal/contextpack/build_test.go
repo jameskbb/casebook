@@ -109,7 +109,7 @@ func testSnapshot() Snapshot {
 
 const wantMarkdown = `Question: INV-0007
 Title: Widget count mismatch
-Status: In progress
+Status: Answered
 
 The question:
 Why do the two widget counts differ?
@@ -120,7 +120,7 @@ Counts use different cutoffs.
 Answer marked: Not checked
 Findings behind the answer: none selected.
 Findings against the answer: none selected.
-Answer review: not reviewed yet.
+Answer checked by a person: not yet.
 
 Why this answer:
 C-001 is supported by two sources.
@@ -129,11 +129,11 @@ Findings:
 C-001 [A person checked this]
 The export uses a midnight UTC cutoff.
 Why: Config and logs agree. Checked twice.
-Sources: E-001 [Check not known], E-002 [Check not known]
-Sources against: E-003 [Check not known]
+Sources: E-001 [Not checked], E-002 [Not checked]
+Sources against: E-003 [Not checked]
 C-200 [Not checked]
 Two hundredth claim.
-Sources: E-004 [Check not known]
+Sources: E-004 [Not checked]
 C-1000 [AI checked the source]
 Thousandth claim.
 
@@ -144,39 +144,39 @@ Findings still being tested:
 H-001 [Not tested yet, Not checked]
 Time zones may shift counts.
 Why: Cutoffs differ by hours.
-Sources: E-004 [Check not known]
-H-004 [Supported, A person checked this]
+Sources: E-004 [Not checked]
+H-004 [Looks right so far, A person checked this]
 Late arriving rows explain part of it.
-Sources against: E-001 [Check not known]
+Sources against: E-001 [Not checked]
 
 Follow-up questions:
 Q-001
 Which cutoff is correct?
 
-Deferred follow-up questions:
+Follow-up questions for later:
 Q-002 Should returns be excluded? (note: Waiting on finance.)
 
 Findings ruled out:
 H-002 Duplicate rows cause the gap. [Not checked]
-Ruled out by: E-006 [Check not known]
+Ruled out by: E-006 [Not checked]
 
 Sources:
-E-001 Nightly export job (Export logs) [Check not known]
-E-002 Cutoff config (Config repo) [Check not known]
-E-003 Count query (SQL query) [Check not known]
-E-004 Analyst interview (Analyst) [Check not known]
-E-006 Row audit (Audit query) [Check not known]
+E-001 Nightly export job (Export logs) [Not checked]
+E-002 Cutoff config (Config repo) [Not checked]
+E-003 Count query (SQL query) [Not checked]
+E-004 Analyst interview (Analyst) [Not checked]
+E-006 Row audit (Audit query) [Not checked]
 
 Recent changes:
 - 2026-02-01T10:00:13.000Z human casebook-ui: Updated the answer
-- 2026-02-01T10:00:12.000Z ai claude-code: Replaced finding C-003 with C-001
-- 2026-02-01T10:00:10.000Z ai claude-code: Added finding C-002 (0 sources)
-- 2026-02-01T10:00:09.000Z ai claude-code: Added finding C-001 (3 sources)
-- 2026-02-01T10:00:08.000Z human casebook-ui: Added source E-005
-- 2026-02-01T10:00:06.000Z human casebook-ui: Added source E-004
-- 2026-02-01T10:00:05.000Z ai claude-code: Added source E-003
-- 2026-02-01T10:00:04.000Z ai claude-code: Added source E-002
-- 2026-02-01T10:00:03.000Z ai claude-code: Added source E-001
+- 2026-02-01T10:00:12.000Z ai claude-code: Replaced the finding C-003 with C-001
+- 2026-02-01T10:00:10.000Z ai claude-code: Added the finding C-002 with 0 sources
+- 2026-02-01T10:00:09.000Z ai claude-code: Added the finding C-001 with 3 sources
+- 2026-02-01T10:00:08.000Z human casebook-ui: Added the source E-005
+- 2026-02-01T10:00:06.000Z human casebook-ui: Added the source E-004
+- 2026-02-01T10:00:05.000Z ai claude-code: Added the source E-003
+- 2026-02-01T10:00:04.000Z ai claude-code: Added the source E-002
+- 2026-02-01T10:00:03.000Z ai claude-code: Added the source E-001
 - 2026-02-01T10:00:01.000Z human casebook-ui: Created this question
 
 Sources outside the included findings: 1 omitted.
@@ -311,7 +311,7 @@ func TestRenderMarkdownPlaceholders(t *testing.T) {
 	md := RenderMarkdown(Build(s, Options{}))
 	want := `Question: INV-0002
 Title: Empty
-Status: New
+Status: No answer yet
 
 The question:
 (not yet set)

@@ -8,7 +8,7 @@ Casebook includes a Model Context Protocol (MCP) server, so any AI client that s
 
 - Standard output (stdout) carries only MCP protocol messages. Logs go to standard error (stderr).
 - It uses the same database as the desktop app and the CLI, so changes appear everywhere within a few seconds.
-- The MCP server sends nothing over the network and opens no network connection; the one request Casebook makes, the check for updates a person starts, lives outside it. The AI client sends what it reads from Casebook to its own model provider, and carries data between Casebook and any other app or MCP server it is connected to (for example when you ask it to save a question summary in a notes app, as [Using a question summary in other apps](sharing.md#using-a-question-summary-in-other-apps) describes); see [Privacy and local data](privacy.md#what-leaves-your-machine).
+- The MCP server sends nothing over the network and opens no network connection; the one request Casebook makes, the check for updates a person starts, lives outside it. The AI client sends what it reads from Casebook to its own model provider, and carries data between Casebook and any other app or MCP server it is connected to (for example when you ask it to save a question summary in a notes app, as [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) describes); see [Privacy and local data](privacy.md#what-leaves-your-machine).
 
 ## Server command
 
@@ -190,12 +190,12 @@ The active question is the one the desktop app marks as your AI's current questi
 ### Context and checkpoints
 
 - `casebook_get_context`: get the context pack (a short, structured summary of the question) as Markdown or JSON.
-- `casebook_get_report`: get a Markdown write-up of the question to share (a review, a status note or a summary for your team), the same complete report `casebook report` prints. `mode` chooses `report` (the complete report, the default) or `brief` (the leadership brief with Casebook's default selection, the same text as `casebook report --brief`).
+- `casebook_get_report`: get the answer to a question as Markdown to share with people, the same text `casebook report` prints. `mode` chooses `report` (everything, the default) or `brief` (the short version, the same text as `casebook report --brief`).
 - `casebook_checkpoint`: record a short checkpoint note, optionally with a batch of new and changed sources, findings, follow-up questions and the answer, and get back the refs it created and updated, what changed since the previous checkpoint, and open items that may need updating. The batch is all or nothing: if any item fails, nothing is written and the error names the item, so the AI can fix it and resend the whole batch.
 
-### Saving a summary in another app
+### Saving the answer in another app
 
-Casebook connects to no other app. When a person asks their AI client to save a question summary in a notes or document app, the client fetches the text with `casebook_get_report` (with `mode` set to `brief` for the leadership brief) and writes it with the tools that app provides in the same session, under the client's own permission prompts. Casebook records nothing about the destination and never reports that a note was created or updated; the client reports the actual result of the app's tool. [Using a question summary in other apps](sharing.md#using-a-question-summary-in-other-apps) explains the flow for people.
+Casebook connects to no other app. When a person asks their AI client to save the answer to a question in a notes or document app, the client fetches the text with `casebook_get_report` (with `mode` set to `brief` for the short version) and writes it with the tools that app provides in the same session, under the client's own permission prompts. Casebook records nothing about the destination and never reports that a note was created or updated; the client reports the actual result of the app's tool. [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) explains the flow for people.
 
 ## How the tools behave
 

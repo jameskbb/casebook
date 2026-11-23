@@ -213,7 +213,7 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 			questionCount++
 		}
 		chosen := wants(q.Ref, o.QuestionRefs, initial)
-		out.Candidates = append(out.Candidates, ShareCandidate{Ref: q.Ref, Text: q.Question, Group: "questions", Label: q.Status.Label(), Selected: chosen})
+		out.Candidates = append(out.Candidates, ShareCandidate{Ref: q.Ref, Text: q.Question, Group: "questions", Label: q.Status.PlainLabel(), Selected: chosen})
 		if chosen {
 			selected.Questions = append(selected.Questions, q)
 		}

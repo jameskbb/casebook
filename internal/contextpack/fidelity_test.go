@@ -88,18 +88,21 @@ func TestEvidenceVerificationSurvivesEveryPackRendering(t *testing.T) {
 func TestReportLabelsInlineEvidenceAndRuledOutFindings(t *testing.T) {
 	md := RenderReport(fidelitySnapshot(), ReportOptions{})
 	for _, want := range []string{
-		"## Findings", "Supported by E-001: Contested rebate estimate (File; Sources disagree)",
-		"Supported by E-002: Prior margin extract (File; Replaced)",
-		"Contradicted by E-003: Regional ledger (File; AI checked the source)",
-		"- **H-001** Duplicate invoices caused the decline. (Ruled out; Not checked)",
-		"- **C-003** Exchange rates explain the gap. (Ruled out; Not checked)",
+		"## Findings\n\n- Rebates explain the margin decline. (A person checked this)\n",
+		"  - Backed by: Contested rebate estimate (Sources disagree)\n",
+		"  - Backed by: Prior margin extract (Replaced)\n",
+		"  - Goes against it: Regional ledger (AI checked the source)\n",
+		"## Where sources disagree\n\n- The old extract is complete.\n",
+		"## Ruled out\n\n- Exchange rates explain the gap. (Not checked)\n",
+		"- Duplicate invoices caused the decline. (Not checked)\n",
+		"- Unlinked interview (Not checked)\n  - Something a person said\n",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("report lacks %q:\n%s", want, md)
 		}
 	}
 	html := ReportHTML(md)
-	for _, want := range []string{"File; Sources disagree", "File; Replaced", "(Ruled out; Not checked)"} {
+	for _, want := range []string{"Contested rebate estimate (Sources disagree)", "Prior margin extract (Replaced)", "<h2>Ruled out</h2>"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("HTML report lacks %q", want)
 		}
@@ -143,9 +146,10 @@ func TestMissingEvidenceNeverBorrowsFindingVerification(t *testing.T) {
 	s := fidelitySnapshot()
 	s.Evidence = nil
 	p := Build(s, Options{})
-	for _, body := range []string{RenderMarkdown(p), RenderReport(s, ReportOptions{})} {
-		if !strings.Contains(body, "Check not known") {
-			t.Fatalf("missing evidence rendered as checked: %s", body)
-		}
+	if md := RenderMarkdown(p); !strings.Contains(md, "Sources: E-001 [Not checked], E-002 [Not checked]") {
+		t.Fatalf("missing evidence rendered as checked: %s", md)
+	}
+	if shared := RenderReport(s, ReportOptions{}); !strings.Contains(shared, "  - Backed by: a source that is not included here\n") || strings.Contains(shared, "Backed by: a source that is not included here (") {
+		t.Fatalf("missing evidence rendered with a label: %s", shared)
 	}
 }

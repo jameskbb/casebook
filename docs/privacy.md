@@ -7,7 +7,7 @@ Casebook stores your questions in a database on your computer. When you connect 
 - No telemetry: Casebook does not collect usage data or crash reports.
 - No hosted accounts or automatic uploads by Casebook.
 - No passwords, tokens or keys held by Casebook.
-- One optional network request: **Check for updates...** or `casebook update` asks GitHub for the latest release. It sends no question content, settings, installed version or identifier, and downloads no update.
+- One optional network request: **Look for updates...** or `casebook update` asks GitHub for the latest release. It sends no question content, settings, installed version or identifier, and downloads no update.
 
 [What leaves your machine](#what-leaves-your-machine) explains the update request and your AI client's separate connection. [Using a question summary in other apps](#using-a-question-summary-in-other-apps) uses your AI client's connection too.
 
@@ -52,7 +52,7 @@ Keep the database on a local disk. SQLite's write-ahead log (the `-wal` and `-sh
 
 Relative values are resolved against the current folder. Every Casebook program that sees the same values uses the same database, so set them the same way for the desktop app, the CLI and your AI clients if you use them.
 
-To see which file is in use, run `casebook status` (its `Database:` line) or `casebook doctor` (its `database` line), or in the desktop app open the **Data** menu at the bottom of the sidebar: the **Data file** item shows the path, and choosing it copies the path.
+To see which file is in use, run `casebook status` (its `Database:` line) or `casebook doctor` (its `database` line), or in the desktop app open the **Settings** menu at the bottom of the sidebar, then **Technical...**, which shows where the data file is.
 
 ## File permissions
 
@@ -64,7 +64,7 @@ On Windows these modes do not apply. The files live in your own `%LocalAppData%`
 
 Casebook does not upload your questions. Your connected AI client can read and send question content, and Casebook itself can contact GitHub for an update check you start.
 
-The one request Casebook makes is the check for updates, and only when you start it: **Check for updates...** in the desktop app's **Data** menu, or `casebook update`. It asks GitHub's public releases API (`api.github.com`) for the latest Casebook release, sending only a fixed program name (`Casebook-update-check`) that GitHub requires. It sends no version, no identifier, nothing from your questions and no settings; your computer compares the versions after the answer arrives. GitHub sees your IP address, as for any web page you visit. Nothing is downloaded or installed, and nothing checks on a timer or at startup ([Updating Casebook](updating.md#checking-for-a-newer-version)).
+The one request Casebook makes is the check for updates, and only when you start it: **Look for updates...** in the desktop app's **Settings** menu, or `casebook update`. It asks GitHub's public releases API (`api.github.com`) for the latest Casebook release, sending only a fixed program name (`Casebook-update-check`) that GitHub requires. It sends no version, no identifier, nothing from your questions and no settings; your computer compares the versions after the answer arrives. GitHub sees your IP address, as for any web page you visit. Nothing is downloaded or installed, and nothing checks on a timer or at startup ([Updating Casebook](updating.md#checking-for-a-newer-version)).
 
 AI clients are different. When you connect Claude Code, Codex or another AI client to Casebook through MCP or hooks, that client reads Casebook data (context packs, sources, findings and so on) and sends it to its model provider as part of the conversation, under that provider's terms. You decide which clients to connect, and you can remove them at any time (see [Deleting your data](#deleting-your-data)). The same applies when you copy a context pack into an AI chat yourself, and to anything an AI client carries between Casebook and another app it is connected to, such as a notes app you ask it to save a summary in (see [Using a question summary in other apps](#using-a-question-summary-in-other-apps)).
 
@@ -80,10 +80,10 @@ How this was checked (an audit on 2026-10-02, and a rerun for 0.3.0 on 2026-10-0
 
 ## Using a question summary in other apps
 
-Saving a summary in a notes or document app ([how](sharing.md#using-a-question-summary-in-other-apps)) adds no network path and no credential to Casebook.
+Saving a summary in a notes or document app ([how](sharing.md#using-a-shared-answer-in-other-apps)) adds no network path and no credential to Casebook.
 
 - Casebook connects to no other app. When you copy or save a summary, the text goes where you put it. When you ask your AI client to save it in an app, the client fetches the summary from Casebook and writes it with that app's own tools, under your sign-in to that app and the client's permission prompts. That text moves through your AI client like any other data, under the client's terms and the app's.
-- What a summary holds is what you see in **Share the answer**: the leadership brief (selected findings with the labels saying who checked them, source references and caveats) or the complete report (every finding and the change history, never the raw detail stored with sources).
+- What a shared answer holds is what you see in **Share the answer**: the short version (the findings you choose, with the labels saying who checked them, their sources and a note of what is left out) or everything (every finding and the history of changes, never the exact words stored with a source).
 - Casebook holds no sign-in for any other app and stores nothing about the destination: no note ids, no links, no record of a save.
 - What the other app does with the text is governed by that app's terms, as for anything you write there.
 
@@ -95,7 +95,7 @@ Casebook's logs carry operation names and refs (such as `E-003`) only, never sou
 
 ## Backups, export and restore
 
-- Do not copy `casebook.db` by hand while the desktop app or an AI client is running: recent changes may still sit in `casebook.db-wal`, and a copy of the main file alone silently misses them. Use **Back up all data...** in the **Data** menu or `casebook backup <file>`, which are safe at any time.
+- Do not copy `casebook.db` by hand while the desktop app or an AI client is running: recent changes may still sit in `casebook.db-wal`, and a copy of the main file alone silently misses them. Use **Save a backup...** in the **Settings** menu or `casebook backup <file>`, which are safe at any time.
 - A backup is a full copy of the database. Casebook makes it with SQLite's `VACUUM INTO`, so it is consistent even while other programs are writing. It never overwrites an existing file, it is checked before Casebook reports success, and on macOS and Linux the file is readable only by you.
 - Restoring checks the backup first. Before replacing anything, Casebook saves a safety copy of the current data as `<data folder>/backups/casebook-pre-restore-<UTC timestamp>.db`. It then replaces the contents in one step, so other open Casebook programs see either the old data or the new data, never a mix.
 - When a newer Casebook has to upgrade the database format, the first program that opens the data saves a copy first, as `<data folder>/backups/casebook-pre-upgrade-schema<old version>-<UTC timestamp>.db`, and refuses to upgrade if it cannot. An older Casebook can restore that copy ([Updating Casebook](updating.md#going-back-to-an-older-version)).

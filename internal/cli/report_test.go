@@ -21,7 +21,7 @@ func TestReportCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want == short || !strings.HasPrefix(want, "# INV-0001: ") {
+	if want == short || !strings.HasPrefix(want, "# September cloud bill") {
 		t.Fatalf("fixture report looks wrong:\n%s", want)
 	}
 
@@ -80,7 +80,7 @@ func TestReportBriefCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := p.Markdown
-	if !strings.Contains(want, "## Answer") || !strings.Contains(want, app.BriefScopeHeading) {
+	if !strings.Contains(want, "## Answer") || !strings.Contains(want, app.BriefLeftOut) {
 		t.Fatalf("fixture brief looks wrong:\n%s", want)
 	}
 
@@ -111,7 +111,7 @@ func TestReportBriefCommand(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "brief.md")
 	r = runCLI(t, "", "--db", db, "report", "--brief", "-o", path)
 	wantCode(t, r, 0)
-	if !strings.Contains(r.Stdout, "leadership brief") {
+	if !strings.Contains(r.Stdout, "Wrote the short version for INV-0001 to ") {
 		t.Errorf("-o message = %q", r.Stdout)
 	}
 	got, err := os.ReadFile(path)

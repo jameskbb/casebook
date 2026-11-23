@@ -30,7 +30,11 @@ func seedDemo(t *testing.T) *app.App {
 // isoTime matches a raw RFC 3339 time of day, which a brief must not print.
 var isoTime = regexp.MustCompile(`T\d\d:\d\d:\d\d`)
 
-// TestGoldenBriefDemo pins the default Leadership brief of the README demo:
+// plainWords are the words the rules for what people read ban, plus record
+// codes, raw dates and the old names of the two versions.
+var plainWords = regexp.MustCompile(`\b(INV|[CEHQ])-\d+\b|\d{4}-\d\d-\d\d|UTC|captured|billing run|[Ll]eadership brief|[Cc]omplete report|[Rr]eviewed|Resolved|Deferred|Supported|Contradicted|Still being tested|None (selected|recorded|linked)`)
+
+// TestGoldenBriefDemo pins the default short version of the README demo:
 // the bytes a person copies to a recipient who has no Casebook.
 func TestGoldenBriefDemo(t *testing.T) {
 	ctx := context.Background()
@@ -44,56 +48,54 @@ func TestGoldenBriefDemo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if again.Markdown != p.Markdown {
-		t.Fatal("brief is not repeatable")
+		t.Fatal("the short version is not repeatable")
 	}
 	checkGolden(t, "calls_brief.md", p.Markdown)
 
 	for _, banned := range []string{"Active", "Current", "onfidence", "High", "Medium", "Sources disagree; Sources disagree", "laim", "vidence", "ypothes", "onclusion", "isputed", "erified", "uperseded", "nvestigation", " case", " flat", "2014", " 0 "} {
 		if strings.Contains(p.Markdown, banned) {
-			t.Errorf("brief contains %q", banned)
+			t.Errorf("the short version contains %q", banned)
 		}
 	}
 	if isoTime.MatchString(p.Markdown) {
-		t.Error("brief prints a raw timestamp")
+		t.Error("the short version prints a raw timestamp")
 	}
 	for _, want := range []string{
-		"# INV-0002: Why did calls go up 30% in October when sales stayed the same?\n",
-		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.",
-		"Answer marked: A person checked this",
-		"Findings behind the answer: C-002 (Not checked); C-003 (A person checked this)",
-		"Findings against the answer: C-001 (Sources disagree)",
-		"- **C-001** Callers waited too long and hung up before buying. (Sources disagree)",
-		"(Ruled out; Not checked)",
+		"# Why did calls go up 30% in October when sales stayed the same?\n\nAsked on October 29, 2026. Last changed on November 1, 2026.\n\n## Background\n",
+		"2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.\n\nA person checked this answer on November 1, 2026.\n",
+		"Findings that back the answer:\n- About the same number of people called to buy. (Not checked)\n- A billing mistake on October 3 charged some customers twice. (A person checked this)\n",
+		"Findings that go against the answer:\n- Callers waited too long and hung up before buying. (Sources disagree)\n",
+		"## Where sources disagree\n\n- Callers waited too long and hung up before buying.\n",
+		"  - Goes against it: The average wait was 40 seconds in September and 40 seconds in October (Not checked)\n",
+		"- Something went wrong with billing in early October. (Looks right so far; Not checked)\n",
+		"## Not tested yet\n\n- Customers who were charged twice are less likely to buy again. (Not checked)\n\n## Ruled out\n\n- A new ad brought in more callers. (Not checked)\n",
+		"- Should we expect fewer sales in November from the customers who were charged twice? (Later)\n  - Why it can wait: ",
 		"(AI checked the source)",
-		"Labels: AI checked the source means an AI compared it with its source and no person has.",
-		"Replaced means a newer finding took its place.",
-		"Not included: Q-001 and Q-002. The history is not included. Ask the person who shared this for the full version.",
-		"## Still being tested\n\n- **H-003** ",
-		"- **H-004** Customers who were charged twice are less likely to buy again. (Not tested yet; Not checked)",
-		"Findings where sources disagree, sources that contradict a finding and the findings behind the answer are always included.",
-		"_Prepared by Casebook from the saved records of INV-0002. Casebook did not rewrite them or add to them._",
+		"\nThis short version leaves out 2 follow-up questions and the history. Ask the person who shared this for the version with everything.\n\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
 	} {
 		if !strings.Contains(p.Markdown, want) {
-			t.Errorf("brief missing %q", want)
+			t.Errorf("the short version lacks %q", want)
 		}
 	}
-	// The finding not tested yet sits under its own heading, after the
-	// findings and before the follow-up questions.
-	if f, h, q := strings.Index(p.Markdown, "## Findings"), strings.Index(p.Markdown, "- **H-004**"), strings.Index(p.Markdown, "## Follow-up questions"); !(f < h && h < q) {
-		t.Error("H-004 is not between the findings and the questions")
-	}
-	// Ruled-out hypotheses sit under their own heading, after the open
-	// explanations and before the questions, not among the things in doubt.
-	if e, r, d, q := strings.Index(p.Markdown, "## Still being tested"), strings.Index(p.Markdown, "## Ruled out\n\n- **H-"), strings.Index(p.Markdown, "(Ruled out; Not checked)"), strings.Index(p.Markdown, "## Follow-up questions"); !(e < r && r < d && d < q) {
-		t.Error("the Ruled out section is not between the open explanations and the questions")
-	}
-	// Every evidence line under a finding keeps its verification label; the
-	// source path prints once, under Evidence and source caveats.
+	// Every source line under a finding keeps its check label.
 	for _, line := range strings.Split(p.Markdown, "\n") {
-		if strings.HasPrefix(line, "  - Supported by ") || strings.HasPrefix(line, "  - Contradicted by ") {
-			if !strings.HasSuffix(line, ")") || strings.Contains(line, "Call log, ") {
-				t.Errorf("finding evidence line lacks its label or repeats its source: %q", line)
-			}
+		if (strings.HasPrefix(line, "  - Backed by: ") || strings.HasPrefix(line, "  - Goes against it: ")) && !strings.HasSuffix(line, ")") {
+			t.Errorf("a source under a finding lacks its label: %q", line)
 		}
+	}
+
+	// Both versions of the demo, the first thing a new user shares, hold no
+	// record code, raw date or word a leader would not say.
+	full, err := a.SharePreview(ctx, demo.FeaturedRef, app.ShareOptions{Mode: "report"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{"short version": p.Markdown, "everything": full.Markdown} {
+		if m := plainWords.FindAllString(text, -1); m != nil {
+			t.Errorf("%s prints %q:\n%s", name, m, text)
+		}
+	}
+	if !strings.Contains(full.Markdown, "## How we got here\n\n### October 29, 2026\n\n- Claude Code created this question\n") {
+		t.Errorf("everything lacks the history:\n%s", full.Markdown)
 	}
 }

@@ -41,7 +41,7 @@ func TestGetReport(t *testing.T) {
 	out = decode[reportOutput](t, res)
 	if resultText(res) != app.FrameContext(brief.Markdown) || out.Report != app.FrameContext(brief.Markdown) ||
 		out.Mode != "brief" || out.TimelineLimit != 0 || out.Truncated || out.Bytes != len(out.Report) ||
-		!strings.Contains(out.Report, "## Answer") || !strings.Contains(out.Report, app.BriefScopeHeading) {
+		!strings.Contains(out.Report, "## Answer") || !strings.Contains(out.Report, app.BriefLeftOut) {
 		t.Errorf("mode brief: out = %+v", out)
 	}
 	wantToolError(t, callTool(t, cs, "casebook_get_report", map[string]any{"mode": "brief", "timeline_limit": 5}), "invalid timeline_limit")
@@ -94,7 +94,7 @@ func TestGetReportShrinksTimeline(t *testing.T) {
 }
 
 // TestCutBriefKeepsOmissionNotice proves a brief cut to fit the response
-// keeps its whole "What is included" section after the cut body, with a
+// keeps its whole note of what is left out after the cut body, with a
 // note worded for the brief.
 func TestCutBriefKeepsOmissionNotice(t *testing.T) {
 	a, f := seeded(t)
@@ -102,7 +102,7 @@ func TestCutBriefKeepsOmissionNotice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := strings.LastIndex(p.Markdown, briefScopeHeading)
+	i := strings.LastIndex(p.Markdown, briefLeftOut)
 	if i < 2*minContextMaxBytes {
 		t.Fatalf("fixture brief too small to cut (%d bytes before the scope section):\n%s", i, p.Markdown)
 	}
@@ -116,20 +116,20 @@ func TestCutBriefKeepsOmissionNotice(t *testing.T) {
 	if !out.Truncated || out.Mode != "brief" || out.Report != text || resultBytes(text, out) > budget {
 		t.Fatalf("out = %+v", out)
 	}
-	if !strings.Contains(text, "(Brief cut to fit the response; the What is included section below describes the full brief. Run casebook report --brief in a terminal for the full text.)") ||
-		strings.Contains(text, "Report cut") {
+	if !strings.Contains(text, "(Cut to fit the response; the note below on what is left out describes the whole short version. Run casebook report --brief in a terminal for the full text.)") ||
+		strings.Contains(text, "(Cut to fit the response; run casebook report in") {
 		t.Errorf("cut note missing or worded for a report:\n%s", text)
 	}
-	if !strings.Contains(text, scope) || !strings.Contains(text, "Not included: ") {
+	if !strings.Contains(text, scope) || !strings.Contains(text, app.BriefLeftOut) {
 		t.Errorf("cut brief lost its omission notice:\n%s", text)
 	}
-	if strings.Index(text, "(Brief cut") > strings.Index(text, briefScopeHeading) {
+	if strings.Index(text, "(Cut to fit") > strings.Index(text, briefLeftOut) {
 		t.Error("cut note comes after the scope section")
 	}
 
 	// A report is cut from its end, with the report's note.
 	out, text, ok = cutReport(f.InvestigationRef, reportModeReport, 0, p.Markdown, budget)
-	if !ok || !out.Truncated || !strings.Contains(text, "(Report cut to fit the response; run casebook report in a terminal") {
+	if !ok || !out.Truncated || !strings.Contains(text, "(Cut to fit the response; run casebook report in a terminal") {
 		t.Errorf("report cut = %+v", out)
 	}
 }

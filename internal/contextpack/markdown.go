@@ -30,11 +30,11 @@ func RenderMarkdown(p Pack) string {
 
 	add("Question: "+oneLine(p.Investigation.Ref),
 		"Title: "+oneLine(p.Investigation.Title),
-		"Status: "+questionStatusWord(p.Investigation.Status))
+		"Status: "+answerState(p))
 	add("The question:", orNotSet(oneLine(p.Investigation.PrimaryQuestion)))
 	add("Answer so far:", orNotSet(oneLine(p.Conclusion.Text)))
 	if p.Conclusion.Text != "" {
-		add(conclusionAccountabilityLines(p.Conclusion, basisBrackets)...)
+		add(conclusionAccountabilityLines(p.Conclusion)...)
 	}
 	if rationale := oneLine(p.Conclusion.Rationale); rationale != "" {
 		add("Why this answer:", rationale)
@@ -75,7 +75,7 @@ func RenderMarkdown(p Pack) string {
 	add(listTail(lines, len(p.OpenQuestions), p.Omitted.OpenQuestions, "follow-up question", "follow-up questions")...)
 
 	if len(p.DeferredQuestions) > 0 {
-		lines := []string{"Deferred follow-up questions:"}
+		lines := []string{"Follow-up questions for later:"}
 		for _, q := range p.DeferredQuestions {
 			line := refTag(q.Ref, q.Imported) + " " + oneLine(q.Question)
 			if note := oneLine(q.Note); note != "" {
@@ -118,7 +118,7 @@ func RenderMarkdown(p Pack) string {
 				who += " (imported)"
 			}
 			lines = append(lines, fmt.Sprintf("- %s %s: %s", c.At, who,
-				timelinePhrase(domain.Activity{Action: c.Action, TargetRef: c.TargetRef, Summary: c.Summary}, verificationLabel)))
+				TimelinePhrase(domain.Activity{Action: c.Action, TargetRef: c.TargetRef, Summary: c.Summary})))
 		}
 		add(lines...)
 	}
@@ -224,8 +224,9 @@ func (p Pack) evidenceVerificationLabel(ref string) string {
 	return checkUnknown
 }
 
-// checkUnknown stands in for a check label that is not available.
-const checkUnknown = "Check not known"
+// checkUnknown stands in for a check label that is not available: nobody is
+// known to have checked it.
+const checkUnknown = "Not checked"
 
 // verificationLabel is the check label in everything that leaves the app: a
 // shared answer and a pack an AI client reads. Its reader is not the person
@@ -240,35 +241,21 @@ func verificationLabel(v domain.Verification) string {
 	return v.PlainLabel()
 }
 
-// basisStyle picks how conclusionAccountabilityLines writes a finding
-// behind the answer. Documents for people (the shared answer) use
-// parentheses joined by semicolons; packs keep square brackets and commas.
-type basisStyle int
-
-const (
-	basisBrackets basisStyle = iota
-	basisParens
-)
-
 // claimBasisLabel names a basis finding's state without repeating a word: a
 // current finding shows only its check label, a finding whose status and
 // check agree (Sources disagree, Replaced) shows the words once, and any
 // other finding shows its status, then its check label, joined by a
-// semicolon inside parentheses and by a comma inside brackets.
-func claimBasisLabel(claim PackConclusionClaim, style basisStyle) string {
+// comma.
+func claimBasisLabel(claim PackConclusionClaim) string {
 	if claim.Missing {
 		return "missing finding"
 	}
 	verification := verificationLabel(claim.Verification)
-	sep := "; "
-	if style == basisBrackets {
-		sep = ", "
-	}
 	status := claim.Status.PlainLabel()
 	if claim.Status == domain.ClaimStatusActive || claim.Status == "" || status == verification {
 		return verification
 	}
-	return status + sep + verification
+	return status + ", " + verification
 }
 
 // readableTime renders an RFC 3339 timestamp as "YYYY-MM-DD HH:MM UTC" for
@@ -283,15 +270,11 @@ func readableTime(ts string) string {
 
 // These labels are mandatory: a budget may shorten prose, never a check
 // label or the fact that the findings behind the answer need a person's
-// review.
-func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string {
+// check.
+func conclusionAccountabilityLines(c PackConclusion) []string {
 	verification := c.Verification
 	if verification == "" {
 		verification = domain.VerificationAIGenerated
-	}
-	open, closing, sep := " [", "]", ", "
-	if style == basisParens {
-		open, closing, sep = " (", ")", "; "
 	}
 	lines := []string{"Answer marked: " + verificationLabel(verification)}
 	for _, group := range []struct {
@@ -300,25 +283,25 @@ func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string 
 	}{{"Findings behind the answer", c.SupportingClaims}, {"Findings against the answer", c.ContradictingClaims}} {
 		refs := []string{}
 		for _, claim := range group.claims {
-			refs = append(refs, oneLine(claim.Ref)+open+claimBasisLabel(claim, style)+closing)
+			refs = append(refs, oneLine(claim.Ref)+" ["+claimBasisLabel(claim)+"]")
 		}
 		if len(refs) > 0 {
-			lines = append(lines, group.label+": "+strings.Join(refs, sep))
+			lines = append(lines, group.label+": "+strings.Join(refs, ", "))
 		} else {
 			lines = append(lines, group.label+": none selected.")
 		}
 	}
 	if c.ReviewedAt == "" {
-		lines = append(lines, "Answer review: not reviewed yet.")
+		lines = append(lines, "Answer checked by a person: not yet.")
 	} else {
-		lines = append(lines, "Answer reviewed: "+readableTime(c.ReviewedAt))
+		lines = append(lines, "Answer checked by a person: "+readableTime(c.ReviewedAt))
 		if c.ReviewBasis != "" {
 			lines = append(lines, "What was checked: "+oneLine(c.ReviewBasis))
 		}
 		if c.Verification == domain.VerificationDisputed {
-			lines = append(lines, "The answer needs a new review: sources disagree about it.")
+			lines = append(lines, "The answer needs checking again: sources disagree about it.")
 		} else if c.NeedsReview {
-			lines = append(lines, "The answer needs a new review: its findings or their sources changed since the last review.")
+			lines = append(lines, "The answer needs checking again: its findings or their sources changed since a person checked it.")
 		}
 	}
 	return lines
@@ -328,7 +311,7 @@ func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string 
 // sources checked by a person. 1 checked by AI, 1 not checked." It is "" when
 // there are none. The count stands where a confidence rating used to.
 func sourcesCheckedLine(evidence []domain.Evidence) string {
-	total, byPerson, byAI, notChecked := 0, 0, 0, 0
+	total, byPerson, byAI := 0, 0, 0
 	for _, e := range evidence {
 		switch e.Verification {
 		case domain.VerificationSuperseded:
@@ -337,8 +320,6 @@ func sourcesCheckedLine(evidence []domain.Evidence) string {
 			byPerson++
 		case domain.VerificationSourceVerified:
 			byAI++
-		case domain.VerificationAIGenerated:
-			notChecked++
 		}
 		total++
 	}
@@ -354,11 +335,25 @@ func sourcesCheckedLine(evidence []domain.Evidence) string {
 	if byAI > 0 {
 		rest = append(rest, fmt.Sprintf("%d checked by AI", byAI))
 	}
-	if notChecked > 0 {
+	if notChecked := total - byPerson - byAI; notChecked > 0 {
 		rest = append(rest, fmt.Sprintf("%d not checked", notChecked))
 	}
 	if len(rest) > 0 {
 		line += " " + strings.Join(rest, ", ") + "."
 	}
 	return line
+}
+
+// answerState is the state of the question as the app shows it: whether it
+// has an answer, and whether it is archived. The engine's own status words
+// (new, investigating, blocked, resolved) are never printed.
+func answerState(p Pack) string {
+	state := "No answer yet"
+	if p.Conclusion.Text != "" {
+		state = "Answered"
+	}
+	if p.Investigation.Status == domain.InvestigationStatusArchived {
+		state += ", archived"
+	}
+	return state
 }

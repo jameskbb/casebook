@@ -8,7 +8,7 @@ Every release has one version, such as `v1.2.3`, and both programs in a release 
 
 To see which version you have:
 
-- **Desktop app:** open the **Data** menu at the bottom of the sidebar. Its last item, **Version**, shows the version; choosing it copies `Casebook <version>` for a bug report.
+- **Desktop app:** open the **Settings** menu at the bottom of the sidebar. Choose **Technical...** to see the version; **Copy version** copies `Casebook <version>` for a bug report.
 - **Command line:** `casebook --version` (or `casebook version`) prints `casebook <version>`. On Windows, from the Casebook folder, run `bin\casebook.exe --version`.
 - **Doctor:** `casebook doctor` prints the version in its first line. Its `bundle_version` line checks that the desktop app next to the CLI is the same version: `ok` when they match, a warning such as `the desktop app is v1.2.0, this CLI is v1.3.0: replace the whole folder when you update` when only part of a folder was replaced, and `skip` for builds from source or a CLI with no desktop app next to it.
 
@@ -16,7 +16,7 @@ To see which version you have:
 
 Casebook can ask GitHub whether a newer release exists. It does this only when you ask, never at startup or on a timer, and it never downloads or installs anything. The check is one request to GitHub's public releases API; it sends no version, no identifier and nothing from your questions, and GitHub sees your IP address as for any web page.
 
-- **Desktop app:** open the **Data** menu at the bottom of the sidebar and choose **Check for updates...**. A small dialog explains what will be sent; nothing is sent until you choose **Check now**. The result shows the latest version and whether it is newer than yours, and offers **Open release page** and **Copy download link**.
+- **Desktop app:** open the **Settings** menu at the bottom of the sidebar and choose **Look for updates...**. A small dialog explains what will be sent; nothing is sent until you choose **Check now**. The result shows the latest version and whether it is newer than yours, and offers **Open release page** and **Copy download link**.
 - **Command line:** run `casebook update`. When a newer release exists it prints, for example:
 
   ```text
@@ -156,7 +156,7 @@ Your data stays in the per-user data folder (Windows `%LocalAppData%\Casebook`, 
 
 - **Automatic pre-upgrade backup.** When a new release changes the database format (its schema version), the first Casebook program that opens your data (the desktop app, the CLI, an AI client's MCP server or `casebook doctor`) first copies the whole database to `<data folder>/backups/casebook-pre-upgrade-schema<old version>-<UTC timestamp>.db`, then upgrades it. A release that does not change the format makes no copy. If the copy cannot be written (a full disk, a read-only folder), Casebook refuses to upgrade, says so, and leaves your data exactly as it was.
 - **Forward only.** Upgrades only go forward. Once a newer Casebook has upgraded your data, an older Casebook cannot open it: it says the data was saved by a newer version of Casebook, names the two schema versions, and changes nothing. Restores also leave a `casebook-pre-restore-<UTC timestamp>.db` copy in the same `backups` folder.
-- **Your own backups.** Before an update you are unsure about, make a backup with **Back up all data...** in the desktop app's **Data** menu, or `casebook backup <file>`.
+- **Your own backups.** Before an update you are unsure about, make a backup with **Save a backup...** in the desktop app's **Settings** menu, or `casebook backup <file>`.
 
 ### Going back to an older version
 
@@ -164,7 +164,7 @@ Changes you made after the upgrade exist only in the upgraded data, so going bac
 
 1. Find the copy to restore. Open the `backups` folder in the data folder and look for `casebook-pre-upgrade-schema<N>-<timestamp>.db` files. The older Casebook can restore a copy whose `<N>` is at most the schema version it supports, which its error message names (`this Casebook supports up to N`). Pick the newest such file.
 2. With the older Casebook:
-   - **Desktop app:** start it. The startup screen says the data needs a newer Casebook and offers **Restore from backup...**. Choose the pre-upgrade copy. Casebook moves the newer data file into the `backups` folder as `casebook-unopened-<timestamp>.db` (nothing is deleted) and opens the restored data in its place.
+   - **Desktop app:** start it. The startup screen says the data needs a newer Casebook and offers **Bring back a backup...**. Choose the pre-upgrade copy. Casebook moves the newer data file into the `backups` folder as `casebook-unopened-<timestamp>.db` (nothing is deleted) and opens the restored data in its place.
    - **Command line only:** quit every Casebook program, move `casebook.db` and any `casebook.db-wal` and `casebook.db-shm` files out of the data folder together (into a folder of their own), then run `casebook restore <path to the pre-upgrade copy> --yes`. The restore starts from an empty database and fills it from the copy.
 3. Run `casebook doctor` to confirm.
 
@@ -172,7 +172,7 @@ To return to the newer version later, update again: it upgrades the restored dat
 
 ## Updating checklist
 
-1. Back up (optional but cheap): **Data**, **Back up all data...**.
+1. Back up (optional but cheap): **Settings**, **Save a backup...**.
 2. Download the release and check it against `SHA256SUMS.txt`.
 3. Quit Casebook and every AI client that uses it.
 4. Replace the whole program folder (or run the installer, or drag the app).

@@ -69,8 +69,9 @@ type InvestigationSummary struct {
 	// SourcesCheckedByYou counts those with verification human_verified.
 	SourcesTotal        int `json:"sources_total"`
 	SourcesCheckedByYou int `json:"sources_checked_by_you"`
-	// FindingsDisagree counts claims with verification disputed that are
-	// not superseded or rejected.
+	// FindingsDisagree counts claims and hypotheses with verification
+	// disputed that are not superseded and not ruled out (rejected or
+	// disproven).
 	FindingsDisagree int `json:"findings_disagree"`
 }
 

@@ -83,7 +83,7 @@ func TestImportInvestigationFromLimitsReading(t *testing.T) {
 
 	r := &endless{}
 	_, err = dst.ImportInvestigationFrom(ctx, apptest.Human, r)
-	if !isValidation(err) || !strings.Contains(err.Error(), "20 MiB") {
+	if !isValidation(err) || !strings.Contains(err.Error(), "20 MB") {
 		t.Fatalf("endless input err = %v", err)
 	}
 	if r.n > int64(app.MaxImportBytes)+64*1024 {

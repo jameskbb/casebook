@@ -200,7 +200,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		qs[q.Ref] = q
 	}
 	if q1 := qs["Q-001"]; q1.Status != app.QuestionStatusResolved ||
-		q1.Resolution != "They were about a bill: 400 calls in September, 1,070 in October (E-006)." {
+		q1.Resolution != "They were about a bill: 400 calls in September, 1,070 in October." {
 		t.Errorf("Q-001 = %+v", q1)
 	}
 	claims := map[string]app.Claim{}

@@ -1,6 +1,6 @@
 Question: INV-0001
 Title: September cloud bill up 38%
-Status: In progress
+Status: Answered
 
 The question:
 Why did the cloud bill rise 38% in September when traffic was flat?
@@ -11,7 +11,7 @@ Debug logging requested for payments only reached every service and drove most o
 Answer marked: Not checked
 Findings behind the answer: none selected.
 Findings against the answer: none selected.
-Answer review: not reviewed yet.
+Answer checked by a person: not yet.
 
 Why this answer:
 The change, the pricing page and the billing export agree; the remaining 29% is still open.
@@ -51,13 +51,13 @@ E-004 (imported) Head of platform: debug was requested for payments only (Head o
 E-005 Local check: payments values file still lacks the debug override (Local review) [A person checked this]
 
 Recent changes:
-- 2026-01-15T09:00:00.000Z human casebook-ui: Asked Q-002: Who owns the chart default now?
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added finding C-004 (1 source)
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added source E-005 "Local check: payments values file still lacks the debug override"
-- 2026-01-15T09:00:00.000Z import casebook-ui: Imported this question
+- 2026-01-15T09:00:00.000Z human casebook-ui: Asked the follow-up question Q-002: Who owns the chart default now?
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the finding C-004 with 1 source
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-005 "Local check: payments values file still lacks the debug override"
+- 2026-01-15T09:00:00.000Z import casebook-ui: Added this question from a file
 - 2026-01-15T09:00:00.000Z human casebook-ui (imported): Updated the answer
-- 2026-01-15T09:00:00.000Z human casebook-ui (imported): Asked Q-001: Can every service except payments go back to info level today?
-- 2026-01-15T09:00:00.000Z ai claude-code (imported): Ruled out H-002
-- 2026-01-15T09:00:00.000Z ai claude-code (imported): Added finding H-002 (1 source)
-- 2026-01-15T09:00:00.000Z ai claude-code (imported): Added finding H-001
-- 2026-01-15T09:00:00.000Z ai claude-code (imported): Replaced finding C-003 with C-002
+- 2026-01-15T09:00:00.000Z human casebook-ui (imported): Asked the follow-up question Q-001: Can every service except payments go back to info level today?
+- 2026-01-15T09:00:00.000Z ai claude-code (imported): Ruled out the finding H-002
+- 2026-01-15T09:00:00.000Z ai claude-code (imported): Added the finding H-002 with 1 source
+- 2026-01-15T09:00:00.000Z ai claude-code (imported): Added the finding H-001
+- 2026-01-15T09:00:00.000Z ai claude-code (imported): Replaced the finding C-003 with C-002

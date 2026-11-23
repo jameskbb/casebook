@@ -125,16 +125,15 @@ A context pack is a short summary of one case for an AI to read ([engine API ref
 - Excluded: superseded and rejected claims, superseded hypotheses, resolved questions, evidence raw detail and metadata, and bookkeeping activity such as checkpoints.
 - Budget: the compact variant for session hooks is capped at 6000 bytes of Markdown by default. Trimming drops the least important sections first, shortens statements before it removes any, keeps the disproven hypotheses (what not to retry) longer than disputed claims, and never cuts the header or the conclusion.
 
-The same pack serves every surface: the desktop app's **Copy for your AI** button (framed as data) and its **Copy case as text** menu item (unframed), `casebook context`, the `casebook_get_context` MCP tool and the session start hook.
+The same pack serves every surface: **Copy to paste into your AI** in the desktop app (framed as data), `casebook context`, the `casebook_get_context` MCP tool and the session start hook.
 
-## Reports
+## Shared answers
 
-A report is the same case written up for people: a Markdown document for a regional review, a status note, a pull request description or a postmortem ([engine API reference section 12a](api.md#12a-report)). It holds the title and question, the conclusion with its confidence and rationale, established claims with their verification and evidence (source label and ref), what was ruled out and the evidence that contradicted it, answered and open questions, every evidence item, and a dated timeline (UTC) of material changes with who made them.
+A shared answer is the same question written up for people who do not have Casebook ([engine API reference section 12a](api.md#12a-report)). It names findings and sources by their own text, with no record refs: the question, the answer with the count of sources a person checked and who checked the answer, the findings with the sources that back them up or go against them, what was ruled out, the follow-up questions and every source. It comes in two versions: the short version (the records the person chooses, ending with a note of what is left out) and everything (every record and a dated history of changes with who made them).
 
-- Deterministic, like the pack: the same records give the same bytes, and a golden file (`internal/contextpack/testdata/checkout_report.md`) pins the layout.
-- One renderer (`contextpack.RenderReport`) behind `app.Report` serves every surface: `casebook report [ref]` (with `-o FILE` and `--timeline N`), the `casebook_get_report` MCP tool (framed as data, shortened to fit 64 KiB) and the desktop app's **Share summary** dialog when it shows the complete report (Copy, or Save as file...).
-- The leadership brief has its own renderer (`contextpack.RenderBrief`) behind `app.SharePreview` in `brief` mode: the records the person selects, the labels explained in a fixed paragraph and every omitted record named by ref. It serves the desktop **Share summary** dialog (with explicit selection), `casebook report --brief` and `casebook_get_report` with `mode` `brief` (both with Casebook's default selection). Its golden file is `internal/contextpack/testdata/margin_brief.md` ([engine API reference, reviewed sharing snapshots](api.md#reviewed-sharing-snapshots)).
-- Output is portable by design. Casebook writes Markdown for the person to copy or save; to put it in a notes or document app, the person's AI client fetches it and writes it with that app's own tools. Casebook has no adapter for any app and records nothing about where the text went.
+- Deterministic, like the pack: the same records give the same bytes, and golden files (`internal/contextpack/testdata/checkout_report.md` and `calls_brief.md`) pin the layout.
+- One body (`contextpack.RenderReport` and `contextpack.RenderBrief` share it) serves every surface: `casebook report [ref]` (with `--brief`, `-o FILE` and `--timeline N`), the `casebook_get_report` MCP tool (framed as data, shortened to fit 64 KiB) and **Share the answer** in the desktop app ([engine API reference, reviewed sharing snapshots](api.md#reviewed-sharing-snapshots)).
+- Output is portable by design. Copy gives Markdown; Save in the desktop app writes a web page that opens on a double-click. To put the text in a notes or document app, the AI client fetches it and writes it with the tools of that app. Casebook has no adapter for any app and records nothing about where the text went.
 
 ## Record state rules
 

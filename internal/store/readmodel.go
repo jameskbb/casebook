@@ -42,6 +42,8 @@ func ListInvestigationSummaries(ctx context.Context, q Querier, f SummaryQuery) 
     (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id AND e.verification = 'human_verified'),
     (SELECT count(*) FROM claims c WHERE c.investigation_id = i.id AND c.verification = 'disputed'
         AND c.status NOT IN ('superseded', 'rejected'))
+     + (SELECT count(*) FROM hypotheses h WHERE h.investigation_id = i.id AND h.verification = 'disputed'
+        AND h.status NOT IN ('superseded', 'disproven'))
 FROM investigations i`
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")

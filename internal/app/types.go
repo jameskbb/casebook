@@ -108,10 +108,14 @@ const (
 	DefaultRecentChanges   = contextpack.DefaultRecentChanges
 )
 
-// BriefScopeHeading is the heading of the last section of a short shared
-// answer ("## What is included"), which lists what was left out. A surface
-// that cuts a long answer keeps everything from this heading on.
-const BriefScopeHeading = contextpack.BriefScopeHeading
+// BriefLeftOut opens the paragraph of a short shared answer that says what
+// was left out ("This short version leaves out "). A surface that cuts a
+// long answer keeps everything from these words on.
+const BriefLeftOut = contextpack.BriefLeftOut
+
+// AnswerPage wraps the HTML of a shared answer in a whole page for a saved
+// file; see contextpack.AnswerPage.
+func AnswerPage(title, body string) string { return contextpack.AnswerPage(title, body) }
 
 // Actor kinds.
 const (

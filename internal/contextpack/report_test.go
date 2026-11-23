@@ -2,6 +2,7 @@ package contextpack_test
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -128,25 +129,31 @@ func TestGoldenReport(t *testing.T) {
 
 	// Content checks independent of the golden file.
 	for _, want := range []string{
-		"# INV-0002: TestCheckoutTotals flakes in CI\n",
-		"## Question\n\nWhy does TestCheckoutTotals fail about once in 20 CI runs and never locally?\n",
-		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by a person. 6 not checked.\n",
+		"# TestCheckoutTotals flakes in CI\n\nAsked on October 5, 2026. Last changed on October 7, 2026.\n",
+		"## Background\n\nWhy does TestCheckoutTotals fail about once in 20 CI runs and never locally?\n",
+		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by a person. 6 not checked.\n\nNobody has checked this answer yet.\n",
 		"Why: The race detector reproduces it (E-006)",
-		"- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (A person checked this)\n",
-		"  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; Not checked)\n",
-		"## Ruled out\n\n- **H-001** The failure is a midnight boundary",
-		"  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; Not checked)\n",
-		"## Answered follow-up questions\n\n- **Q-001** Do the failure timestamps cluster around 00:00 UTC?\n  - Answer: No: failures are spread evenly across the day (E-003).",
-		"## Open follow-up questions\n\n- **Q-002** Do other packages keep test state in package-level maps?\n",
-		"- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported; Not checked)",
-		"Codex (AI): Ruled out H-001; edited the why\n",
-		"A person: Marked C-001: A person checked this\n",
-		"Claude Code (AI): Created this question\n",
-		"### 2026-10-05\n",
+		"- TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (A person checked this)\n",
+		"  - Backed by: cartCache is a package-level map written under t.Parallel() (Not checked)\n",
+		"- The two checkout tests share cartCache when the package runs in parallel on slow runners. (Looks right so far; Not checked)\n",
+		"## Ruled out\n\n- The failure is a midnight boundary",
+		"  - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)\n",
+		"## Follow-up questions\n\n- Do the failure timestamps cluster around 00:00 UTC? (Answered)\n  - Answer: No: failures are spread evenly across the day (E-003).\n- Do other packages keep test state in package-level maps? (Open)\n",
+		"  - Something your AI read, dated October 6, 2026\n  - Where to find it: internal/checkout/cache.go:18\n",
+		"## How we got here\n\n### October 5, 2026\n\n- Claude Code created this question\n",
+		"- Codex ruled out the finding \"The failure is a midnight boundary",
+		"- A person checked the finding \"TestCheckoutTotals fails",
+		"\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
 	} {
 		if !strings.Contains(md, want) {
-			t.Errorf("report lacks %q:\n%s", want, md)
+			t.Errorf("the full answer lacks %q:\n%s", want, md)
 		}
+	}
+	// Stored text is kept word for word (this fixture's own text names
+	// E-003 to E-006); the layout itself never prints a code or a raw date.
+	layout := strings.NewReplacer("(E-003)", "", "(E-004)", "", "(E-005)", "", "(E-006)", "").Replace(md)
+	if m := regexp.MustCompile(`\b(INV|[CEHQ])-\d+\b|\d{4}-\d\d-\d\d|UTC\)|captured`).FindAllString(layout, -1); m != nil {
+		t.Errorf("the full answer prints %v:\n%s", m, md)
 	}
 	if strings.Contains(md, "Earlier case") || strings.Contains(md, "Set active") ||
 		strings.Contains(md, "your AI's current question") {
@@ -157,7 +164,7 @@ func TestGoldenReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tl := short[strings.Index(short, "## How we got here (UTC)"):]
+	tl := short[strings.Index(short, "## How we got here"):]
 	if !strings.Contains(tl, "Earlier changes are not shown.") || strings.Count(tl, "\n- ") != 2 {
 		t.Fatalf("timeline limit 2:\n%s", tl)
 	}

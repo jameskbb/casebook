@@ -21,7 +21,6 @@ func TestFrontendLimitsMatchEngine(t *testing.T) {
 		"rawDetail":           app.MaxRawDetailBytes,
 		"sourceRef":           app.MaxSourceRefBytes,
 		"sourceLabel":         app.MaxSourceLabelBytes,
-		"metadata":            app.MaxMetadataBytes,
 		"statement":           app.MaxStatementBytes,
 		"rationale":           app.MaxRationaleBytes,
 		"question":            app.MaxQuestionBytes,

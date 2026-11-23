@@ -44,5 +44,5 @@ func OpenImportFile(path string) (*os.File, error) {
 var beforeImportOpen func()
 
 func notRegular() error {
-	return domain.NewValidationError("data", "must be a regular file")
+	return domain.NewValidationError("data", "this is not a file; choose a file to open")
 }

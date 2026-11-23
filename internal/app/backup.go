@@ -33,14 +33,14 @@ func (a *App) Backup(ctx context.Context, destPath string) (BackupInfo, error) {
 		return BackupInfo{}, domain.NewValidationError("path", "is not a usable file path")
 	}
 	if a.isLiveDB(abs) {
-		return BackupInfo{}, fmt.Errorf("%w: cannot write a backup over the live database", domain.ErrConflict)
+		return BackupInfo{}, fmt.Errorf("%w: choose another place; this is the file Casebook is using", domain.ErrConflict)
 	}
 	if fi, err := os.Stat(filepath.Dir(abs)); err != nil || !fi.IsDir() {
 		return BackupInfo{}, domain.NewValidationError("path", "parent directory does not exist")
 	}
 	if err := a.db.VacuumInto(ctx, abs); err != nil {
 		if errors.Is(err, store.ErrDestinationExists) {
-			return BackupInfo{}, fmt.Errorf("%w: backup destination %s already exists", domain.ErrConflict, filepath.Base(abs))
+			return BackupInfo{}, fmt.Errorf("%w: a file named %s is already there; choose another name", domain.ErrConflict, filepath.Base(abs))
 		}
 		var pe *fs.PathError
 		if errors.As(err, &pe) {
@@ -129,7 +129,7 @@ func (a *App) ValidateBackup(ctx context.Context, path string) (BackupInfo, erro
 // invalidBackup is the ErrConflict returned for a file that is not a valid
 // Casebook backup.
 func invalidBackup(reason string) error {
-	return fmt.Errorf("%w: not a valid Casebook backup (%s)", domain.ErrConflict, reason)
+	return fmt.Errorf("%w: this is not a Casebook backup (%s)", domain.ErrConflict, reason)
 }
 
 // isLiveDB reports whether abs is the open database file (or one of its

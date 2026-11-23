@@ -198,7 +198,7 @@ func TestPlainLabels(t *testing.T) {
 		"verification source_verified": "AI checked the source", "verification disputed": "Sources disagree",
 		"verification superseded": "Replaced",
 		"claim active":            "Current", "claim disputed": "Sources disagree", "claim superseded": "Replaced", "claim rejected": "Ruled out",
-		"hypothesis open": "Not tested yet", "hypothesis supported": "Supported", "hypothesis disproven": "Ruled out",
+		"hypothesis open": "Not tested yet", "hypothesis supported": "Looks right so far", "hypothesis disproven": "Ruled out",
 		"hypothesis superseded": "Replaced",
 		"record investigation":  "question", "record evidence": "source", "record claim": "finding", "record hypothesis": "finding",
 		"record question": "follow-up question",

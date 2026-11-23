@@ -28,7 +28,7 @@ func TestExportCancelled(t *testing.T) {
 		t.Fatalf("save dialog shown %d times", len(fake.saveOpts))
 	}
 	o := fake.saveOpts[0]
-	if o.Title != "Export question" || o.DefaultFilename != "INV-0001-september-cloud-bill-up-38.json" {
+	if o.Title != "Save a copy to send to someone" || o.DefaultFilename != "INV-0001-september-cloud-bill-up-38.json" {
 		t.Fatalf("dialog options = %+v", o)
 	}
 	if len(o.Filters) != 1 || o.Filters[0].DisplayName != "Casebook question (*.json)" || o.Filters[0].Pattern != "*.json" {
@@ -110,7 +110,7 @@ func TestExportRefusesCasebookFiles(t *testing.T) {
 		fake.savePath = target
 		_, err := d.ExportInvestigation(f.InvestigationRef)
 		ue := decodeUIError(t, err)
-		if ue.Kind != kindConflict || !strings.Contains(ue.Message, "Choose another location") {
+		if ue.Kind != kindConflict || !strings.Contains(ue.Message, "Choose another place to save") {
 			t.Fatalf("export to %q = %+v, want a conflict", target, ue)
 		}
 	}
@@ -186,7 +186,7 @@ func TestImportRoundTrip(t *testing.T) {
 	if err != nil || !out.Cancelled {
 		t.Fatalf("cancelled import = %+v, %v", out, err)
 	}
-	if o := fake.openOpts[0]; o.Title != "Import question" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.json" {
+	if o := fake.openOpts[0]; o.Title != "Open a question someone sent you" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.json" {
 		t.Fatalf("open dialog options = %+v", o)
 	}
 
@@ -254,7 +254,7 @@ func TestImportRefusesNonRegularFile(t *testing.T) {
 	// is a regular file, and reading a FIFO would block forever.
 	fake.openPath = t.TempDir()
 	ue := decodeUIError(t, func() error { _, err := d.ImportInvestigation(); return err }())
-	if ue.Kind != kindValidation || ue.Field != "data" || ue.Message != "must be a regular file" {
+	if ue.Kind != kindValidation || ue.Field != "data" || ue.Message != "this is not a file; choose a file to open" {
 		t.Fatalf("import of a directory = %+v, want validation on data", ue)
 	}
 }
@@ -268,7 +268,7 @@ func TestBackUpCancelledAndConflict(t *testing.T) {
 		t.Fatalf("cancelled backup = %+v, %v", out, err)
 	}
 	o := fake.saveOpts[0]
-	if o.Title != "Back up all Casebook data" || o.DefaultFilename != "casebook-backup-2026-10-02.db" ||
+	if o.Title != "Save a backup" || o.DefaultFilename != "casebook-backup-2026-10-02.db" ||
 		len(o.Filters) != 1 || o.Filters[0].DisplayName != "Casebook backup (*.db)" || o.Filters[0].Pattern != "*.db" {
 		t.Fatalf("backup dialog options = %+v", o)
 	}
@@ -312,7 +312,7 @@ func TestRestoreTwoStep(t *testing.T) {
 	if err != nil || !pick.Cancelled {
 		t.Fatalf("cancelled pick = %+v, %v", pick, err)
 	}
-	if o := fake.openOpts[0]; o.Title != "Restore from backup" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.db" {
+	if o := fake.openOpts[0]; o.Title != "Bring back a backup" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.db" {
 		t.Fatalf("restore dialog options = %+v", o)
 	}
 
@@ -432,20 +432,21 @@ func TestSaveReport(t *testing.T) {
 		t.Fatalf("cancel = %+v, %v", res, err)
 	}
 	fake.savePath = d.dbPath
-	if _, err := d.SaveReport(inv.Ref); err == nil || !strings.Contains(err.Error(), "cannot export over its own data files") {
+	if _, err := d.SaveReport(inv.Ref); err == nil || !strings.Contains(err.Error(), "Choose another place to save") {
 		t.Fatalf("save over data file = %v", err)
 	}
-	fake.savePath = filepath.Join(t.TempDir(), "saved.md")
+	fake.savePath = filepath.Join(t.TempDir(), "saved.html")
 	res, err = d.SaveReport(inv.Ref)
-	if err != nil || res.Cancelled || res.FileName != "saved.md" {
+	if err != nil || res.Cancelled || res.FileName != "saved.html" {
 		t.Fatalf("save = %+v, %v", res, err)
 	}
-	if got := fake.saveOpts[len(fake.saveOpts)-1].DefaultFilename; got != inv.Ref+"-answer.md" {
+	if got := fake.saveOpts[len(fake.saveOpts)-1].DefaultFilename; got != "Saved (everything).html" {
 		t.Fatalf("default file name = %q", got)
 	}
 	got, _ := os.ReadFile(fake.savePath)
-	want, _ := d.app.Report(d.ctx, inv.Ref, app.ReportOptions{})
-	if string(got) != want {
+	want, _ := d.app.ReportHTML(d.ctx, inv.Ref, app.ReportOptions{})
+	if string(got) != app.AnswerPage("Saved", want) {
+
 		t.Fatalf("file = %q, want the report", got)
 	}
 }

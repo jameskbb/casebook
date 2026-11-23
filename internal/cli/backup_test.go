@@ -100,7 +100,7 @@ func TestRestore(t *testing.T) {
 		}
 		r := runCLI(t, "", "--db", db, "restore", bad, "--yes")
 		wantCode(t, r, 1)
-		wantContains(t, r.Stderr, "not a valid Casebook backup")
+		wantContains(t, r.Stderr, "this is not a Casebook backup")
 		// A bad file fails before the confirmation, even interactively.
 		r = runTerminal(t, true, "yes\n", "--db", db, "restore", bad)
 		wantCode(t, r, 1)

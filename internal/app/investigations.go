@@ -208,17 +208,16 @@ func (a *App) UpdateInvestigation(ctx context.Context, actor Actor, invRef strin
 
 		action := "investigation.update"
 		summary := fmt.Sprintf("Updated question %s: %s", inv.Ref, strings.Join(changed, ", "))
+		// The stored status is the engine's bookkeeping: the text a person
+		// reads says only that the question was archived or put back.
 		switch change {
 		case statusArchive:
-			action = "investigation.archive"
-			summary = fmt.Sprintf("Archived question %s", inv.Ref)
-			if textChanged {
-				summary += fmt.Sprintf(" and updated %s", strings.Join(changed[:len(changed)-1], ", "))
-			}
+			action, summary = "investigation.archive", fmt.Sprintf("Archived question %s", inv.Ref)
 		case statusUnarchive:
-			summary += fmt.Sprintf(" (unarchived to %s)", su.Status)
-		case statusSet:
-			summary += fmt.Sprintf(" (status %s)", su.Status)
+			action, summary = "investigation.unarchive", fmt.Sprintf("Unarchived question %s", inv.Ref)
+		}
+		if textChanged && change != statusSame && change != statusSet {
+			summary += fmt.Sprintf(" and updated %s", strings.Join(changed[:len(changed)-1], ", "))
 		}
 		if err := a.recordActivity(ctx, tx, actor, inv.ID, action, inv.Ref, summary, "", now); err != nil {
 			return err
@@ -291,7 +290,7 @@ func (a *App) moveStatus(ctx context.Context, actor Actor, invRef, op string, ar
 		}
 		summary := fmt.Sprintf("Archived question %s", inv.Ref)
 		if !archive {
-			summary = fmt.Sprintf("Unarchived question %s (status %s)", inv.Ref, su.Status)
+			summary = fmt.Sprintf("Unarchived question %s", inv.Ref)
 		}
 		if err := a.recordActivity(ctx, tx, actor, inv.ID, op, inv.Ref, summary, "", now); err != nil {
 			return err

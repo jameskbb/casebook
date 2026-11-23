@@ -29,7 +29,7 @@ func TestOpenImportFile(t *testing.T) {
 
 	_, err = app.OpenImportFile(dir)
 	ve, ok := app.IsValidation(err)
-	if !ok || ve.Field != "data" || ve.Message != "must be a regular file" {
+	if !ok || ve.Field != "data" || ve.Message != "this is not a file; choose a file to open" {
 		t.Fatalf("directory = %v, want validation on data", err)
 	}
 

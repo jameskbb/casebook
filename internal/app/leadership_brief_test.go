@@ -47,7 +47,7 @@ func TestLeadershipBriefRetainsCaveatsAndCountsOmissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{disputed.Statement, contra.Statement, hyp.Statement, "Contradicted by " + ev.Ref, "Not checked", "Sources disagree", "No answer yet.", "Not included: " + ignored.Ref + " and " + q.Ref + ". The history is not included. Ask the person who shared this for the full version."} {
+	for _, want := range []string{disputed.Statement, contra.Statement, hyp.Statement, "Goes against it: " + ev.Title + " (Not checked)", "## Where sources disagree\n\n- " + disputed.Statement + "\n", "No answer yet.", "This short version leaves out 1 finding, 1 follow-up question and the history. Ask the person who shared this for the version with everything."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
@@ -129,7 +129,7 @@ func TestLeadershipBriefKeepsConclusionBasisAndMixedVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, "A person checked this", "Supported by " + ev.Ref + ": AI captured ledger (Not checked)", "**" + ev.Ref + "** AI captured ledger (File: ledger.csv; Not checked)", "Expenses explain the drop.", "0 of 1 source checked by a person. 1 not checked.", "Answer marked: A person checked this", "Answer review: not reviewed yet."} {
+	for _, want := range []string{c.Statement, "A person checked this", "  - Backed by: AI captured ledger (Not checked)\n", "- AI captured ledger (Not checked)\n  - Report or spreadsheet\n  - Where to find it: ledger.csv\n", "Expenses explain the drop.", "0 of 1 source checked by a person. 1 not checked.\n\nA person checked this answer.\n", "Findings that back the answer:\n- " + c.Statement + " (A person checked this)\n"} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
@@ -162,7 +162,7 @@ func TestLeadershipBriefRetainsDisputedSourcesOutsideSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, linked.Title, standalone.Title, "Sources disagree", "Every finding, follow-up question and source is included."} {
+	for _, want := range []string{c.Statement, linked.Title, standalone.Title, "Sources disagree", "\nThis short version leaves out the history. "} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("source dispute omitted %q", want)
 		}
@@ -289,7 +289,7 @@ func TestLeadershipBriefSelectsOpenExplanations(t *testing.T) {
 	if len(selected) != 3 || !selected[refs[0]] || !selected[refs[1]] || selected[refs[2]] {
 		t.Fatalf("default open explanations = %v, want the first two of %v", selected, refs)
 	}
-	if !strings.Contains(p.Markdown, "## Still being tested\n\n- **"+refs[0]+"** Live explanation 0 (Supported; Not checked)") || strings.Contains(p.Markdown, "Live explanation 2") {
+	if !strings.Contains(p.Markdown, "## Findings\n\n- Live explanation 0 (Looks right so far; Not checked)\n") || !strings.Contains(p.Markdown, "## Not tested yet\n\n- Live explanation 1 (Not checked)\n") || strings.Contains(p.Markdown, "Live explanation 2") {
 		t.Fatalf("brief does not show the default explanations:\n%s", p.Markdown)
 	}
 	if got := strings.Join(p.Omitted.HypothesisRefs, ","); got != refs[2] || p.Omitted.Hypotheses != 1 {
@@ -299,7 +299,7 @@ func TestLeadershipBriefSelectsOpenExplanations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(chosen.Markdown, "Live explanation 2") || strings.Contains(chosen.Markdown, "Live explanation 0") || !strings.Contains(chosen.Markdown, "Not included: "+refs[0]+", "+refs[1]+" and "+dead.Ref+".") {
+	if !strings.Contains(chosen.Markdown, "Live explanation 2") || strings.Contains(chosen.Markdown, "Live explanation 0") || !strings.Contains(chosen.Markdown, "leaves out 3 findings and the history.") {
 		t.Fatalf("explicit selection not honoured:\n%s", chosen.Markdown)
 	}
 	for _, o := range []app.ShareOptions{{HypothesisRefs: []string{dead.Ref}}, {RuledOutRefs: []string{refs[0]}}, {HypothesisRefs: []string{disputed.Ref}}} {

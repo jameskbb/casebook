@@ -64,7 +64,7 @@ func (d *Desktop) ExportInvestigation(invRef string) (FileResult, error) {
 		return FileResult{}, mapErr(err)
 	}
 	path, err := d.native.SaveFile(runtime.SaveDialogOptions{
-		Title:                "Export question",
+		Title:                "Save a copy to send to someone",
 		DefaultFilename:      exportFileName(inv.Ref, inv.Title),
 		Filters:              jsonFilter,
 		CanCreateDirectories: true,
@@ -88,46 +88,23 @@ func (d *Desktop) ExportInvestigation(invRef string) (FileResult, error) {
 	return FileResult{Path: path, FileName: filepath.Base(path)}, nil
 }
 
-var mdFilter = []runtime.FileFilter{{DisplayName: "Markdown document (*.md)", Pattern: "*.md"}}
-
-// SaveReport writes the report (app.Report) to a Markdown file chosen in
-// the native save dialog, for sending to the person who asked the question.
+// SaveReport saves the full shared answer ("Everything") as a web page
+// chosen in the native save dialog, for sending to the person who asked the
+// question.
 func (d *Desktop) SaveReport(invRef string) (FileResult, error) {
 	if err := d.ready(); err != nil {
 		return FileResult{}, err
 	}
-	inv, err := d.app.GetInvestigation(d.ctx, invRef)
+	p, err := d.app.SharePreview(d.ctx, invRef, app.ShareOptions{Mode: "report"})
 	if err != nil {
 		return FileResult{}, mapErr(err)
 	}
-	text, err := d.app.Report(d.ctx, inv.Ref, app.ReportOptions{})
-	if err != nil {
-		return FileResult{}, mapErr(err)
-	}
-	path, err := d.native.SaveFile(runtime.SaveDialogOptions{
-		Title:                "Save the answer",
-		DefaultFilename:      inv.Ref + "-answer.md",
-		Filters:              mdFilter,
-		CanCreateDirectories: true,
-	})
-	if err != nil {
-		return FileResult{}, nativeErr("dialog", err)
-	}
-	if path == "" {
-		return FileResult{Cancelled: true}, nil
-	}
-	if d.isCasebookFile(path) {
-		return FileResult{}, errExportOverData
-	}
-	if err := writePrivateFile(path, []byte(text)); err != nil {
-		return FileResult{}, mapErr(err)
-	}
-	return FileResult{Path: path, FileName: filepath.Base(path)}, nil
+	return d.saveAnswer(p)
 }
 
 // errExportOverData refuses an export destination that is one of
 // Casebook's own files.
-var errExportOverData = uiErr(kindConflict, "", "Casebook cannot export over its own data files. Choose another location.")
+var errExportOverData = uiErr(kindConflict, "", "Casebook keeps its own data in that file. Choose another place to save.")
 
 // isCasebookFile reports whether path is the live database, one of its
 // SQLite side files, or anything inside the backups folder next to it
@@ -178,7 +155,7 @@ func (d *Desktop) ImportInvestigation() (ImportOutcome, error) {
 		return ImportOutcome{}, err
 	}
 	path, err := d.native.OpenFile(runtime.OpenDialogOptions{
-		Title:   "Import question",
+		Title:   "Open a question someone sent you",
 		Filters: jsonFilter,
 	})
 	if err != nil {
@@ -206,7 +183,7 @@ func (d *Desktop) BackUp() (BackupOutcome, error) {
 		return BackupOutcome{}, err
 	}
 	path, err := d.native.SaveFile(runtime.SaveDialogOptions{
-		Title:                "Back up all Casebook data",
+		Title:                "Save a backup",
 		DefaultFilename:      backupFileName(d.now()),
 		Filters:              dbFilter,
 		CanCreateDirectories: true,
@@ -233,7 +210,7 @@ func (d *Desktop) PickBackupToRestore() (RestorePick, error) {
 	}
 	d.setPendingRestore("")
 	path, err := d.native.OpenFile(runtime.OpenDialogOptions{
-		Title:   "Restore from backup",
+		Title:   "Bring back a backup",
 		Filters: dbFilter,
 	})
 	if err != nil {

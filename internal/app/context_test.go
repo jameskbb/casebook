@@ -134,7 +134,7 @@ func TestRenderContextFormats(t *testing.T) {
 	if err != nil || again != md {
 		t.Fatalf("second render differs (err %v)", err)
 	}
-	if !strings.HasPrefix(md, "Question: INV-0001\nTitle: September cloud bill up 38%\nStatus: In progress\n") {
+	if !strings.HasPrefix(md, "Question: INV-0001\nTitle: September cloud bill up 38%\nStatus: Answered\n") {
 		t.Fatalf("markdown header:\n%s", md)
 	}
 

@@ -1,9 +1,8 @@
-# INV-0002: TestCheckoutTotals flakes in CI
+# TestCheckoutTotals flakes in CI
 
-- Opened: 2026-10-05
-- Last updated: 2026-10-07
+Asked on October 5, 2026. Last changed on October 7, 2026.
 
-## Question
+## Background
 
 Why does TestCheckoutTotals fail about once in 20 CI runs and never locally?
 
@@ -13,94 +12,85 @@ Two parallel tests share a package-level cart cache; the slower 4-core runners w
 
 0 of 6 sources checked by a person. 6 not checked.
 
-Answer marked: Not checked
-
-Findings behind the answer: none selected.
-
-Findings against the answer: none selected.
-
-Answer review: not reviewed yet.
+Nobody has checked this answer yet.
 
 Why: The race detector reproduces it (E-006), the code shows the shared map (E-005), and every failure was on the 4-core pool (E-004).
 
 ## Findings
 
-- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (A person checked this)
+- TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (A person checked this)
   - Why: Reproduced 50 of 50 times with -race; the map is written under t.Parallel().
-  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; Not checked)
-  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; Not checked)
-  - Supported by E-006: go test -race reproduces a data race on cartCache, 50 of 50 runs (Local race run; Not checked)
+  - Backed by: All 23 failures ran on the 4-core runner pool (Not checked)
+  - Backed by: cartCache is a package-level map written under t.Parallel() (Not checked)
+  - Backed by: go test -race reproduces a data race on cartCache, 50 of 50 runs (Not checked)
+- The two checkout tests share cartCache when the package runs in parallel on slow runners. (Looks right so far; Not checked)
+  - Backed by: All 23 failures ran on the 4-core runner pool (Not checked)
 
 ## Ruled out
 
-- **H-001** The failure is a midnight boundary: the fixture's date flips between seeding and assertion. (Ruled out; Not checked)
+- The failure is a midnight boundary: the fixture's date flips between seeding and assertion. (Not checked)
   - Why: No failure is near midnight (E-003).
-  - Supported by E-002: Fixture seeds order dates from time.Now() truncated to the day (Code: internal/checkout/totals_test.go:41; Not checked)
-  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; Not checked)
+  - Backed by: Fixture seeds order dates from time.Now() truncated to the day (Not checked)
+  - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)
 
-## Still being tested
+## Follow-up questions
 
-- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported; Not checked)
-  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; Not checked)
-
-## Answered follow-up questions
-
-- **Q-001** Do the failure timestamps cluster around 00:00 UTC?
-  - Answer: No: failures are spread evenly across the day (E-003). (2026-10-06)
-
-## Open follow-up questions
-
-- **Q-002** Do other packages keep test state in package-level maps?
+- Do the failure timestamps cluster around 00:00 UTC? (Answered)
+  - Answer: No: failures are spread evenly across the day (E-003).
+- Do other packages keep test state in package-level maps? (Open)
 
 ## Sources
 
-- **E-001** 23 of the last 400 CI runs fail on the totals assertion
-  - CI failure log: ci/logs/checkout-2026-10.txt, captured 2026-10-05, Not checked
+- 23 of the last 400 CI runs fail on the totals assertion (Not checked)
+  - CI failure log, dated October 5, 2026
+  - Where to find it: ci/logs/checkout-2026-10.txt
   - All 23 failures are the same assertion: expected 3 line items, got 2.
-- **E-002** Fixture seeds order dates from time.Now() truncated to the day
-  - Code: internal/checkout/totals_test.go:41, captured 2026-10-05, Not checked
+- Fixture seeds order dates from time.Now() truncated to the day (Not checked)
+  - Something your AI read, dated October 5, 2026
+  - Where to find it: internal/checkout/totals_test.go:41
   - The fixture computes the order date once and the assertion recomputes it.
-- **E-003** Failure times are spread across the day; none within 30 min of 00:00 UTC
-  - CI runs query, captured 2026-10-05, Not checked
+- Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)
+  - CI runs query, dated October 5, 2026
   - Failures spread evenly over 24 hours.
-- **E-004** All 23 failures ran on the 4-core runner pool
-  - CI runs query, captured 2026-10-06, Not checked
+- All 23 failures ran on the 4-core runner pool (Not checked)
+  - CI runs query, dated October 6, 2026
   - 0 of 23 on the 8-core pool, which ran 61% of the jobs.
-- **E-005** cartCache is a package-level map written under t.Parallel()
-  - Code: internal/checkout/cache.go:18, captured 2026-10-06, Not checked
+- cartCache is a package-level map written under t.Parallel() (Not checked)
+  - Something your AI read, dated October 6, 2026
+  - Where to find it: internal/checkout/cache.go:18
   - Both tests write the same map without a lock.
-- **E-006** go test -race reproduces a data race on cartCache, 50 of 50 runs
-  - Local race run, captured 2026-10-06, Not checked
+- go test -race reproduces a data race on cartCache, 50 of 50 runs (Not checked)
+  - Local race run, dated October 6, 2026
   - The race detector reports concurrent map writes in every run.
 
-## How we got here (UTC)
+## How we got here
 
-### 2026-10-05
+### October 5, 2026
 
-- 11:13 Claude Code (AI): Created this question
-- 13:26 Claude Code (AI): Added source E-001 "23 of the last 400 CI runs fail on the totals assertion"
-- 15:39 Claude Code (AI): Added source E-002 "Fixture seeds order dates from time.Now() truncated to the day"
-- 17:52 Claude Code (AI): Added finding H-001 (1 source)
-- 20:05 Claude Code (AI): Asked Q-001: Do the failure timestamps cluster around 00:00 UTC?
-- 22:18 Codex (AI): Added source E-003 "Failure times are spread across the day; none within 30 min of 00:00 UTC"
+- Claude Code created this question
+- Claude Code added the source "23 of the last 400 CI runs fail on the totals assertion"
+- Claude Code added the source "Fixture seeds order dates from time.Now() truncated to the day"
+- Claude Code added the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert..." with 1 source
+- Claude Code asked the follow-up question "Do the failure timestamps cluster around 00:00 UTC?"
+- Codex added the source "Failure times are spread across the day; none within 30 min of 00:00 UTC"
 
-### 2026-10-06
+### October 6, 2026
 
-- 00:31 Codex (AI): Added source E-004 "All 23 failures ran on the 4-core runner pool"
-- 02:44 Codex (AI): Linked source E-003 to H-001, which it contradicts
-- 04:57 Codex (AI): Ruled out H-001; edited the why
-- 07:10 Codex (AI): Resolved Q-001: No: failures are spread evenly across the day (E-003).
-- 09:23 Codex (AI): Added finding H-002 (1 source)
-- 11:36 Claude Code (AI): Added source E-005 "cartCache is a package-level map written under t.Parallel()"
-- 13:49 Claude Code (AI): Added source E-006 "go test -race reproduces a data race on cartCache, 50 of 50 runs"
-- 16:02 Claude Code (AI): Added finding C-001 (3 sources)
-- 18:15 Claude Code (AI): Marked H-002: Supported
-- 20:28 Claude Code (AI): Asked Q-002: Do other packages keep test state in package-level maps?
-- 22:41 Claude Code (AI): Updated the answer
+- Codex added the source "All 23 failures ran on the 4-core runner pool"
+- Codex added the source "Failure times are spread across the day; none within 30 min of 00:00 UTC" to the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert...", which it goes against
+- Codex ruled out the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert..." (also changed: why)
+- Codex answered the follow-up question "Do the failure timestamps cluster around 00:00 UTC?": No: failures are spread evenly across the day (E-003).
+- Codex added the finding "The two checkout tests share cartCache when the package runs in parallel on slow runners." with 1 source
+- Claude Code added the source "cartCache is a package-level map written under t.Parallel()"
+- Claude Code added the source "go test -race reproduces a data race on cartCache, 50 of 50 runs"
+- Claude Code added the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites th..." with 3 sources
+- Claude Code marked the finding "The two checkout tests share cartCache when the package runs in parallel on slow runners.": Looks right so far
+- Claude Code asked the follow-up question "Do other packages keep test state in package-level maps?"
+- Claude Code updated the answer
 
-### 2026-10-07
+### October 7, 2026
 
-- 00:54 A person: Marked C-001: A person checked this
-- 03:07 A person: Updated the answer
+- A person checked the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites th..."
+- A person updated the answer
 
-_Generated by Casebook from INV-0002._
+_Made with Casebook. These are the saved findings and sources, word for word._

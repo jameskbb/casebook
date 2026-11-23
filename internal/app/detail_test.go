@@ -289,6 +289,23 @@ func TestListInvestigationsCheckedCounts(t *testing.T) {
 	if s := summary(); s.FindingsDisagree != 1 {
 		t.Fatalf("after ruling one out: %+v", s)
 	}
+	// A finding still being tested counts too, until it is ruled out.
+	if _, err := a.AddHypothesis(ctx, apptest.AI, inv.Ref, app.HypothesisInput{Statement: "Being tested, sources disagree"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.SetHypothesisVerification(ctx, apptest.AI, inv.Ref, "H-001", app.VerificationDisputed); err != nil {
+		t.Fatal(err)
+	}
+	if s := summary(); s.FindingsDisagree != 2 {
+		t.Fatalf("with a finding being tested: %+v, want 2", s)
+	}
+	disproven := app.HypothesisStatusDisproven
+	if _, err := a.UpdateHypothesis(ctx, apptest.AI, inv.Ref, "H-001", app.HypothesisPatch{Status: &disproven}); err != nil {
+		t.Fatal(err)
+	}
+	if s := summary(); s.FindingsDisagree != 1 {
+		t.Fatalf("after ruling the tested finding out: %+v", s)
+	}
 	apptest.AssertNoJSONNulls(t, summary())
 }
 

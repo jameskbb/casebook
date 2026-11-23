@@ -87,8 +87,12 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 				if s.Conclusion != "" {
 					answer = "Answered"
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d of %d\t%s%s\n", s.Ref, s.UpdatedAt, active, answer,
-					s.SourcesCheckedByYou, s.SourcesTotal, app.TruncateLine(s.Title, listTitleBytes), archivedNote(s.Status))
+				checked := "No sources yet"
+				if s.SourcesTotal > 0 {
+					checked = fmt.Sprintf("%d of %d", s.SourcesCheckedByYou, s.SourcesTotal)
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s%s\n", s.Ref, s.UpdatedAt, active, answer,
+					checked, app.TruncateLine(s.Title, listTitleBytes), archivedNote(s.Status))
 			}
 			return tw.Flush()
 		},
@@ -162,7 +166,7 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 		if e.SourceLabel != "" {
 			src = "from: " + line(e.SourceLabel)
 		}
-		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.Label(), e.Verification.PlainLabel()+importedNote(e.Imported), line(e.Title), cell(src))
+		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.PlainLabel(), e.Verification.PlainLabel()+importedNote(e.Imported), line(e.Title), cell(src))
 	}
 	fmt.Fprintf(tw, "\nFindings (%d)\n", len(d.Claims))
 	for _, c := range d.Claims {
@@ -183,7 +187,7 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 		case q.DeferNote != "":
 			extra = "note: " + line(q.DeferNote)
 		}
-		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", q.Ref, q.Status.Label(), line(q.Question), cell(extra))
+		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", q.Ref, q.Status.PlainLabel(), line(q.Question), cell(extra))
 	}
 	fmt.Fprintf(tw, "\nRecent activity (%d)\n", len(d.RecentActivity))
 	for _, act := range d.RecentActivity {

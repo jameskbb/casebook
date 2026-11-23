@@ -32,13 +32,13 @@ func TestReviewedSharePreservesBytesAfterAIWrite(t *testing.T) {
 	if native.clipboard != p.Markdown || strings.Contains(native.clipboard, "Added after preview") {
 		t.Fatal("copy reread changed case")
 	}
-	native.savePath = filepath.Join(t.TempDir(), "reviewed.md")
+	native.savePath = filepath.Join(t.TempDir(), "reviewed.html")
 	res, err := d.SaveSharePreview(p.SnapshotID)
 	if err != nil || res.Cancelled {
 		t.Fatalf("save = %+v %v", res, err)
 	}
 	got, err := os.ReadFile(native.savePath)
-	if err != nil || string(got) != p.Markdown {
+	if err != nil || string(got) != app.AnswerPage("Reviewed answer", p.HTML) || !strings.HasPrefix(string(got), "<!doctype html>") {
 		t.Fatal("save did not preserve reviewed bytes")
 	}
 	// Windows permissions are ACLs, not Unix mode bits.
@@ -119,7 +119,7 @@ func TestReviewedShareUnchangedDuringNativeSaveDialog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	native.savePath = filepath.Join(t.TempDir(), "reviewed.md")
+	native.savePath = filepath.Join(t.TempDir(), "reviewed.html")
 	d.native = &mutationDuringSave{fakeNative: native, mutate: func() {
 		title := "Changed while dialog open"
 		if _, err := d.app.UpdateInvestigation(d.ctx, apptest.AI, inv.Ref, app.InvestigationPatch{Title: &title}); err != nil {
@@ -130,16 +130,23 @@ func TestReviewedShareUnchangedDuringNativeSaveDialog(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(native.savePath)
-	if err != nil || string(got) != p.Markdown {
+	if err != nil || string(got) != app.AnswerPage("Before save dialog", p.HTML) || !strings.HasPrefix(string(got), "<!doctype html>") {
 		t.Fatal("native dialog write changed reviewed bytes")
 	}
 }
 
-func TestShareFileName(t *testing.T) {
-	if got := shareFileName("INV-0002", "brief"); got != "INV-0002-answer.md" {
-		t.Errorf("short answer file name = %q", got)
-	}
-	if got := shareFileName("INV-0002", "report"); got != "INV-0002-full-answer.md" {
-		t.Errorf("full answer file name = %q", got)
+func TestAnswerFileName(t *testing.T) {
+	for _, tc := range []struct{ title, mode, want string }{
+		{"Why did calls go up 30% in October?", "brief", "Why did calls go up 30 percent in October.html"},
+		{"Why did calls go up 30% in October?", "report", "Why did calls go up 30 percent in October (everything).html"},
+		{`a/b\c: "d" <e> | f * g`, "brief", "abc d e f g.html"},
+		{"Pourquoi les appels ont-ils doublé ?", "brief", "Pourquoi les appels ont-ils doublé.html"},
+		{strings.Repeat("word ", 40), "brief", strings.TrimSpace(strings.Repeat("word ", 16)) + ".html"},
+		{"???", "brief", "answer.html"},
+		{"", "report", "answer (everything).html"},
+	} {
+		if got := answerFileName(tc.title, tc.mode); got != tc.want {
+			t.Errorf("answerFileName(%q, %s) = %q, want %q", tc.title, tc.mode, got, tc.want)
+		}
 	}
 }

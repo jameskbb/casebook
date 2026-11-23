@@ -9,11 +9,11 @@ import (
 	"github.com/jameskbb/casebook/internal/app"
 )
 
-// newReportCommand prints the Markdown write-up of an investigation (the
+// newReportCommand prints the shared answer of an investigation (the
 // active one when no ref is given). The text is exactly what app.Report
 // returns (or, with --brief, the Markdown of app.SharePreview in brief mode
 // with its default selection), so the CLI, the MCP tool and the desktop
-// app's Share summary agree byte for byte.
+// app's Share the answer agree byte for byte.
 func newReportCommand(env *Env) *cobra.Command {
 	var (
 		output   string
@@ -23,25 +23,25 @@ func newReportCommand(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "report [ref]",
-		Short: "Print a Markdown write-up of a question and its answer (default: the active one)",
-		Long: `Print a write-up of a question for people to read or share. It includes the answer
-and who checked it, the findings and their sources, what was
-ruled out, answered and open questions, and a dated history of changes (UTC).
-With no ref, use the active question.
+		Short: "Print the answer to a question, ready to share (default: the active one)",
+		Long: `Print the answer to a question as Markdown for people to read. It includes the
+answer and who checked it, the findings and their sources, what was ruled out,
+the follow-up questions and a dated history of changes. Records are named by
+their own text, without refs. With no ref, use the active question.
 
---brief prints the leadership brief instead: the short summary the app's
-Share the answer starts with, including its note of what it leaves out. A brief
-has no timeline, so --timeline cannot be combined with --brief.
+--brief prints the short version instead: what the app's Share the answer
+starts with, ending with a note of what it leaves out. The short version has
+no history, so --timeline cannot be combined with --brief.
 
 The output is deterministic: the same records always give the same bytes.
 -o writes it to a new owner-only file (never overwriting one unless --force
-is given). --timeline N keeps only the newest N timeline entries. --json
+is given). --timeline N keeps only the newest N history entries. --json
 prints {"investigation_ref", "mode", "report"} instead of the bare Markdown
 (mode is "report" or "brief").`,
 		Example: `  casebook report
   casebook report --brief
-  casebook report INV-0002 -o postmortem.md
-  casebook report --timeline 20 | gh pr create --body-file -`,
+  casebook report INV-0002 -o answer.md
+  casebook report --timeline 20`,
 		Args: usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref := ""
@@ -49,7 +49,7 @@ prints {"investigation_ref", "mode", "report"} instead of the bare Markdown
 				ref = args[0]
 			}
 			if brief && cmd.Flags().Changed("timeline") {
-				return newUsageError("--timeline cannot be used with --brief (a brief has no timeline)")
+				return newUsageError("--timeline cannot be used with --brief (the short version has no history)")
 			}
 			a, err := env.App()
 			if err != nil {
@@ -60,11 +60,11 @@ prints {"investigation_ref", "mode", "report"} instead of the bare Markdown
 			if err != nil {
 				return err
 			}
-			mode, kind := "report", "report"
+			mode, kind := "report", "everything"
 			var text string
 			if brief {
-				mode, kind = "brief", "leadership brief"
-				// Nil selections: the default brief the Share summary opens with.
+				mode, kind = "brief", "the short version"
+				// Nil selections: what Share the answer opens with.
 				p, err := a.SharePreview(ctx, inv.Ref, app.ShareOptions{Mode: "brief"})
 				if err != nil {
 					return err
@@ -94,13 +94,13 @@ prints {"investigation_ref", "mode", "report"} instead of the bare Markdown
 					"investigation_ref": inv.Ref, "mode": mode, "path": path, "bytes": len(text),
 				})
 			}
-			_, err = fmt.Fprintf(env.Stdout, "Wrote the %s %s to %s (%d bytes).\n", inv.Ref, kind, path, len(text))
+			_, err = fmt.Fprintf(env.Stdout, "Wrote %s for %s to %s (%d bytes).\n", kind, inv.Ref, path, len(text))
 			return err
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "", "write to this file instead of stdout")
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite the -o file if it exists")
-	cmd.Flags().IntVar(&timeline, "timeline", 0, "keep only the newest N timeline entries (0 means all; not with --brief)")
-	cmd.Flags().BoolVar(&brief, "brief", false, "print the leadership brief instead of the complete report")
+	cmd.Flags().IntVar(&timeline, "timeline", 0, "keep only the newest N history entries (0 means all; not with --brief)")
+	cmd.Flags().BoolVar(&brief, "brief", false, "print the short version instead of everything")
 	return cmd
 }
