@@ -1,29 +1,34 @@
-// The guide on a question with nothing in it yet: one block that leads to
-// connecting an AI. It goes away once the question has a source, a finding
-// or a follow-up question. Connect your AI... opens the same window as the
-// Settings menu's entry.
+// A brand new question, with nothing in it yet: two buttons to start by
+// hand, and one line saying an AI can fill it in. It goes away once the
+// question has a source, a finding or something to find out. Connect your
+// AI... opens the same window as the Settings menu's entry.
 import { useState } from 'react'
-import { Plug, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import type { InvestigationDetail } from '../../api/types'
 import { ConnectClientsDialog } from '../dialogs/ConnectClientsDialog'
 import { Button } from '../ui/Button'
 import './FirstFindingGuide.css'
 
-/** True when the case has no record of any kind yet. */
+export const ADD_SOURCE = 'Add a source'
+export const ADD_FINDING = 'Add a finding'
+
+/** True when the question has nothing in it yet. */
 export function caseHasNoRecords(detail: InvestigationDetail): boolean {
   return detail.evidence.length === 0 && detail.claims.length === 0 && detail.hypotheses.length === 0 && detail.questions.length === 0
 }
 
-export function FirstFindingGuide({ onAddEvidence }: { onAddEvidence: () => void }) {
+export function FirstFindingGuide({ onAddSource, onAddFinding }: { onAddSource: () => void; onAddFinding: () => void }) {
   const [connectOpen, setConnectOpen] = useState(false)
   return (
-    <section className="first-finding-guide" aria-labelledby="first-finding-heading">
-      <h2 id="first-finding-heading">Get your first finding</h2>
-      <p>Ask your AI to work on this question and save what it finds here. Connect your AI once. Then copy the starter message and paste it into your AI.</p>
+    <section className="first-finding-guide" aria-label="Start here">
       <div className="first-finding-actions">
-        <Button variant="primary" icon={Plug} onClick={() => setConnectOpen(true)}>Connect your AI...</Button>
-        <Button variant="secondary" icon={Plus} onClick={onAddEvidence}>Add a source myself</Button>
+        <Button variant="primary" icon={Plus} onClick={onAddSource}>{ADD_SOURCE}</Button>
+        <Button variant="secondary" icon={Plus} onClick={onAddFinding}>{ADD_FINDING}</Button>
       </div>
+      <p>
+        Your AI can add sources and findings here too.{' '}
+        <button type="button" className="text-button" onClick={() => setConnectOpen(true)}>Connect your AI...</button>
+      </p>
       {connectOpen && <ConnectClientsDialog onClose={() => setConnectOpen(false)} />}
     </section>
   )

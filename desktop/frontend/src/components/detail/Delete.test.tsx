@@ -161,12 +161,13 @@ describe('deleting records', () => {
     expect(mocks.api.deleteClaim).not.toHaveBeenCalled()
   })
 
-  it('deletes a question from its row', async () => {
+  it('deletes something to find out from its row', async () => {
     const user = renderDetail()
-    await user.click(await screen.findByRole('button', { name: 'Delete follow-up question: Have the customers who were charged twice been paid back?' }))
-    const dialog = screen.getByRole('dialog', { name: 'Delete this follow-up question?' })
+    await user.click(await screen.findByRole('button', { name: 'Delete: Have the customers who were charged twice been paid back?' }))
+    const dialog = screen.getByRole('dialog', { name: 'Delete this?' })
+    expect(dialog).toHaveTextContent('This will be removed from Still to find out.')
     expect(dialog).toHaveTextContent(IRREVERSIBLE)
-    await user.click(within(dialog).getByRole('button', { name: 'Delete follow-up question' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
     expect(mocks.api.deleteQuestion).toHaveBeenCalledWith('INV-0001', 'Q-001')
   })
 

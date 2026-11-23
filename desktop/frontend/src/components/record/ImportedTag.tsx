@@ -3,6 +3,7 @@
 // and did not see it happen, so the marker sits next to the check label and
 // the name wherever they are shown.
 import { FileInput } from 'lucide-react'
+import { FROM_A_FILE } from '../../lib/labels'
 import './ImportedTag.css'
 
 export const IMPORTED_TITLE =
@@ -12,7 +13,7 @@ export function ImportedTag() {
   return (
     <span className="imported-tag" title={IMPORTED_TITLE}>
       <FileInput className="imported-tag-icon" size={14} strokeWidth={1.75} aria-hidden="true" />
-      From a file
+      {FROM_A_FILE}
     </span>
   )
 }

@@ -4,13 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { claims, evidence, hypotheses, questions } from '../../test/fixtures'
 import { claimWith } from '../../test/fixtures.detail'
 import { evidenceWith, question } from '../../test/fixtures.records'
-import { hypothesisStatusLabels, sourceTypeLabels } from '../../lib/labels'
 import { IMPORTED_TITLE } from './ImportedTag'
 import { EvidenceRow } from '../detail/EvidenceRow'
 import { QuestionRow } from '../detail/QuestionRow'
 import { RecordRow } from '../detail/RecordRow'
 import { kindRuleClass } from './KindRule'
-import { LATER, RecordStatusLabel } from './StatusLabel'
+import { FindingLabel, LATER } from './StatusLabel'
 import { VerificationBadge } from './VerificationBadge'
 
 const byRef = <T extends { ref: string }>(list: T[], ref: string) => list.find((x) => x.ref === ref)!
@@ -25,6 +24,8 @@ describe('kindRuleClass', () => {
     expect(kindRuleClass('claim', { status: 'disputed' })).toContain('kind-rule-disputed')
     expect(kindRuleClass('claim', { status: 'active', verification: 'disputed' })).toContain('kind-rule-disputed')
     expect(kindRuleClass('hypothesis', { status: 'open', verification: 'disputed' })).toContain('kind-rule-disputed')
+    // A source never takes the hatched rule.
+    expect(kindRuleClass('evidence', { verification: 'disputed' })).toContain('kind-rule-evidence')
     expect(kindRuleClass('claim', { status: 'superseded' })).toContain('kind-rule-retired')
     expect(kindRuleClass('claim', { status: 'rejected' })).toContain('kind-rule-retired')
     expect(kindRuleClass('hypothesis', { status: 'disproven' })).toContain('kind-rule-retired')
@@ -34,127 +35,109 @@ describe('kindRuleClass', () => {
 })
 
 describe('VerificationBadge', () => {
-  it('renders BadgeCheck with You checked this', () => {
-    const { container } = render(<VerificationBadge verification="human_verified" />)
-    expect(screen.getByText('You checked this')).toBeInTheDocument()
-    expect(container.querySelector('.lucide-badge-check')).not.toBeNull()
-  })
-
-  it('renders BadgeCheck with AI checked the source', () => {
-    const { container } = render(<VerificationBadge verification="source_verified" />)
-    expect(screen.getByText('AI checked the source')).toBeInTheDocument()
-    expect(container.querySelector('.lucide-badge-check')).not.toBeNull()
-  })
-
-  it('renders Bot with Not checked', () => {
-    const { container } = render(<VerificationBadge verification="ai_generated" />)
-    expect(screen.getByText('Not checked')).toBeInTheDocument()
-    expect(container.querySelector('.lucide-bot')).not.toBeNull()
-  })
-
-  it('renders CircleAlert with Sources disagree', () => {
-    const { container } = render(<VerificationBadge verification="disputed" />)
-    expect(screen.getByText('Sources disagree')).toBeInTheDocument()
-    expect(container.querySelector('.lucide-circle-alert')).not.toBeNull()
+  it('shows who checked a source, with an icon beside the words', () => {
+    const cases = [
+      ['human_verified', 'You checked this', '.lucide-badge-check'],
+      ['source_verified', 'AI checked the source', '.lucide-badge-check'],
+      ['ai_generated', 'Not checked', '.lucide-circle-dashed'],
+      // Stored by an AI as sources disagree: no person has checked it.
+      ['disputed', 'Not checked', '.lucide-circle-dashed'],
+    ] as const
+    for (const [verification, text, icon] of cases) {
+      const { container, unmount } = render(<VerificationBadge verification={verification} />)
+      expect(container.textContent).toBe(text)
+      expect(container.querySelector(icon)).not.toBeNull()
+      unmount()
+    }
+    const { container } = render(<VerificationBadge verification="superseded" />)
+    expect(container.textContent).toBe('Replaced')
   })
 })
 
-describe('RecordStatusLabel', () => {
-  it('names every record status', () => {
-    const cases: [Parameters<typeof RecordStatusLabel>[0], string | null][] = [
-      [{ kind: 'claim', status: 'active' }, null],
-      [{ kind: 'claim', status: 'disputed' }, 'Sources disagree'],
-      [{ kind: 'claim', status: 'superseded', supersededBy: 'C-002' }, 'Replaced by C-002'],
-      [{ kind: 'claim', status: 'rejected' }, 'Ruled out'],
-      [{ kind: 'hypothesis', status: 'open' }, 'Not tested yet'],
-      [{ kind: 'hypothesis', status: 'supported' }, 'Looks right so far'],
-      [{ kind: 'hypothesis', status: 'disproven' }, 'Ruled out'],
-      [{ kind: 'hypothesis', status: 'superseded', supersededBy: 'H-004' }, 'Replaced by H-004'],
-      [{ kind: 'question', status: 'open' }, null],
-      // An answered follow-up question shows no state word; one left for later says Later.
-      [{ kind: 'question', status: 'resolved' }, null],
-      [{ kind: 'question', status: 'deferred' }, 'Later'],
+describe('FindingLabel', () => {
+  it('shows one label for every state of a finding', () => {
+    const sources = new Map(evidence.map((e) => [e.ref, e]))
+    const cases: [string, string][] = [
+      ['C-001', '1 of 2 sources checked by you'],
+      ['C-002', '0 of 2 sources checked by you'],
+      ['C-003', 'Replaced by C-002'],
+      ['C-004', 'Sources disagree'],
+      ['H-001', 'Not tested yet'],
+      ['H-002', 'Ruled out'],
+      ['H-003', '0 of 1 source checked by you'],
     ]
-    for (const [props, text] of cases) {
-      const { container, unmount } = render(<RecordStatusLabel {...props} />)
-      if (text === null) expect(container.textContent).toBe('')
-      else expect(container.textContent).toBe(text)
+    for (const [ref, text] of cases) {
+      const finding = ref.startsWith('C') ? { kind: 'claim' as const, record: byRef(claims, ref) } : { kind: 'hypothesis' as const, record: byRef(hypotheses, ref) }
+      const { container, unmount } = render(<FindingLabel finding={finding} sources={sources} />)
+      expect(container.textContent).toBe(text)
       unmount()
     }
+  })
+
+  it('marks a finding green only when every one of its sources is checked by the person', () => {
+    const all = new Map(evidence.map((e) => [e.ref, { ...e, verification: 'human_verified' as const }]))
+    const { container } = render(<FindingLabel finding={{ kind: 'claim', record: byRef(claims, 'C-002') }} sources={all} />)
+    expect(container.textContent).toBe('2 of 2 sources checked by you')
+    expect(container.querySelector('.badge-verified .lucide-badge-check')).not.toBeNull()
   })
 })
 
 describe('RecordRow', () => {
-  it('shows a finding with its badge, statement and nested sources, and no confidence', () => {
-    const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} />)
-    const row = container.querySelector('[data-ref="C-001"]')!
-    expect(row).not.toBeNull()
+  it('shows a finding with its one label, statement and nested sources, and nothing about how sure anyone is', () => {
+    const sources = new Map(evidence.map((e) => [e.ref, e]))
+    const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} sources={sources} />)
+    const row = container.querySelector('[data-ref="C-001"]') as HTMLElement
     expect(row.className).toContain('kind-rule-claim')
-    expect(within(row as HTMLElement).getByText('You checked this')).toBeInTheDocument()
-    expect(within(row as HTMLElement).queryByText(/confidence/i)).toBeNull()
-    const sources = within(within(row as HTMLElement).getByRole('list', { name: 'Sources for this finding' })).getAllByRole('listitem')
-    expect(sources).toHaveLength(2)
-    expect(sources[0]).toHaveTextContent('Backs this: E-001 Notice dated October 4: 1,900 customers were charged twice')
-    // Without the question's sources to look up, a nested source shows its title only.
-    expect(sources[0].querySelector('.badge')).toBeNull()
+    // Stored as checked by a person; the row says what its sources say.
+    expect(row.querySelector('.row-line')).toHaveTextContent(/^C-0011 of 2 sources checked by you$/)
+    expect(within(row).queryByText(/confidence/i)).toBeNull()
+    const list = within(within(row).getByRole('list', { name: 'Sources for this finding' })).getAllByRole('listitem')
+    expect(list).toHaveLength(2)
+    expect(list[0]).toHaveTextContent('Backs it: E-001 Notice dated October 4: 1,900 customers were charged twice Not checked')
+    expect(list[1]).toHaveTextContent('Backs it: E-004 Head of billing: the mistake was on October 3 only You checked this')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it('shows each nested source with where it came from and its own check label, and a minus when it goes against the finding', () => {
+  it('says in words which way each source points, with no plus or minus sign', () => {
     const sources = new Map(evidence.map((e) => [e.ref, e]))
     const { container } = render(
       <>
         <RecordRow kind="claim" record={byRef(claims, 'C-001')} sources={sources} />
         <RecordRow kind="claim" record={byRef(claims, 'C-004')} sources={sources} />
-        <RecordRow kind="hypothesis" record={{ ...byRef(hypotheses, 'H-003'), ref: 'H-030' }} sources={new Map([['E-002', { ...byRef(evidence, 'E-002'), source_label: '' }]])} />
       </>,
     )
-    const c1 = container.querySelector('[data-ref="C-001"]') as HTMLElement
-    const [e1, e4] = within(c1).getAllByRole('listitem')
-    expect(e1).toHaveTextContent('Email from the billing team')
-    expect(within(e1).getByText('Not checked')).toBeInTheDocument()
-    expect(within(e4).getByText('You checked this')).toBeInTheDocument()
-    expect(e1.querySelector('.lucide-plus')).not.toBeNull()
     const against = (container.querySelector('[data-ref="C-004"]') as HTMLElement).querySelector('.finding-source') as HTMLElement
     expect(against).toHaveClass('is-against')
-    expect(against.querySelector('.lucide-minus')).not.toBeNull()
-    expect(against).toHaveTextContent('Goes against this:')
-    expect(container).not.toHaveTextContent(/Supports this|Contradicts this/)
-    // With no "where it came from", the kind of source stands in.
-    expect(container.querySelector('[data-ref="H-030"] .finding-source-from')?.textContent).toBe(sourceTypeLabels.documentation)
+    expect(against).toHaveTextContent(/^Goes against it:/)
+    expect(container.querySelector('.lucide-plus, .lucide-minus')).toBeNull()
+    expect(container).not.toHaveTextContent(/Supports|Contradicts/)
+    // Where a source came from and what kind it is are not shown.
+    expect(container).not.toHaveTextContent('Email from the billing team')
   })
 
-  it('shows a finding whose sources disagree with Sources disagree and the hatched rule', () => {
-    const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-004')} />)
-    const row = container.querySelector('[data-ref="C-004"]')!
-    expect(row.className).toContain('kind-rule-disputed')
-    expect(within(row as HTMLElement).getAllByText('Sources disagree')).toHaveLength(1)
-  })
-
-  it('shows Sources disagree for a finding whose check value alone says so', () => {
-    const { container } = render(
-      <RecordRow kind="claim" record={claimWith({ ref: 'C-009', status: 'active', verification: 'disputed' })} />,
-    )
-    const row = container.querySelector('[data-ref="C-009"]')!
-    expect(row.className).toContain('kind-rule-disputed')
-    expect(within(row as HTMLElement).getByText('Sources disagree')).toBeInTheDocument()
-  })
-
-  it('never shows two contradicting marks on a row', () => {
+  it('shows a finding a source goes against with Sources disagree and the hatched rule, whatever is stored', () => {
+    const against = byRef(claims, 'C-004').links
     const { container } = render(
       <>
-        <RecordRow kind="claim" record={claimWith({ ref: 'C-010', status: 'active', verification: 'superseded' })} />
-        <RecordRow kind="claim" record={claimWith({ ref: 'C-011', status: 'disputed', verification: 'human_verified' })} />
+        <RecordRow kind="claim" record={byRef(claims, 'C-004')} />
+        <RecordRow kind="claim" record={claimWith({ ref: 'C-009', status: 'active', verification: 'disputed' })} />
+        <RecordRow kind="claim" record={claimWith({ ref: 'C-010', status: 'active', verification: 'source_verified', links: against })} />
+        <RecordRow kind="claim" record={claimWith({ ref: 'C-011', status: 'active', verification: 'human_verified', links: against })} />
       </>,
     )
-    const stray = container.querySelector('[data-ref="C-010"]') as HTMLElement
-    expect(within(stray).queryByText(/Superseded/)).toBeNull()
-    const disputed = container.querySelector('[data-ref="C-011"]') as HTMLElement
-    expect(within(disputed).getAllByText('Sources disagree')).toHaveLength(1)
-    expect(within(disputed).queryByText('You checked this')).toBeNull()
+    for (const ref of ['C-004', 'C-009', 'C-010']) {
+      const row = container.querySelector(`[data-ref="${ref}"]`) as HTMLElement
+      expect(row.className, ref).toContain('kind-rule-disputed')
+      expect(row.querySelectorAll('.row-line .badge'), ref).toHaveLength(1)
+      expect(row.querySelector('.row-line .badge'), ref).toHaveTextContent('Sources disagree')
+    }
+    // The person decided it still holds.
+    const decided = container.querySelector('[data-ref="C-011"]') as HTMLElement
+    expect(decided.className).not.toContain('kind-rule-disputed')
+    expect(decided.querySelector('.row-line')).toHaveTextContent('You decided this holds')
   })
 
-  it('strikes through a superseded claim and names its replacement', () => {
+  it('strikes through a replaced finding and names its replacement', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-003')} />)
     const row = container.querySelector('[data-ref="C-003"]')!
     expect(row.className).toContain('kind-rule-retired')
@@ -163,47 +146,21 @@ describe('RecordRow', () => {
     expect(row.querySelector('.record-statement')?.className).toContain('is-retired')
   })
 
-  it('shows an open hypothesis with the dashed rule and the label Not tested yet', () => {
-    const { container } = render(<RecordRow kind="hypothesis" record={byRef(hypotheses, 'H-001')} />)
-    const row = container.querySelector('[data-ref="H-001"]')!
+  it('shows a finding nobody has tested with the dashed rule and one label, Not tested yet', () => {
+    const { container } = render(<RecordRow kind="hypothesis" record={{ ...byRef(hypotheses, 'H-001'), verification: 'human_verified' }} />)
+    const row = container.querySelector('[data-ref="H-001"]') as HTMLElement
     expect(row.className).toContain('kind-rule-hypothesis-open')
-    expect(within(row as HTMLElement).getByText('Not tested yet')).toBeInTheDocument()
-    expect(within(row as HTMLElement).queryByText(/confidence/i)).toBeNull()
+    expect(row.querySelector('.row-line')).toHaveTextContent(/^H-001Not tested yet$/)
   })
 
-  it('shows a finding that held up with CircleCheck and Looks right so far', () => {
-    const { container } = render(<RecordRow kind="hypothesis" record={byRef(hypotheses, 'H-003')} />)
-    const row = container.querySelector('[data-ref="H-003"]')!
-    expect(row.className).toContain('kind-rule-hypothesis-supported')
-    expect(within(row as HTMLElement).getByText(hypothesisStatusLabels.supported)).toBeInTheDocument()
-    expect(within(row as HTMLElement).queryByText('Supported')).toBeNull()
-    expect(row.querySelector('.lucide-circle-check')).not.toBeNull()
-  })
-
-  it('shows a ruled-out finding with the source that goes against it nested under it, and no confidence', () => {
+  it('shows a ruled out finding with the source that goes against it nested under it', () => {
     const h = byRef(hypotheses, 'H-002')
-    const title = h.links[0].evidence_title
     const { container } = render(<RecordRow kind="hypothesis" record={h} />)
     const row = container.querySelector('[data-ref="H-002"]') as HTMLElement
-    expect(within(row).getByRole('listitem')).toHaveTextContent(`Goes against this: E-003 ${title}`)
-    expect(within(row).queryByText('Low confidence')).toBeNull()
-    expect(within(row).getByText('Ruled out')).toBeInTheDocument()
+    expect(within(row).getByRole('listitem')).toHaveTextContent(`Goes against it: E-003 ${h.links[0].evidence_title}`)
+    expect(row.querySelector('.row-line')).toHaveTextContent(/^H-002Ruled out$/)
     expect(row.querySelector('.record-statement')!.className).toContain('is-retired')
-  })
-
-  it('lists both kinds of source on a ruled-out finding, and no list without sources', () => {
-    const contra = byRef(hypotheses, 'H-002').links[0]
-    const support = byRef(hypotheses, 'H-003').links[0]
-    const { container } = render(
-      <>
-        <RecordRow kind="claim" record={claimWith({ ref: 'C-020', status: 'rejected', confidence: 'high', links: [support, contra] })} />
-        <RecordRow kind="hypothesis" record={{ ...byRef(hypotheses, 'H-002'), ref: 'H-020', links: [] }} />
-      </>,
-    )
-    const rejected = container.querySelector('[data-ref="C-020"]') as HTMLElement
-    expect(within(rejected).getAllByRole('listitem').map((li) => li.querySelector('.finding-source')?.classList.contains('is-against'))).toEqual([false, true])
-    expect(within(rejected).queryByText('High confidence')).toBeNull()
-    const bare = container.querySelector('[data-ref="H-020"]') as HTMLElement
+    const bare = render(<RecordRow kind="hypothesis" record={{ ...h, ref: 'H-020', links: [] }} />).container
     expect(within(bare).queryByRole('list')).toBeNull()
   })
 
@@ -213,33 +170,24 @@ describe('RecordRow', () => {
     render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} onOpen={onOpen} />)
     await user.click(screen.getByRole('button', { name: /^Open finding C-001/ }))
     expect(onOpen).toHaveBeenLastCalledWith('C-001')
-    await user.click(screen.getByRole('button', { name: 'Backs this: E-004 Head of billing: the mistake was on October 3 only' }))
+    await user.click(screen.getByRole('button', { name: 'Backs it: E-004 Head of billing: the mistake was on October 3 only' }))
     expect(onOpen).toHaveBeenLastCalledWith('E-004')
   })
 })
 
 describe('EvidenceRow', () => {
-  it('shows the title, clamped summary and where it came from', () => {
+  it('shows its check label, the title and the clamped summary, and nothing else', () => {
     const e3 = byRef(evidence, 'E-003')
     const { container } = render(<EvidenceRow evidence={e3} />)
     const row = container.querySelector('[data-ref="E-003"]') as HTMLElement
     expect(row.className).toContain('kind-rule-evidence')
+    expect(within(row).getByText('Not checked')).toBeInTheDocument()
     expect(within(row).getByText('Calls about a bill: 400 in September, 1,070 in October')).toBeInTheDocument()
     expect(row.querySelector('.evidence-summary')?.className).toContain('is-clamped')
-    // Where it came from stands alone: the kind of source is not shown beside it.
-    const meta = row.querySelector('.evidence-meta') as HTMLElement
-    expect(meta.children).toHaveLength(1)
-    expect(meta.textContent).toBe('Call log')
-    // The row has one control at most (none here): it never lists findings.
+    // Where it came from and its kind are not shown.
+    expect(row).not.toHaveTextContent('Call log')
+    expect(row.querySelector('.evidence-meta')).toBeNull()
     expect(within(row).queryByRole('button')).toBeNull()
-  })
-
-  it('shows the kind of source when where it came from is not known', () => {
-    const e = { ...byRef(evidence, 'E-001'), source_label: '', claim_links: [], hypothesis_links: [] }
-    const { container } = render(<EvidenceRow evidence={e} />)
-    const meta = container.querySelector('.evidence-meta') as HTMLElement
-    expect(meta.children).toHaveLength(1)
-    expect(meta.textContent).toBe(sourceTypeLabels.file)
   })
 })
 
@@ -254,7 +202,7 @@ describe('QuestionRow', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows an answered follow-up question with its answer and no state word', () => {
+  it('shows an answered one with its answer and no label', () => {
     const { container } = render(<QuestionRow question={byRef(questions, 'Q-002')} />)
     const row = container.querySelector('[data-ref="Q-002"]') as HTMLElement
     expect(row.className).toContain('kind-rule-retired')
@@ -270,7 +218,7 @@ describe('QuestionRow', () => {
     expect(code.nextElementSibling).toHaveTextContent('a source')
   })
 
-  it('shows a follow-up question left for later with Later and its note', () => {
+  it('shows one left for later with Later and its note', () => {
     const { container } = render(<QuestionRow question={byRef(questions, 'Q-003')} />)
     const row = container.querySelector('[data-ref="Q-003"]') as HTMLElement
     expect(within(row).getByText(LATER)).toBeInTheDocument()

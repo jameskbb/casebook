@@ -13,8 +13,11 @@ import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ADD_TO_FIND_OUT } from '../dialogs/QuestionDialog'
 import { LATER } from '../record/StatusLabel'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_SOURCES_USED_COPY, DetailView } from './DetailView'
-import { BACK_IN_LIST_COPY, CHECK_FINDINGS_LABEL, PUT_BACK_LABEL } from './MoreMenu'
+import { CHECK_SOURCES_TITLE, SOURCE_CHECKED_ACTION } from './CheckSources'
+import { CHECK_NEXT_SOURCE, SHARE_THE_ANSWER } from './ConclusionPanel'
+import { DetailView } from './DetailView'
+import { ADD_FINDING, ADD_SOURCE } from './FirstFindingGuide'
+import { BACK_IN_LIST_COPY, PUT_BACK_LABEL } from './MoreMenu'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -45,59 +48,61 @@ describe('DetailView reading column', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('offers only Add source in the sources section, with no Evernote capture', async () => {
+  it('offers one row of add buttons for a finding, a source and something to find out, with no Evernote capture', async () => {
     renderDetail()
-    await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })
-    expect(within(section('Other sources')).getByRole('button', { name: 'Add source' })).toBeInTheDocument()
-    expect(within(section('Other sources')).queryByRole('button', { name: 'More ways to add evidence' })).toBeNull()
+    const add = await screen.findByRole('group', { name: 'Add to this question' })
+    expect(within(add).getAllByRole('button').map((b) => b.textContent)).toEqual([ADD_FINDING, ADD_SOURCE, ADD_TO_FIND_OUT, 'What the labels mean'])
     expect(screen.queryByText(/evernote/i)).toBeNull()
   })
 
-  it('nests each finding\'s sources under it, with a sign, where it came from and its own check label', async () => {
+  it('nests each finding\'s sources under it, with Backs it or Goes against it in words and its own check label', async () => {
     renderDetail()
     const backing = await screen.findByRole('region', { name: 'What backs this up' })
     const c1 = backing.querySelector('[data-ref="C-001"]') as HTMLElement
     const sources = within(within(c1).getByRole('list', { name: 'Sources for this finding' })).getAllByRole('listitem')
     expect(sources.map((li) => li.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'Backs this: E-001 Notice dated October 4: 1,900 customers were charged twice Email from the billing team Not checked',
-      'Backs this: E-004 Head of billing: the mistake was on October 3 only Head of billing, in person You checked this',
+      'Backs it: E-001 Notice dated October 4: 1,900 customers were charged twice Not checked',
+      'Backs it: E-004 Head of billing: the mistake was on October 3 only You checked this',
     ])
     // The code is in the page for an AI and for tests, but hidden from a reader.
     expect(within(sources[0]).getByText('E-001')).toHaveClass('record-id')
-    // A source that goes against a finding carries the minus class, under that finding.
+    // A source that goes against a finding says so in words, under that finding.
     const c4 = section('Where sources disagree').querySelector('[data-ref="C-004"]') as HTMLElement
-    const against = within(c4).getByRole('button', { name: /^Goes against this:/ })
+    const against = within(c4).getByRole('button', { name: /^Goes against it:/ })
     expect(against).toHaveClass('is-against')
-    expect(against).toHaveTextContent('Call log')
+    expect(against).toHaveTextContent('Calls about a bill')
     // A finding with no sources has no list.
     const h1 = section('Still to find out').querySelector('[data-ref="H-001"]') as HTMLElement
     expect(within(h1).queryByRole('list')).toBeNull()
   })
 
-  it('has no Review findings button: the walk-through opens from the More menu and goes back to the question', async () => {
+  it('has one way to check: Check the next source opens the source check, and Escape closes it', async () => {
     const user = userEvent.setup()
     renderDetail()
     await screen.findByRole('region', { name: 'What backs this up' })
-    expect(screen.queryByRole('button', { name: /review findings/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: CHECK_FINDINGS_LABEL })).toBeNull()
-    expect(document.body).not.toHaveTextContent(/review findings/i)
-    await user.click(screen.getByRole('button', { name: 'More' }))
-    await user.click(screen.getByRole('menuitem', { name: CHECK_FINDINGS_LABEL }))
-    const walk = await screen.findByRole('region', { name: CHECK_FINDINGS_LABEL })
-    expect(within(walk).getByRole('heading', { level: 2, name: CHECK_FINDINGS_LABEL })).toBeInTheDocument()
-    // The walk-through takes the place of the reading column; the header stays.
-    expect(screen.queryByRole('region', { name: 'What backs this up' })).toBeNull()
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    await user.click(within(walk).getByRole('button', { name: 'Back to the question' }))
-    expect(screen.queryByRole('region', { name: CHECK_FINDINGS_LABEL })).toBeNull()
-    expect(screen.getByRole('region', { name: 'What backs this up' })).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/one by one|review findings/i)
+    // No finding offers its own check on the page.
+    expect(within(section('What backs this up')).queryByRole('button', { name: 'I checked this' })).toBeNull()
+    const next = screen.getByRole('button', { name: CHECK_NEXT_SOURCE })
+    await user.click(next)
+    const check = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
+    expect(within(check).getByRole('button', { name: SOURCE_CHECKED_ACTION })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: CHECK_SOURCES_TITLE })).toBeNull()
+    expect(next).toHaveFocus()
   })
 
-  it('lists only the sources no finding uses under Other sources, and says so when there are none', async () => {
+  it('keeps Share the answer beside the main button while sources are left to check', async () => {
+    renderDetail()
+    const panel = await screen.findByRole('region', { name: 'The answer' })
+    expect(within(panel).getByRole('button', { name: CHECK_NEXT_SOURCE })).toHaveClass('btn-primary')
+    expect(within(panel).getByRole('button', { name: SHARE_THE_ANSWER })).toHaveClass('btn-secondary')
+  })
+
+  it('lists only the sources no finding uses under Other sources, and leaves the section out when there are none', async () => {
     const { unmount } = renderDetail()
-    await screen.findByRole('region', { name: 'Other sources' })
-    expect(section('Other sources').querySelectorAll('.evidence-row')).toHaveLength(0)
-    expect(within(section('Other sources')).getByText(ALL_SOURCES_USED_COPY)).toBeInTheDocument()
+    await screen.findByRole('region', { name: 'What backs this up' })
+    expect(screen.queryByRole('region', { name: 'Other sources' })).toBeNull()
     unmount()
     renderDetail(detailWithBareEvidence())
     await screen.findByRole('region', { name: 'Other sources' })
@@ -121,27 +126,26 @@ describe('DetailView reading column', () => {
     // E-001 backs C-001, which stands. E-003 is used by the replaced C-003 too, but also by C-002, which stands.
     expect(refs).toEqual(['E-009'])
     expect(within(other).getByText(lone.title)).toBeInTheDocument()
-    expect(within(other).queryByText(ALL_SOURCES_USED_COPY)).toBeNull()
     expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
   })
 
-  it('renders the sections in reading order after the question', async () => {
+  it('renders the sections in reading order after the question, leaving out the empty ones', async () => {
     renderDetail()
     await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })
-    expect(screen.getByText('The question')).toBeInTheDocument()
     const h2 = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(h2).toEqual([
-      'The answer',
-      'What backs this up',
-      'Where sources disagree',
-      'Ruled out',
-      'Still to find out',
-      'Other sources',
-      'How we got here',
-    ])
+    // Every source sits under a finding, so Other sources is not drawn.
+    expect(h2).toEqual(['The answer', 'What backs this up', 'Where sources disagree', 'Still to find out', 'How we got here'])
     const label = screen.getByText('The question')
     const conclusion = screen.getByRole('heading', { level: 2, name: 'The answer' })
     expect(label.compareDocumentPosition(conclusion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('shows the question as the big line and the background under it, labelled Background', async () => {
+    renderDetail()
+    const block = await screen.findByRole('region', { name: 'The question' })
+    expect(block.querySelector('.question-block-text')).toHaveTextContent(detail.investigation.title)
+    expect(within(block).getByText('Background')).toBeInTheDocument()
+    expect(block.querySelector('.question-block-background-text')).toHaveTextContent(detail.investigation.problem_statement)
   })
 
   it('shows the answer with the count of sources checked, no confidence, and how you know', async () => {
@@ -157,23 +161,26 @@ describe('DetailView reading column', () => {
     expect(within(panel).getByText(rationale)).toBeInTheDocument()
   })
 
-  it('collapses replaced findings, and shows disagreements and ruled-out findings in their own sections', async () => {
+  it('collapses replaced and ruled out findings, and shows disagreements in their own section', async () => {
     const user = userEvent.setup()
     renderDetail()
-    await screen.findByRole('region', { name: 'What backs this up' })
-    const believe = section('What backs this up')
-    expect(within(believe).queryByText('The extra calls were people calling to buy.')).toBeNull()
-    await user.click(within(believe).getByRole('button', { name: 'Show 1 replaced finding' }))
-    const c3 = believe.querySelector('[data-ref="C-003"]') as HTMLElement
+    const believe = await screen.findByRole('region', { name: 'What backs this up' })
+    expect(screen.queryByText('The extra calls were people calling to buy.')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Show 1 replaced finding' }))
+    const c3 = document.querySelector('[data-ref="C-003"]') as HTMLElement
     expect(c3.querySelector('.record-status')).toHaveTextContent('Replaced by C-002')
     expect(within(c3).getByText('by C-002')).toHaveClass('record-id')
 
     // A supported hypothesis backs the answer beside the claims; a disputed
-    // claim and a disproven hypothesis each move to their own section.
+    // claim moves to its own section and a disproven hypothesis behind its line.
     expect(believe.querySelector('[data-ref="H-003"]')).not.toBeNull()
     expect(believe.querySelector('[data-ref="C-004"]')).toBeNull()
     expect(section('Where sources disagree').querySelector('[data-ref="C-004"]')).not.toBeNull()
-    expect(section('Ruled out').querySelector('[data-ref="H-002"]')).not.toBeNull()
+    expect(screen.queryByRole('region', { name: 'Ruled out' })).toBeNull()
+    expect(document.querySelector('[data-ref="H-002"]')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Show 1 ruled out finding' }))
+    expect(document.querySelector('[data-ref="H-002"]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Hide 1 ruled out finding' })).toHaveAttribute('aria-expanded', 'true')
 
     // An answered follow-up question sits behind its own disclosure, with its answer and no state word.
     const open = section('Still to find out')
@@ -188,14 +195,10 @@ describe('DetailView reading column', () => {
   it('uses plural and singular disclosure copy by count', async () => {
     renderDetail(manyRuledOutDetail())
     await screen.findByRole('region', { name: 'What backs this up' })
-    expect(
-      within(section('What backs this up')).getByRole('button', { name: 'Show 1 replaced finding' }),
-    ).toBeInTheDocument()
-    // The two rejected claims are ruled out, in the open.
-    expect(section('Ruled out').querySelectorAll('.record-row')).toHaveLength(3)
-    expect(
-      within(section('Still to find out')).getByRole('button', { name: 'Show 1 answered' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show 1 replaced finding' })).toBeInTheDocument()
+    // Two rejected claims and the disproven hypothesis.
+    expect(screen.getByRole('button', { name: 'Show 3 ruled out findings' })).toBeInTheDocument()
+    expect(within(section('Still to find out')).getByRole('button', { name: 'Show 1 answered' })).toBeInTheDocument()
   })
 
   it('lists a finding not tested yet and the follow-up questions together under Still to find out, with one add button', async () => {
@@ -212,10 +215,9 @@ describe('DetailView reading column', () => {
     // H-003 looks right so far and H-002 is ruled out, so neither repeats here.
     expect(open.querySelector('[data-ref="H-003"]')).toBeNull()
     expect(open.querySelector('[data-ref="H-002"]')).toBeNull()
-    // Exactly one add button for both kinds.
-    const adds = within(open).getAllByRole('button', { name: /^Add/ })
-    expect(adds).toHaveLength(1)
-    expect(adds[0]).toHaveAccessibleName(ADD_TO_FIND_OUT)
+    // Exactly one add button for both kinds, in the add row above the sections.
+    expect(within(open).queryAllByRole('button', { name: /^Add/ })).toHaveLength(0)
+    expect(screen.getAllByRole('button', { name: ADD_TO_FIND_OUT })).toHaveLength(1)
     expect(ADD_TO_FIND_OUT).toBe('Add something to find out')
     const later = open.querySelector('[data-ref="Q-003"]') as HTMLElement
     expect(within(later).getByText(LATER)).toBeInTheDocument()
@@ -224,56 +226,39 @@ describe('DetailView reading column', () => {
     expect(await screen.findByRole('dialog', { name: 'Finding H-001' })).toBeInTheDocument()
   })
 
-  it('keeps the Still to find out empty copy and its add button when only answered questions are left', async () => {
+  it('keeps Still to find out for its Show N answered line when only answered ones are left', async () => {
     renderDetail({ ...detail, hypotheses: detail.hypotheses.filter((h) => h.status !== 'open'), questions: [questions[1]] })
-    await screen.findByRole('region', { name: 'Still to find out' })
-    const open = section('Still to find out')
-    expect(within(open).getByText('Nothing is left to find out.')).toBeInTheDocument()
-    expect(within(open).getAllByRole('button', { name: ADD_TO_FIND_OUT })).toHaveLength(1)
+    const open = await screen.findByRole('region', { name: 'Still to find out' })
+    expect(within(open).queryByText('Nothing is left to find out.')).toBeNull()
     expect(within(open).getByRole('button', { name: 'Show 1 answered' })).toBeInTheDocument()
   })
 
-  it('renders every empty section copy for a new question', async () => {
-    renderDetail(emptyDetail())
-    await screen.findByRole('heading', { level: 1, name: 'Why did returns double in May?' })
-    // With no sources at all the section is plainly Sources.
-    expect(screen.getByRole('region', { name: 'Sources' })).toBeInTheDocument()
-    for (const text of [
-      'No answer yet. Write it here when the findings back one.',
-      'No findings yet. Your AI adds them here, or you can add one.',
-      'Nothing is left to find out.',
-      'No sources yet. Add what you found and where you found it.',
-      'Nothing has happened yet.',
-    ]) {
-      expect(screen.getByText(text)).toBeInTheDocument()
-    }
-    // Sections that only exist when something is in them stay off an empty page.
-    expect(screen.queryByRole('region', { name: 'Where sources disagree' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Ruled out' })).toBeNull()
+  it('leaves Still to find out off the page when there is nothing in it', async () => {
+    renderDetail({ ...detail, hypotheses: detail.hypotheses.filter((h) => h.status !== 'open'), questions: [] })
+    await screen.findByRole('region', { name: 'What backs this up' })
+    expect(screen.queryByRole('region', { name: 'Still to find out' })).toBeNull()
   })
 
-  it('guides an empty case to its first finding, through the AI or by hand', async () => {
+  it('shows a new question with No answer yet, two add buttons and the AI hint, and no empty sections', async () => {
     const user = userEvent.setup()
     renderDetail(emptyDetail())
-    const guide = await screen.findByRole('region', { name: 'Get your first finding' })
-    expect(guide).toHaveTextContent('Ask your AI to work on this question and save what it finds here. Connect your AI once. Then copy the starter message and paste it into your AI.')
-    const connect = within(guide).getByRole('button', { name: 'Connect your AI...' })
-    const add = within(guide).getByRole('button', { name: 'Add a source myself' })
-    await user.tab()
-    while (document.activeElement !== connect) await user.tab()
-    await user.tab()
-    expect(add).toHaveFocus()
-    await user.click(connect)
-    const dialog = await screen.findByRole('dialog', { name: 'Connect your AI' })
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
-    await user.click(add)
+    await screen.findByRole('heading', { level: 1, name: 'Why did returns double in May?' })
+    const panel = screen.getByRole('region', { name: 'The answer' })
+    expect(within(panel).getByText('No answer yet.')).toBeInTheDocument()
+    expect(within(panel).queryByRole('button')).toBeNull()
+    const start = screen.getByRole('region', { name: 'Start here' })
+    expect(within(start).getAllByRole('button').map((b) => b.textContent)).toEqual([ADD_SOURCE, ADD_FINDING, 'Connect your AI...'])
+    expect(start).toHaveTextContent('Your AI can add sources and findings here too.')
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['The answer'])
+    expect(screen.queryByRole('group', { name: 'Add to this question' })).toBeNull()
+    await user.click(within(start).getByRole('button', { name: ADD_SOURCE }))
     expect(await screen.findByRole('dialog', { name: 'Add source' })).toBeInTheDocument()
   })
 
   it('hides the first finding guide once the case has any record', async () => {
     renderDetail({ ...emptyDetail(), questions: [questions[0]] })
     await screen.findByRole('heading', { level: 1, name: 'Why did returns double in May?' })
-    expect(screen.queryByRole('region', { name: 'Get your first finding' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Start here' })).not.toBeInTheDocument()
   })
 
   it('shows the title as the question when there is no background, and the missing answer copy', async () => {

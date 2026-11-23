@@ -5,6 +5,7 @@
 // row its roving tabindex props, so the whole list is one Tab stop.
 import type { InvestigationSummary } from '../../api/types'
 import type { RovingItemProps } from '../../hooks/useRovingFocus'
+import { AI_WORKING } from '../../lib/labels'
 import { checkedLine } from '../../lib/questions'
 import { formatAbsolute, formatRelative } from '../../lib/relativeTime'
 import { ArchivedTag } from '../record/StatusLabel'
@@ -33,7 +34,7 @@ export function InvestigationRow({ investigation: inv, selected, onSelect, now, 
         onClick={() => onSelect(inv.ref)}
       >
         <span className="inv-row-title">{inv.title}</span>
-        {inv.is_active && <ActiveMarker />}
+        {inv.is_active && !inv.archived && <ActiveMarker />}
         <span className="inv-row-line inv-row-meta">
           <span className="inv-row-ref tabular">{inv.ref}</span>
           {inv.archived && <ArchivedTag />}
@@ -46,7 +47,7 @@ export function InvestigationRow({ investigation: inv, selected, onSelect, now, 
   )
 }
 
-/** The question your AI saves its findings under: an 8px accent dot and the words "Your AI is working on this". */
+/** The question your AI saves its findings under: an 8px accent dot and the words. A marker, never a control. */
 export function ActiveMarker({ className }: { className?: string }) {
   return (
     <span
@@ -54,7 +55,7 @@ export function ActiveMarker({ className }: { className?: string }) {
       title="Your AI saves what it finds under this question."
     >
       <span className="active-dot" aria-hidden="true" />
-      Your AI is working on this
+      {AI_WORKING}
     </span>
   )
 }

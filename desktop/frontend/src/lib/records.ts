@@ -1,5 +1,8 @@
 // Pure helpers over an InvestigationDetail for the reading column. Records
 // arrive ordered by ref (docs/api.md section 8) and keep that order here.
+//
+// A person checks sources, so a finding's label is worked out from its
+// sources (findingLabel), never printed from its stored check value.
 import type {
   Claim,
   Evidence,
@@ -8,7 +11,7 @@ import type {
   Question,
   Relation,
 } from '../api/types'
-import { statementMarks } from './recordState'
+import { DECIDED_HOLDS, NO_SOURCE_YET, NOT_TESTED, REPLACED, RULED_OUT, SOURCES_DISAGREE, sourcesCheckedLabel } from './labels'
 
 /** Records that always show, and records collapsed under a disclosure. */
 export interface Partition<T> {
@@ -23,7 +26,7 @@ function split<T>(list: T[], ruledOut: (x: T) => boolean): Partition<T> {
 }
 
 /**
- * Open questions show, then the ones left for later (each in the order they
+ * Open ones show, then the ones left for later (each in the order they
  * arrived): one left for later is still unanswered. Only answered ones collapse.
  */
 export function partitionQuestions(questions: Question[]): Partition<Question> {
@@ -35,39 +38,83 @@ export function partitionQuestions(questions: Question[]): Partition<Question> {
 /** A claim or a hypothesis: on screen both are a finding. */
 export type Finding = { kind: 'claim'; record: Claim } | { kind: 'hypothesis'; record: Hypothesis }
 
+/** The question's sources by code. */
+export type Sources = Map<string, Evidence>
+
+export function evidenceByRef(detail: Pick<InvestigationDetail, 'evidence'>): Sources {
+  return new Map(detail.evidence.map((e) => [e.ref, e]))
+}
+
+type FindingRecord = Finding['record']
+
+export const isReplaced = (r: FindingRecord) => r.status === 'superseded'
+export const isRuledOut = (r: FindingRecord) => r.status === 'rejected' || r.status === 'disproven'
+
+/** The finding's sources that have not been replaced. A source the page does not know still counts. */
+function liveLinks(r: FindingRecord, sources: Sources) {
+  return r.links.filter((l) => sources.get(l.evidence_ref)?.verification !== 'superseded')
+}
+
+const hasLiveAgainst = (r: FindingRecord, sources: Sources) => liveLinks(r, sources).some((l) => l.relation === 'contradicts')
+
+/**
+ * Sources disagree about a finding that is not replaced and not ruled out
+ * when it is stored that way, or when a source that was not replaced goes
+ * against it and the person has not decided it still holds. The list count
+ * and the shared answer use the same rule.
+ */
+export function sourcesDisagree(r: FindingRecord, sources: Sources): boolean {
+  if (isReplaced(r) || isRuledOut(r)) return false
+  if (r.verification === 'disputed' || r.status === 'disputed') return true
+  return r.verification !== 'human_verified' && hasLiveAgainst(r, sources)
+}
+
+/** How a finding's label is drawn: color and icon never carry the meaning alone. */
+export type FindingTone = 'checked' | 'disagree' | 'open' | 'plain' | 'retired'
+
+/** The one label a finding shows, and how it is drawn. */
+export function findingMark(f: Finding, sources: Sources): { label: string; tone: FindingTone } {
+  const r = f.record
+  if (isReplaced(r)) return { label: REPLACED, tone: 'retired' }
+  if (isRuledOut(r)) return { label: RULED_OUT, tone: 'retired' }
+  if (sourcesDisagree(r, sources)) return { label: SOURCES_DISAGREE, tone: 'disagree' }
+  if (r.verification === 'human_verified' && hasLiveAgainst(r, sources)) return { label: DECIDED_HOLDS, tone: 'checked' }
+  if (f.kind === 'hypothesis' && r.status === 'open') return { label: NOT_TESTED, tone: 'open' }
+  const live = liveLinks(r, sources)
+  if (live.length === 0) return { label: NO_SOURCE_YET, tone: 'plain' }
+  const checked = live.filter((l) => sources.get(l.evidence_ref)?.verification === 'human_verified').length
+  return { label: sourcesCheckedLabel(checked, live.length), tone: checked === live.length ? 'checked' : 'plain' }
+}
+
+export const findingLabel = (f: Finding, sources: Sources): string => findingMark(f, sources).label
+
 /** Findings sorted by what happened to them, claims before hypotheses, each in ref order. */
 export interface FindingGroups {
-  /** Current claims and supported hypotheses: what the answer can stand on. */
+  /** What the answer can stand on. */
   backing: Finding[]
-  /** A source contradicts it and nobody has decided yet. */
+  /** Sources disagree and nobody has decided yet. */
   disagree: Finding[]
-  /** Hypotheses no source has backed or ruled out. */
+  /** Findings nobody has shown right or wrong. */
   notTested: Finding[]
-  /** Rejected claims and disproven hypotheses. */
   ruledOut: Finding[]
-  /** Superseded by a newer finding. */
   replaced: Finding[]
 }
 
-export function groupFindings(claims: Claim[], hypotheses: Hypothesis[]): FindingGroups {
+export function groupFindings(claims: Claim[], hypotheses: Hypothesis[], sources: Sources): FindingGroups {
   const g: FindingGroups = { backing: [], disagree: [], notTested: [], ruledOut: [], replaced: [] }
-  for (const record of claims) {
-    const marks = statementMarks('claim', record)
-    const group = marks.superseded ? g.replaced : record.status === 'rejected' ? g.ruledOut : marks.disputed ? g.disagree : g.backing
-    group.push({ kind: 'claim', record })
-  }
-  for (const record of hypotheses) {
-    const marks = statementMarks('hypothesis', record)
-    const group = marks.superseded
+  const all: Finding[] = [...claims.map((record) => ({ kind: 'claim' as const, record })), ...hypotheses.map((record) => ({ kind: 'hypothesis' as const, record }))]
+  for (const f of all) {
+    const r = f.record
+    const group = isReplaced(r)
       ? g.replaced
-      : record.status === 'disproven'
+      : isRuledOut(r)
         ? g.ruledOut
-        : marks.disputed
+        : sourcesDisagree(r, sources)
           ? g.disagree
-          : record.status === 'open'
+          : f.kind === 'hypothesis' && r.status === 'open'
             ? g.notTested
             : g.backing
-    group.push({ kind: 'hypothesis', record })
+    group.push(f)
   }
   return g
 }
@@ -75,10 +122,10 @@ export function groupFindings(claims: Claim[], hypotheses: Hypothesis[]): Findin
 /**
  * The findings an answer is saved with, taken from the page: the ones under
  * What backs this up and the ones under Where sources disagree. The engine
- * accepts claims only, so findings still being tested are left out.
+ * accepts claims only, so findings not tested yet are left out.
  */
-export function answerFindings(claims: Claim[]): { supporting_claims: string[]; contradicting_claims: string[] } {
-  const g = groupFindings(claims, [])
+export function answerFindings(claims: Claim[], sources: Sources): { supporting_claims: string[]; contradicting_claims: string[] } {
+  const g = groupFindings(claims, [], sources)
   return { supporting_claims: g.backing.map((f) => f.record.ref), contradicting_claims: g.disagree.map((f) => f.record.ref) }
 }
 
@@ -97,8 +144,9 @@ export function sourceChecks(evidence: Evidence[]): SourceChecks {
   return { total: live.length, byYou, byAi, notChecked: live.length - byYou - byAi }
 }
 
-export function evidenceByRef(detail: InvestigationDetail): Map<string, Evidence> {
-  return new Map(detail.evidence.map((e) => [e.ref, e]))
+/** The sources a person has not checked, in page order. Replaced sources are skipped. */
+export function sourcesToCheck(evidence: Evidence[]): Evidence[] {
+  return evidence.filter((e) => e.verification !== 'human_verified' && e.verification !== 'superseded')
 }
 
 /** A claim or hypothesis that links a piece of evidence. */

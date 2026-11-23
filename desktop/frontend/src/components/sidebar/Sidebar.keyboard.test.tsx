@@ -52,7 +52,7 @@ describe('Sidebar keyboard', () => {
     // The help desk question has no answer, so it comes first; the answered ones follow.
     expect(r.map((b) => b.dataset.ref)).toEqual(['INV-0002', 'INV-0001', 'INV-0003'])
     expect(r.map((b) => b.tabIndex)).toEqual([0, -1, -1])
-    expect(screen.getByRole('button', { name: /^To check/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'true')
     await user.click(r[1])
     expect(r[1]).toHaveAttribute('aria-current', 'true')
     expect(r.map((b) => b.tabIndex)).toEqual([-1, 0, -1])

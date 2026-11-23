@@ -26,17 +26,3 @@
   line-clamp: 2;
   overflow: hidden;
 }
-
-.evidence-meta {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--space-3);
-  font-size: var(--text-label);
-  line-height: var(--leading-label);
-  color: var(--ink-muted);
-}
-
-.evidence-meta > span {
-  overflow-wrap: anywhere;
-}
-

@@ -1,12 +1,12 @@
-// The header's More menu: Edit question..., Check findings one by one, Copy
-// to paste into your AI, Save a copy to send to someone..., and Archive
-// question or Put back in the list. Saving runs the native save window in Go;
+// The header's More menu: Edit question..., Have my AI work on this (or
+// Stop my AI working on this), Copy to paste into your AI, Save the whole
+// question as a file..., and Archive question or Put back in the list. Saving runs the native save window in Go;
 // a cancelled one shows nothing. Archiving can be undone and deletes nothing,
 // so it has no confirmation, only a toast with Undo. An archived question
 // also offers Delete question..., which says what it removes and cannot be
 // undone.
 import { useState } from 'react'
-import { Archive, ArchiveRestore, ClipboardCopy, Download, Ellipsis, ListChecks, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ClipboardCopy, Download, Ellipsis, Pencil, Pin, PinOff, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { Investigation, InvestigationDetail, RecordCounts } from '../../api/types'
@@ -24,18 +24,21 @@ export const ARCHIVED_COPY = 'Archived this question. It is hidden from the list
 
 export const BACK_IN_LIST_COPY = 'This question is back in the list.'
 export const PUT_BACK_LABEL = 'Put back in the list'
-export const CHECK_FINDINGS_LABEL = 'Check findings one by one'
 export const COPY_FOR_AI_LABEL = 'Copy to paste into your AI'
-export const SAVE_COPY_LABEL = 'Save a copy to send to someone...'
+export const SAVE_COPY_LABEL = 'Save the whole question as a file...'
+export const AI_ON_LABEL = 'Have my AI work on this'
+export const AI_OFF_LABEL = 'Stop my AI working on this'
+export const AI_ON_COPY = 'Your AI will save what it finds here.'
+export const AI_OFF_COPY = 'Your AI is no longer working on this question.'
 
 export const deleteInvestigationBody = (inv: Investigation, counts: RecordCounts | null) => {
   const what = counts
-    ? `everything in it: ${countPhrase(counts.evidence, 'source', 'sources')}, ${countPhrase(counts.claims + counts.hypotheses, 'finding', 'findings')}, ${countPhrase(counts.questions, 'follow-up question', 'follow-up questions')} and its history`
+    ? `everything in it: ${countPhrase(counts.evidence, 'source', 'sources')}, ${countPhrase(counts.claims + counts.hypotheses, 'finding', 'findings')}, ${countPhrase(counts.questions, 'thing to find out', 'things to find out')} and its history`
     : 'everything in it and its history'
   return `"${inv.title}" will be removed with ${what}. Save a copy first if you might need it again.`
 }
 
-export function MoreMenu({ investigation: inv, onCheckFindings }: { investigation: Investigation; onCheckFindings?: () => void }) {
+export function MoreMenu({ investigation: inv }: { investigation: Investigation }) {
   const write = useWrite()
   const toast = useToast()
   const { detail, investigations, select } = useAppData()
@@ -66,6 +69,16 @@ export function MoreMenu({ investigation: inv, onCheckFindings }: { investigatio
     }
   }
 
+  // Stopping clears the marker only while it is still on this question.
+  const setAi = async (on: boolean) => {
+    try {
+      const done = await write<unknown>(() => (on ? api.setActiveInvestigation(ref) : api.clearActiveInvestigation(ref)))
+      if (done !== undefined) toast.success(on ? AI_ON_COPY : AI_OFF_COPY)
+    } catch (e) {
+      showError(e)
+    }
+  }
+
   const archive = async () => {
     try {
       const done = await write(() => api.archiveInvestigation(ref))
@@ -83,7 +96,11 @@ export function MoreMenu({ investigation: inv, onCheckFindings }: { investigatio
 
   const items: MenuItem[] = [
     { label: 'Edit question...', icon: Pencil, onSelect: () => setEditOpen(true) },
-    ...(onCheckFindings ? [{ label: CHECK_FINDINGS_LABEL, icon: ListChecks, onSelect: onCheckFindings }] : []),
+    ...(inv.is_active
+      ? [{ label: AI_OFF_LABEL, icon: PinOff, onSelect: () => void setAi(false) }]
+      : archived
+        ? []
+        : [{ label: AI_ON_LABEL, icon: Pin, onSelect: () => void setAi(true) }]),
     { label: COPY_FOR_AI_LABEL, icon: ClipboardCopy, onSelect: () => void copy(ref) },
     { label: SAVE_COPY_LABEL, icon: Download, onSelect: () => void exportJson() },
     archived

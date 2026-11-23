@@ -1,0 +1,92 @@
+/* The window keeps one height from source to source, so "I checked this"
+   and "Skip" stay under the pointer. Long sources scroll inside it. */
+.check-sources .dialog-body {
+  height: min(460px, 60vh);
+}
+
+.check-source,
+.check-end {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.check-progress {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
+.check-source-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.check-source-summary {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.check-source-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.check-source-facts dt {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-muted);
+}
+
+.check-source-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.check-source-finding {
+  font-family: var(--font-serif);
+}
+
+.check-source-finding + .check-source-finding {
+  margin-top: var(--space-2);
+}
+
+.check-source-tag {
+  font-family: var(--font-sans, inherit);
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
+  color: var(--claim);
+}
+
+.check-source-tag.is-against {
+  color: var(--disputed);
+}
+
+.check-end-heading {
+  font-size: var(--text-heading);
+  line-height: var(--leading-heading);
+  font-weight: var(--weight-semibold);
+}
+
+.check-answer {
+  padding: var(--space-4);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--primary-tint);
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

@@ -1,69 +1,65 @@
-// A reading-column section:
-// a 20px kind icon, the h2 heading, an optional add action, then rows
-// separated by 1px rules (no cards, no shadows). Ruled-out records collapse
-// under a disclosure with count-aware copy. An empty section shows its one
-// line of copy, carrying the add action itself so it never appears twice.
+// A reading-column section: a 20px kind icon, the h2 heading, then rows
+// separated by 1px rules (no cards, no shadows). A section with nothing in
+// it is not drawn at all. Rows a person rarely needs (answered, ruled out,
+// replaced) collapse under a Collapsed line with count-aware words.
 import { useId, useState, type ReactNode } from 'react'
-import { ChevronDown, Plus, type LucideIcon } from 'lucide-react'
+import { ChevronDown, type LucideIcon } from 'lucide-react'
 import { plural } from '../../lib/plural'
-import { Button } from '../ui/Button'
 import './SectionList.css'
 
-export interface SectionListProps<T> {
+interface Rows<T> {
+  items: T[]
+  itemKey: (item: T) => string
+  renderItem: (item: T) => ReactNode
+}
+
+export interface CollapsedProps<T> extends Rows<T> {
+  /** Singular and plural words for the line ("Show 2 replaced findings"). */
+  noun: [string, string]
+}
+
+/** "Show 2 ruled out findings": the rows appear under it when opened. Nothing when there are none. */
+export function Collapsed<T>({ items, noun, itemKey, renderItem }: CollapsedProps<T>) {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  const n = items.length
+  if (n === 0) return null
+  return (
+    <div className="section-ruled-out">
+      <button type="button" className="section-disclosure" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
+        <ChevronDown className={['section-disclosure-icon', open ? 'is-open' : ''].filter(Boolean).join(' ')} size={16} strokeWidth={1.75} aria-hidden="true" />
+        {`${open ? 'Hide' : 'Show'} ${n} ${plural(n, noun[0], noun[1])}`}
+      </button>
+      <div id={id} hidden={!open}>
+        {open && (
+          <ul className="section-rows">
+            {items.map((item) => (
+              <li key={itemKey(item)}>{renderItem(item)}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export interface SectionListProps<T> extends Rows<T> {
   /** Stable id used for the heading. */
   id: string
   icon: LucideIcon
   /** Tints the heading icon with the kind hue. */
   kind: 'evidence' | 'claim' | 'hypothesis' | 'question' | 'history'
   heading: string
-  /** "Add claim", "Add evidence", ... shown only with onAdd. */
-  addLabel?: string
-  onAdd?: () => void
-  emptyText: string
-  /** Show the empty copy when only collapsed items exist (Still to find out). */
-  emptyWithRuledOut?: boolean
-  items: T[]
-  ruledOut?: T[]
-  /** Singular and plural words for the disclosure ("Show 2 replaced findings"). */
-  ruledOutNoun?: [string, string]
-  itemKey: (item: T) => string
-  renderItem: (item: T) => ReactNode
-  /** Rendered after the add action in the heading row, for a small text link. */
-  headingExtra?: ReactNode
-  /** Rendered after the rows (History's Show more). */
+  /** Rows behind a Collapsed line under the others. */
+  collapsed?: T[]
+  collapsedNoun?: [string, string]
+  /** Rendered after the rows (the history's Show all). */
   footer?: ReactNode
 }
 
-export function SectionList<T>({
-  id,
-  icon: Icon,
-  kind,
-  heading,
-  addLabel,
-  onAdd,
-  emptyText,
-  emptyWithRuledOut = false,
-  items,
-  ruledOut = [],
-  ruledOutNoun,
-  itemKey,
-  renderItem,
-  headingExtra,
-  footer,
-}: SectionListProps<T>) {
-  const [showRuledOut, setShowRuledOut] = useState(false)
-  const ruledOutId = useId()
+export function SectionList<T>({ id, icon: Icon, kind, heading, items, collapsed = [], collapsedNoun, itemKey, renderItem, footer }: SectionListProps<T>) {
   const headingId = `section-${id}`
-  const empty = items.length === 0 && (ruledOut.length === 0 || emptyWithRuledOut)
-  const add =
-    onAdd && addLabel ? (
-      <Button variant="ghost" icon={Plus} onClick={onAdd}>
-        {addLabel}
-      </Button>
-    ) : null
-  const n = ruledOut.length
-  const noun = ruledOutNoun ? plural(n, ruledOutNoun[0], ruledOutNoun[1]) : ''
-
+  if (items.length === 0 && collapsed.length === 0) return null
   return (
     <section className={`section section-${kind}`} aria-labelledby={headingId}>
       <div className="section-head">
@@ -71,15 +67,7 @@ export function SectionList<T>({
         <h2 className="section-heading" id={headingId}>
           {heading}
         </h2>
-        {!empty && add && <div className="section-add">{add}</div>}
-        {headingExtra}
       </div>
-      {empty && (
-        <div className="section-empty">
-          <p className="section-empty-text">{emptyText}</p>
-          {add}
-        </div>
-      )}
       {items.length > 0 && (
         <ul className="section-rows">
           {items.map((item) => (
@@ -87,34 +75,7 @@ export function SectionList<T>({
           ))}
         </ul>
       )}
-      {n > 0 && ruledOutNoun && (
-        <div className="section-ruled-out">
-          <button
-            type="button"
-            className="section-disclosure"
-            aria-expanded={showRuledOut}
-            aria-controls={ruledOutId}
-            onClick={() => setShowRuledOut((v) => !v)}
-          >
-            <ChevronDown
-              className={['section-disclosure-icon', showRuledOut ? 'is-open' : ''].filter(Boolean).join(' ')}
-              size={16}
-              strokeWidth={1.75}
-              aria-hidden="true"
-            />
-            {`${showRuledOut ? 'Hide' : 'Show'} ${n} ${noun}`}
-          </button>
-          <div id={ruledOutId} hidden={!showRuledOut}>
-            {showRuledOut && (
-              <ul className="section-rows">
-                {ruledOut.map((item) => (
-                  <li key={itemKey(item)}>{renderItem(item)}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
+      {collapsedNoun && <Collapsed items={collapsed} noun={collapsedNoun} itemKey={itemKey} renderItem={renderItem} />}
       {footer}
     </section>
   )

@@ -21,11 +21,11 @@ const KIND: Record<RecordType, { icon: LucideIcon; label: string }> = {
   evidence: { icon: FileText, label: 'Source' },
   claim: { icon: Quote, label: 'Finding' },
   hypothesis: { icon: Lightbulb, label: 'Finding' },
-  question: { icon: CircleQuestionMark, label: 'Follow-up question' },
+  question: { icon: CircleQuestionMark, label: 'Still to find out' },
 }
 
 export const NO_MATCHES_HINT =
-  'Try fewer or different words. Archived questions are searched only when Show archived is on.'
+  'Try fewer or different words. Archived questions are searched only while they are shown in the list.'
 
 export interface SearchResultsHandle {
   /** Moves focus into the results (the hit holding the Tab stop). */

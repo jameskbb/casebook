@@ -72,6 +72,7 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 4,
     sources_checked_by_you: 1,
     findings_disagree: 1,
+    answer_checked_by_you: false,
   },
   {
     id: 2,
@@ -89,11 +90,12 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 2,
     sources_checked_by_you: 0,
     findings_disagree: 0,
+    answer_checked_by_you: false,
   },
   {
     id: 3,
     ref: 'INV-0003',
-    title: 'Why was March payroll $18k over budget?',
+    title: 'Why was March payroll $18,000 over budget?',
     status: 'archived',
     conclusion_confidence: 'high',
     created_at: '2026-11-02T15:00:00.000Z',
@@ -106,6 +108,7 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 1,
     sources_checked_by_you: 1,
     findings_disagree: 0,
+    answer_checked_by_you: true,
   },
 ]
 
@@ -144,8 +147,8 @@ export const evidence: Evidence[] = [
     claim_links: [{ ref: 'C-001', relation: 'supports' }],
   }),
   ev(2, {
-    title: 'Sales were $510k in September and $512k in October',
-    summary: 'The October sales report shows $510k of sales in September and $512k in October. The number of orders was 4,080 and 4,100.',
+    title: 'Sales were $510,000 in September and $512,000 in October',
+    summary: 'The October sales report shows $510,000 of sales in September and $512,000 in October. The number of orders was 4,080 and 4,100.',
     source_type: 'documentation',
     source_ref: 'October sales report, page 2, Sales by month',
     source_label: 'October sales report',
@@ -439,6 +442,7 @@ export function summaryOf(inv: Investigation): InvestigationSummary {
     sources_total: 0,
     sources_checked_by_you: 0,
     findings_disagree: 0,
+    answer_checked_by_you: false,
   }
 }
 

@@ -1,4 +1,4 @@
-// Answer a follow-up question. The answer is required, so an empty one is
+// Answer something under Still to find out. The answer is required, so an empty one is
 // caught here before any call.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
@@ -53,7 +53,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
 
   return (
     <Dialog
-      title="Answer this follow-up question"
+      title="What did you find out?"
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}

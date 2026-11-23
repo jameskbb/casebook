@@ -1,8 +1,9 @@
 // Left kind rules: one class per
 // kind and state. Retired records (superseded, rejected, disproven, resolved,
-// deferred) take the muted rule first; then disputed (claim status, or
-// verification on any record) takes the hatched rule; hypotheses are dashed
-// while open and solid once supported.
+// deferred) take the muted rule first; then a finding where sources disagree
+// takes the hatched rule (a finding row passes status "disputed" when
+// lib/records sourcesDisagree says so; a source never takes it); hypotheses
+// are dashed while open and solid once supported.
 import type { Verification } from '../../api/types'
 import './KindRule.css'
 
@@ -28,7 +29,7 @@ export function ruleVariant(kind: RecordKind, state: RuleState = {}): RuleVarian
   const { status = '', verification } = state
   if (RETIRED.has(status)) return 'retired'
   if (kind === 'evidence' && verification === 'superseded') return 'retired'
-  if (status === 'disputed' || verification === 'disputed') return 'disputed'
+  if (status === 'disputed' || (kind !== 'evidence' && verification === 'disputed')) return 'disputed'
   if (kind === 'hypothesis') return status === 'supported' ? 'hypothesis-supported' : 'hypothesis-open'
   return kind
 }

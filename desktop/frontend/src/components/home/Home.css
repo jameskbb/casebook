@@ -69,10 +69,6 @@
   color: var(--ink);
 }
 
-.home-needs strong {
-  font-weight: var(--weight-semibold);
-}
-
 .home-answered {
   display: flex;
   flex-direction: column;

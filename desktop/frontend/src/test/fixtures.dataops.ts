@@ -42,7 +42,7 @@ export const markupHit: SearchHit = {
 
 export const archivedHit: SearchHit = {
   investigation_ref: 'INV-0003',
-  investigation_title: 'Why was March payroll $18k over budget?',
+  investigation_title: 'Why was March payroll $18,000 over budget?',
   record_type: 'hypothesis',
   record_ref: 'H-001',
   snippet: 'Two new hires were on the March **billing** run a month early',

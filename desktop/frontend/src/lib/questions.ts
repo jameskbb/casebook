@@ -2,7 +2,8 @@
 // an answer, how many sources a person has checked, and which questions
 // still need a person. Fields a backend may not send yet read as empty.
 import type { InvestigationSummary } from '../api/types'
-import { plural } from './plural'
+import { sourcesCheckedLabel } from './labels'
+import { countOf } from './plural'
 
 export interface QuestionChecks {
   answer: string
@@ -24,17 +25,36 @@ export function questionChecks(q: InvestigationSummary): QuestionChecks {
   }
 }
 
-/** A question needs you when a source is not checked by you, or sources disagree about a finding. */
-export function needsYou(q: InvestigationSummary): boolean {
+/** What Home opens the question on: the source check, the first finding to decide, the answer editor, or the answer check. */
+export type NeedKind = 'check-sources' | 'decide' | 'write-answer' | 'check-answer'
+
+/** Why a question needs a person: the row's one line and its button. */
+export interface Need {
+  kind: NeedKind
+  line: string
+  button: string
+}
+
+/** The one thing a question needs from a person next, or null. The first match wins. */
+export function needOf(q: InvestigationSummary): Need | null {
+  if (q.archived) return null
   const c = questionChecks(q)
-  return !q.archived && (c.checkedByYou < c.sourcesTotal || c.disagree > 0)
+  if (c.checkedByYou < c.sourcesTotal) return { kind: 'check-sources', line: sourcesCheckedLabel(c.checkedByYou, c.sourcesTotal), button: 'Check' }
+  if (c.disagree > 0) return { kind: 'decide', line: countOf(c.disagree, 'finding where sources disagree', 'findings where sources disagree'), button: 'Decide' }
+  if (c.sourcesTotal > 0 && !c.answered) return { kind: 'write-answer', line: 'Every source is checked. Write the answer.', button: 'Write the answer' }
+  // Only a backend that says so: one that leaves the field out never nags.
+  if (c.answered && q.answer_checked_by_you === false) return { kind: 'check-answer', line: 'The answer is not checked yet.', button: 'Check the answer' }
+  return null
+}
+
+export function needsYou(q: InvestigationSummary): boolean {
+  return needOf(q) !== null
 }
 
 /** "1 of 3 sources checked by you"; "" when the question has no sources. */
 export function checkedLine(q: InvestigationSummary): string {
   const c = questionChecks(q)
-  if (c.sourcesTotal === 0) return ''
-  return `${c.checkedByYou} of ${c.sourcesTotal} ${plural(c.sourcesTotal, 'source', 'sources')} checked by you`
+  return c.sourcesTotal === 0 ? '' : sourcesCheckedLabel(c.checkedByYou, c.sourcesTotal)
 }
 
 export interface QuestionGroups {
@@ -50,11 +70,10 @@ export function groupQuestions(list: InvestigationSummary[]): QuestionGroups {
 }
 
 export interface HomeLists {
-  /** Sources left to check, or findings where sources disagree. */
   needYou: InvestigationSummary[]
-  /** Answered, with nothing left to check. */
+  /** Answered, with nothing left to do. */
   answered: InvestigationSummary[]
-  /** No answer and nothing to check yet. */
+  /** No answer and no sources yet. */
   waiting: InvestigationSummary[]
 }
 

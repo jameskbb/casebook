@@ -7,7 +7,7 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_CHECKED_BODY, Home, needYouHeading } from './Home'
+import { ALL_CHECKED_BODY, Home, needYouHeading, NO_SOURCES_YET } from './Home'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -15,8 +15,8 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 const [calls, helpDesk, payroll] = summaries
 
 function Probe() {
-  const { selectedRef, listStatus } = useAppData()
-  return <p data-testid="probe">{`${listStatus}:${selectedRef ?? ''}`}</p>
+  const { selectedRef, listStatus, pendingOpen } = useAppData()
+  return <p data-testid="probe">{`${listStatus}:${selectedRef ?? ''}${pendingOpen ? ` ${pendingOpen}` : ''}`}</p>
 }
 
 async function renderHome(list: InvestigationSummary[]) {
@@ -43,30 +43,45 @@ describe('Home', () => {
     expect(needYouHeading(2)).toBe('2 questions need you')
   })
 
-  it('lists the questions that need you with what is left, and Check opens one', async () => {
+  it('gives each question that needs you one line and one button, which opens it on that', async () => {
     const user = userEvent.setup()
     await renderHome([calls, helpDesk])
     expect(screen.getByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
     const items = within(screen.getByRole('list', { name: 'Questions that need you' })).getAllByRole('listitem')
     expect(items[0]).toHaveTextContent('Why did calls go up 30% in October when sales stayed the same?')
-    expect(items[0]).toHaveTextContent('1 of 4 sources checked by you')
-    expect(items[0]).toHaveTextContent('1 finding where sources disagree')
-    expect(items[0]).not.toHaveTextContent('No answer yet')
-    expect(items[1]).toHaveTextContent('0 of 2 sources checked by you')
-    expect(items[1]).toHaveTextContent('No answer yet')
-    expect(items[1]).not.toHaveTextContent('sources disagree')
+    // One line: the first thing it needs. The finding where sources disagree waits its turn.
+    expect(items[0].querySelector('.home-needs')).toHaveTextContent(/^1 of 4 sources checked by you$/)
+    expect(items[1].querySelector('.home-needs')).toHaveTextContent(/^0 of 2 sources checked by you$/)
     // No codes on Home.
     expect(screen.queryByText(/INV-\d+/)).toBeNull()
     const check = within(items[1]).getByRole('button', { name: 'Check: Why are help desk tickets taking longer to close this month?' })
     expect(check).toHaveClass('btn-primary')
     await user.click(check)
-    expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0002')
+    expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0002 check-sources')
   })
 
-  it('says findings in the plural, and one question in the singular', async () => {
-    await renderHome([{ ...calls, findings_disagree: 2 }])
-    expect(screen.getByRole('heading', { level: 1, name: '1 question needs you' })).toBeInTheDocument()
-    expect(screen.getByText('2 findings where sources disagree')).toBeInTheDocument()
+  it('asks for a decision, then the answer, then the check of the answer, as each comes up', async () => {
+    const user = userEvent.setup()
+    const checked = { sources_total: 4, sources_checked_by_you: 4, findings_disagree: 0 }
+    await renderHome([
+      { ...calls, ...checked, ref: 'INV-0011', title: 'One', findings_disagree: 2 },
+      { ...calls, ...checked, ref: 'INV-0012', title: 'Two', conclusion: '' },
+      { ...calls, ...checked, ref: 'INV-0013', title: 'Three', answer_checked_by_you: false },
+      { ...calls, ...checked, ref: 'INV-0014', title: 'Four', answer_checked_by_you: true },
+    ])
+    expect(screen.getByRole('heading', { level: 1, name: '3 questions need you' })).toBeInTheDocument()
+    const items = within(screen.getByRole('list', { name: 'Questions that need you' })).getAllByRole('listitem')
+    expect(items.map((li) => li.querySelector('.home-needs')?.textContent)).toEqual([
+      '2 findings where sources disagree',
+      'Every source is checked. Write the answer.',
+      'The answer is not checked yet.',
+    ])
+    expect(screen.getByRole('button', { name: 'Decide: One' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Check the answer: Three' })).toBeInTheDocument()
+    // Fully checked: it is under Answered, not in the list.
+    expect(within(screen.getByRole('region', { name: 'Answered' })).getByRole('button', { name: 'Four' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Write the answer: Two' }))
+    expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0012 write-answer')
   })
 
   it('says everything is checked, and lists answers with their text and checked count', async () => {
@@ -79,7 +94,7 @@ describe('Home', () => {
     const answered = screen.getByRole('region', { name: 'Answered' })
     expect(answered).toHaveTextContent('Two new hires started a month earlier than the budget assumed.')
     expect(answered).toHaveTextContent('1 of 1 source checked by you')
-    await user.click(within(answered).getByRole('button', { name: 'Why was March payroll $18k over budget?' }))
+    await user.click(within(answered).getByRole('button', { name: 'Why was March payroll $18,000 over budget?' }))
     expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0003')
   })
 
@@ -88,8 +103,8 @@ describe('Home', () => {
     await renderHome([fresh, payroll])
     const waiting = screen.getByRole('region', { name: 'No answer yet' })
     expect(within(waiting).getByRole('button', { name: 'Why did returns double in May?' })).toBeInTheDocument()
-    expect(waiting).toHaveTextContent('Nothing to check yet. Ask your AI to work on it.')
-    expect(screen.queryByText('Why was March payroll $18k over budget?')).toBeNull()
+    expect(waiting).toHaveTextContent(NO_SOURCES_YET)
+    expect(screen.queryByText('Why was March payroll $18,000 over budget?')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Answered' })).toBeNull()
   })
 

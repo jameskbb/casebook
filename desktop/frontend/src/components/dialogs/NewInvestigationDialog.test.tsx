@@ -6,6 +6,7 @@ import { ApiError, BUSY_COPY, NOT_SAVED_COPY, REQUIRED_COPY, TOO_LONG_COPY } fro
 import type { Investigation } from '../../api/types'
 import { AppDataProvider, useAppData } from '../../state/appData'
 import { investigation } from '../../test/fixtures'
+import { clientConnections } from '../../test/fixtures.clients'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
@@ -40,9 +41,33 @@ describe('NewInvestigationDialog', () => {
   it('leaves Have my AI work on this question unchecked when it already works on another', async () => {
     renderDialog()
     const dialog = await screen.findByRole('dialog', { name: 'New question' })
-    expect(within(dialog).getByRole('checkbox', { name: 'Have my AI work on this question' })).not.toBeChecked()
+    expect(await within(dialog).findByRole('checkbox', { name: 'Have my AI work on this question' })).not.toBeChecked()
     expect(within(dialog).getByText("What do you want to know? For example: Why did calls go up when sales stayed the same?")).toBeInTheDocument()
-    expect(within(dialog).getByText('Which months, the numbers, and which reports to look at.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Which months, the numbers, and where to look.')).toBeInTheDocument()
+  })
+
+  it('ticks Have my AI work on this question when an AI tool is connected and no question has it', async () => {
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    expect(await within(dialog).findByRole('checkbox', { name: 'Have my AI work on this question' })).toBeChecked()
+    await user.type(within(dialog).getByLabelText('Question'), 'Why are tickets slower?')
+    await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
+    expect(mocks.api.createInvestigation).toHaveBeenCalledWith(expect.objectContaining({ make_active: true }))
+  })
+
+  it('offers no AI choice and never turns the AI on when no AI tool is connected', async () => {
+    const off = { ...clientConnections, claude: { ...clientConnections.claude, configured: false } }
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [], clientConnections: async () => off }))
+    const user = userEvent.setup()
+    renderDialog()
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    await waitFor(() => expect(mocks.api.clientConnections).toHaveBeenCalled())
+    expect(within(dialog).queryByRole('checkbox')).toBeNull()
+    await user.type(within(dialog).getByLabelText('Question'), 'Why are tickets slower?')
+    await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
+    expect(mocks.api.createInvestigation).toHaveBeenCalledWith(expect.objectContaining({ make_active: false }))
   })
 
   it('shows Adding... and disables the submit while the call runs', async () => {

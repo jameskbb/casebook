@@ -1,8 +1,10 @@
-// New investigation.
+// New question. "Have my AI work on this question" is offered only when an
+// AI tool is connected, and is off otherwise.
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../../api/api'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
+import { anyClientConnected } from '../../lib/clients'
 import { useAppData } from '../../state/appData'
 import { useWrite } from '../../state/useWrite'
 import { Checkbox } from '../ui/Checkbox'
@@ -23,13 +25,32 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
   const write = useWrite()
   const [title, setTitle] = useState('')
   const [question, setQuestion] = useState('')
-  const [makeActive, setMakeActive] = useState(() => !investigations.some((i) => i.is_active))
+  const [aiConnected, setAiConnected] = useState(false)
+  const [makeActive, setMakeActive] = useState(false)
   const [busy, setBusy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const [errorTick, setErrorTick] = useState(0)
   const fieldsRef = useRef<HTMLDivElement>(null)
   const submitRef = useRef<() => Promise<void>>(async () => {})
+
+  // Ticked once an AI tool turns out to be connected, unless the AI is already on another question.
+  useEffect(() => {
+    let live = true
+    api.clientConnections().then(
+      (c) => {
+        if (!live || !anyClientConnected(c)) return
+        setAiConnected(true)
+        setMakeActive(!investigations.some((i) => i.is_active))
+      },
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+    // Asked once, when the window opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // The first invalid field takes focus after a failed submit.
   useEffect(() => {
@@ -44,7 +65,7 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
     try {
       const inv = await write(
         async () => {
-          const created = await api.createInvestigation({ title, problem_statement: question, make_active: makeActive })
+          const created = await api.createInvestigation({ title, problem_statement: question, make_active: aiConnected && makeActive })
           select(created.ref)
           return created
         },
@@ -96,14 +117,14 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
         />
         <TextArea
           label="Background (optional)"
-          hint="Which months, the numbers, and which reports to look at."
+          hint="Which months, the numbers, and where to look."
           value={question}
           onChange={setQuestion}
           error={fieldErrors.problem_statement}
           note={nearLimit(question, LIMITS.problemStatement)}
           spellCheck
         />
-        <Checkbox label="Have my AI work on this question" checked={makeActive} onChange={setMakeActive} />
+        {aiConnected && <Checkbox label="Have my AI work on this question" checked={makeActive} onChange={setMakeActive} />}
       </div>
     </Dialog>
   )

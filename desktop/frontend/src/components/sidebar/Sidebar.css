@@ -172,3 +172,12 @@
 .inv-skeleton-meta {
   width: 45%;
 }
+
+/* One small line under the list: show or hide archived questions. */
+.sidebar-archived {
+  display: block;
+  margin: var(--space-4) var(--space-4) 0;
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
+}

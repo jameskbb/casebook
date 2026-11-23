@@ -1,23 +1,23 @@
-// Home: what there is to check today. Shown when no question is open and at
-// least one exists. One list of the questions that need a person (a source
-// they have not checked, or a finding where sources disagree), then the
-// answers already in hand, then questions still waiting for a first finding.
-// Everything comes from the question list; nothing is stored for this view.
-import { CircleAlert } from 'lucide-react'
+// Home: what needs a person today. Shown when no question is open and at
+// least one exists. One list of the questions that need a person, each with
+// the one thing it needs next and a button that opens the question on it
+// (lib/questions needOf); then the answers already in hand; then questions
+// with no sources yet. Everything comes from the question list; nothing is
+// stored for this view.
 import type { InvestigationSummary } from '../../api/types'
 import { useNow } from '../../hooks/useNow'
-import { countOf, plural } from '../../lib/plural'
-import { checkedLine, homeLists, questionChecks } from '../../lib/questions'
+import { plural } from '../../lib/plural'
+import { checkedLine, homeLists, needOf, questionChecks } from '../../lib/questions'
 import { useAppData } from '../../state/appData'
 import { NO_ANSWER_YET } from '../record/StatusLabel'
 import { Button } from '../ui/Button'
-import '../record/VerificationBadge.css'
 import './Home.css'
 
 const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
 export const ALL_CHECKED_HEADING = 'Everything is checked'
-export const ALL_CHECKED_BODY = 'You have checked every source, and no sources disagree.'
+export const ALL_CHECKED_BODY = 'You have checked every source and every answer, and no sources disagree.'
+export const NO_SOURCES_YET = 'No sources yet. Ask your AI to work on it, or add one.'
 
 /** "2 questions need you", "1 question needs you". */
 export function needYouHeading(n: number): string {
@@ -39,7 +39,7 @@ export function Home() {
       {needYou.length > 0 && (
         <ul className="home-list" aria-label="Questions that need you">
           {needYou.map((q) => (
-            <NeedsYou key={q.ref} question={q} onOpen={() => select(q.ref)} />
+            <NeedsYou key={q.ref} question={q} onOpen={(what) => select(q.ref, { openRecord: what })} />
           ))}
         </ul>
       )}
@@ -78,7 +78,7 @@ export function Home() {
                     {q.title}
                   </button>
                 </h3>
-                <p className="home-checked">Nothing to check yet. Ask your AI to work on it.</p>
+                <p className="home-checked">{NO_SOURCES_YET}</p>
               </li>
             ))}
           </ul>
@@ -88,32 +88,17 @@ export function Home() {
   )
 }
 
-function NeedsYou({ question: q, onOpen }: { question: InvestigationSummary; onOpen: () => void }) {
-  const c = questionChecks(q)
+function NeedsYou({ question: q, onOpen }: { question: InvestigationSummary; onOpen: (what: string) => void }) {
+  const need = needOf(q)
+  if (!need) return null
   return (
     <li className="home-todo">
       <div className="home-todo-main">
         <h2 className="home-todo-title">{q.title}</h2>
-        <p className="home-needs">
-          {c.sourcesTotal > 0 && (
-            <span>
-              <strong>
-                {c.checkedByYou} of {c.sourcesTotal}
-              </strong>{' '}
-              {plural(c.sourcesTotal, 'source', 'sources')} checked by you
-            </span>
-          )}
-          {c.disagree > 0 && (
-            <span className="badge badge-disputed">
-              <CircleAlert className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-              {countOf(c.disagree, 'finding where sources disagree', 'findings where sources disagree')}
-            </span>
-          )}
-          {!c.answered && <span>{NO_ANSWER_YET}</span>}
-        </p>
+        <p className="home-needs">{need.line}</p>
       </div>
-      <Button variant="primary" aria-label={`Check: ${q.title}`} onClick={onOpen}>
-        Check
+      <Button variant="primary" aria-label={`${need.button}: ${q.title}`} onClick={() => onOpen(need.kind)}>
+        {need.button}
       </Button>
     </li>
   )

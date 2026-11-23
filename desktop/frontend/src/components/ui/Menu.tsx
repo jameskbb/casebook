@@ -54,8 +54,6 @@ export interface MenuProps {
   /** The menu's accessible name. */
   label: string
   items: MenuItem[]
-  /** Optional, non-interactive content below the actions. */
-  footer?: ReactNode
   /** Renders the button; spread the props onto a <button>. */
   trigger: (props: MenuTriggerProps) => ReactNode
   /** Align the menu with the button's left (start) or right (end) edge. */
@@ -65,7 +63,7 @@ export interface MenuProps {
 const GAP = 4
 const EDGE = 8
 
-export function Menu({ label, items, footer, trigger, align = 'start' }: MenuProps) {
+export function Menu({ label, items, trigger, align = 'start' }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [startAt, setStartAt] = useState<'first' | 'last'>('first')
   const [position, setPosition] = useState<CSSProperties>({ top: 0, left: 0, visibility: 'hidden' })
@@ -238,7 +236,6 @@ export function Menu({ label, items, footer, trigger, align = 'start' }: MenuPro
               if (!item.separatorBefore) return button
               return [<div key={`${item.label}-rule`} className="menu-separator" role="separator" />, button]
             })}
-            {footer && <div className="menu-footer">{footer}</div>}
           </div>,
           document.body,
         )}

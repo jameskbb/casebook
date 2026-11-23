@@ -31,3 +31,17 @@
 }
 
 
+.question-block-background {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.question-block-background-text {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

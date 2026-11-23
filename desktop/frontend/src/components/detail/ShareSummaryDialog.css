@@ -5,14 +5,12 @@
   max-height: 92vh;
 }
 
-/* The sheet is the scroll box. When the choices are open and the window is
-   short, the dialog body scrolls instead of squeezing the sheet away. */
+/* The sheet is the one scroll box: the window itself never scrolls. */
 .share-summary-dialog .dialog-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .share-summary-lede {
@@ -22,7 +20,7 @@
 
 .share-summary-dialog .note-paper-frame {
   flex: 1 1 auto;
-  min-height: 220px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -39,48 +37,8 @@
   color: var(--disputed);
 }
 
-.share-summary-selection {
-  margin-top: var(--space-3);
-}
-
-.share-summary-selection summary {
-  cursor: pointer;
-  color: var(--ink);
-}
-
-.share-summary-selection p,
 .share-summary-snapshot {
+  margin: 0;
   color: var(--ink-muted);
   font-size: var(--text-label);
-  margin: var(--space-2) 0 var(--space-3);
-}
-
-.share-summary-choices {
-  max-height: min(190px, 30vh);
-  overflow: auto;
-}
-
-.share-summary-choices fieldset {
-  border: 0;
-  padding: 0;
-  margin: var(--space-2) 0;
-  min-width: 0;
-}
-
-.share-summary-choices legend {
-  font-weight: 600;
-  margin-bottom: var(--space-1);
-}
-
-.share-summary-choice {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
-  overflow-wrap: anywhere;
-}
-
-.share-summary-choice small {
-  display: block;
-  color: var(--ink-muted);
 }

@@ -55,13 +55,13 @@ describe('ActivityList', () => {
     ])
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Claude Code added the source E-005')
-    expect(items[1]).toHaveTextContent('You answered a follow-up question Q-001')
-    // The follow-up question's code is there for an AI, but hidden from a reader with the other codes.
+    expect(items[0]).toHaveTextContent('Your AI added the source E-005')
+    expect(items[1]).toHaveTextContent('You answered something to find out Q-001')
+    // Its code is there for an AI, but hidden from a reader with the other codes.
     expect(within(items[1]).getByText('Q-001')).toHaveClass('record-id')
-    expect(within(items[0]).getByText('Claude Code')).toHaveAttribute('title', 'AI, Claude Code')
+    expect(within(items[0]).getByText('Your AI')).toHaveAttribute('title', 'AI, Claude Code')
     expect(within(items[1]).getByText('You')).toHaveAttribute('title', 'Person, Casebook')
-    // The answer to a follow-up question is its second line; the stored sentence around it is not.
+    // The answer is its second line; the stored sentence around it is not.
     expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Yes, says the head of billing\.$/)
   })
 
@@ -75,11 +75,11 @@ describe('ActivityList', () => {
     )
     const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Claude Code added the source E-003 Calls about a bill: 400 in September, 1,070 in October')
+    expect(items[0]).toHaveTextContent('Your AI added the source E-003 Calls about a bill: 400 in September, 1,070 in October')
     expect(within(items[0]).getByText('E-003')).toHaveClass('record-id')
     // The first line already names the source, so there is no second line.
     expect(items[0].querySelector('.activity-summary')).toBeNull()
-    expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Checked this\.$/)
+    expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Decided this still holds\.$/)
     await user.click(within(items[0]).getByRole('button', { name: /Calls about a bill/ }))
     expect(onOpenRef).toHaveBeenCalledWith('E-003')
   })
@@ -108,12 +108,13 @@ describe('ActivityList', () => {
       row(human, 'conclusion.update', 'INV-0001', ''),
     ])
     const history = await screen.findByRole('region', { name: 'How we got here' })
+    await userEvent.click(within(history).getByRole('button', { name: 'Show all 4' }))
     const items = within(history).getAllByRole('listitem')
     expect(within(items[0]).getByText('**not markup** <b>x</b>')).toBeInTheDocument()
     expect(items[0].querySelector('b')).toBeNull()
     expect(items[1].querySelector('.activity-summary')).toBeNull()
     expect(items[2].querySelector('.activity-summary')).toBeNull()
-    expect(items[2]).toHaveTextContent('Claude Code made a change')
+    expect(items[2]).toHaveTextContent('Your AI made a change')
     expect(items[3].querySelector('.activity-summary')).toBeNull()
     expect(history).not.toHaveTextContent('Frobnicated')
     expect(history).not.toHaveTextContent('x.y')
@@ -166,26 +167,37 @@ describe('ActivityList', () => {
     expect(within(history).queryByRole('button')).toBeNull()
   })
 
-  it('offers Show more at 20 rows and reloads with activity_limit 200', async () => {
+  it('shows the last three rows, and Show all with the count opens the rest and closes again', async () => {
+    const user = userEvent.setup()
+    renderList(manyActivity(7))
+    const history = await screen.findByRole('region', { name: 'How we got here' })
+    expect(within(history).getAllByRole('listitem')).toHaveLength(3)
+    await user.click(within(history).getByRole('button', { name: 'Show all 7' }))
+    expect(within(history).getAllByRole('listitem')).toHaveLength(7)
+    // Everything was already on the page: nothing to load.
+    expect(mocks.api.getInvestigationDetail).not.toHaveBeenCalledWith('INV-0001', { activity_limit: 200 })
+    await user.click(within(history).getByRole('button', { name: 'Show only the last 3' }))
+    expect(within(history).getAllByRole('listitem')).toHaveLength(3)
+  })
+
+  it('says Show all without a count when the page may not hold every row, and loads up to 200', async () => {
     const user = userEvent.setup()
     renderList(manyActivity(20))
     const history = await screen.findByRole('region', { name: 'How we got here' })
-    expect(within(history).getAllByRole('listitem')).toHaveLength(20)
-    await user.click(within(history).getByRole('button', { name: 'Show more' }))
+    await user.click(within(history).getByRole('button', { name: 'Show all' }))
     await waitFor(() =>
       expect(mocks.api.getInvestigationDetail).toHaveBeenLastCalledWith('INV-0001', { activity_limit: 200 }),
     )
+    expect(within(history).getAllByRole('listitem')).toHaveLength(20)
   })
 
-  it('hides Show more with fewer than 20 rows', async () => {
-    renderList(manyActivity(19))
+  it('offers no Show all with three rows or fewer, and draws nothing when empty', async () => {
+    const { unmount } = renderList(manyActivity(3))
     const history = await screen.findByRole('region', { name: 'How we got here' })
-    expect(within(history).queryByRole('button', { name: 'Show more' })).toBeNull()
-  })
-
-  it('says Nothing has happened yet. when empty', async () => {
+    expect(within(history).queryByRole('button', { name: /Show/ })).toBeNull()
+    unmount()
     renderList([])
-    const history = await screen.findByRole('region', { name: 'How we got here' })
-    expect(within(history).getByText('Nothing has happened yet.')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.api.getInvestigationDetail).toHaveBeenCalled())
+    expect(screen.queryByRole('region', { name: 'How we got here' })).toBeNull()
   })
 })

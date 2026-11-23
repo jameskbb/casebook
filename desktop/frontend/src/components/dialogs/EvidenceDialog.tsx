@@ -1,73 +1,41 @@
 // Add and edit a source. Four fields: Name, What it shows, Where to find it
-// and Exact words or numbers. The kind of source (Something you saw unless
-// changed) and its date (local time, sent as an RFC3339 timestamp) sit under
-// More. Where it came from and the extra details an AI stores are not edited
-// here; an edit leaves them as they are.
+// and Exact words or numbers. A source a person adds is saved as seen by
+// them and counts as checked by them; the window says so. The stored kind,
+// date and extra details are not edited here; an edit leaves them as they
+// are.
 //
 // Edit mode loads the exact words through GetEvidence with include_raw_detail
-// and sends only the fields that changed; clearing the date sends an empty
-// value, which sets it back to the day the source was added. An error
-// appears under its field (opening More when it is in there); any other goes
-// to the top of the form.
+// and sends only the fields that changed. An error appears under its field;
+// any other goes to the top of the form.
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
-import type { Evidence, EvidenceInput, EvidencePatch, SourceType } from '../../api/types'
+import type { Evidence, EvidenceInput, EvidencePatch } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
-import { fromLocalInputValue, isInvalidCaptured, toLocalInputValue } from '../../lib/captured'
-import { captureHints } from '../../lib/captureHints'
 import { splitFieldErrors } from '../../lib/formErrors'
-import { sourceTypeLabels, sourceTypeOptions } from '../../lib/labels'
 import { useWrite } from '../../state/useWrite'
-import { Button } from '../ui/Button'
 import { ChangedElsewhereBanner } from '../ui/ChangedElsewhereBanner'
 import { Dialog } from '../ui/Dialog'
-import { Select } from '../ui/Select'
 import { TextArea } from '../ui/TextArea'
 import { TextField } from '../ui/TextField'
 import { useToast } from '../ui/Toaster'
 import './EvidenceDialog.css'
 
-export const CAPTURED_INVALID_COPY = 'Enter a valid date and time.'
+export const ADDED_COUNTS_AS_CHECKED = 'Sources you add yourself count as checked by you.'
 
-const FIELDS = [
-  'title',
-  'summary',
-  'source_type',
-  'source_ref',
-  'captured_at',
-  'raw_detail',
-] as const
+const FIELDS = ['title', 'summary', 'source_ref', 'raw_detail'] as const
 
 interface Values {
   title: string
   summary: string
-  source_type: SourceType
   source_ref: string
-  /** datetime-local value. */
-  captured: string
   raw_detail: string
 }
 
-const EMPTY: Values = {
-  title: '',
-  summary: '',
-  source_type: 'manual_observation',
-  source_ref: '',
-  captured: '',
-  raw_detail: '',
-}
+const EMPTY: Values = { title: '', summary: '', source_ref: '', raw_detail: '' }
 
 function valuesOf(e: Evidence): Values {
-  return {
-    title: e.title,
-    summary: e.summary,
-    source_type: e.source_type,
-    source_ref: e.source_ref,
-    captured: toLocalInputValue(e.captured_at),
-    raw_detail: '',
-  }
+  return { title: e.title, summary: e.summary, source_ref: e.source_ref, raw_detail: '' }
 }
 
 const same = (a: Values, b: Values) => (Object.keys(a) as (keyof Values)[]).every((k) => a[k] === b[k])
@@ -90,16 +58,11 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
   const [baseline, setBaseline] = useState<Values>(initial)
   const [values, setValues] = useState<Values>(initial)
   const [rawState, setRawState] = useState<RawState>(existing?.has_raw_detail ? 'loading' : 'none')
-  const [moreOpen, setMoreOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const [focusInvalid, setFocusInvalid] = useState(false)
   const fieldsRef = useRef<HTMLDivElement>(null)
-  const capture = captureHints[values.source_type]
-  // A source of a kind a person cannot pick keeps its own kind listed.
-  const typeOptions: SourceType[] =
-    existing && !sourceTypeOptions.includes(existing.source_type) ? [...sourceTypeOptions, existing.source_type] : sourceTypeOptions
 
   // Edit mode: load the stored exact words when the dialog opens (and again
   // on Show the new version).
@@ -161,10 +124,9 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
 
   const buildInput = (): EvidenceInput => {
     const v = values
-    const input: EvidenceInput = { title: v.title, summary: v.summary, source_type: v.source_type }
+    // Added by hand: the person saw it themselves.
+    const input: EvidenceInput = { title: v.title, summary: v.summary, source_type: 'manual_observation' }
     if (v.source_ref.trim()) input.source_ref = v.source_ref
-    const captured = fromLocalInputValue(v.captured)
-    if (captured) input.captured_at = captured
     if (v.raw_detail.trim()) input.raw_detail = v.raw_detail
     return input
   }
@@ -175,9 +137,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
     const patch: EvidencePatch = {}
     if (v.title !== b.title) patch.title = v.title
     if (v.summary !== b.summary) patch.summary = v.summary
-    if (v.source_type !== b.source_type) patch.source_type = v.source_type
     if (v.source_ref !== b.source_ref) patch.source_ref = v.source_ref
-    if (v.captured !== b.captured) patch.captured_at = v.captured ? fromLocalInputValue(v.captured) : ''
     if (rawState !== 'loading' && rawState !== 'failed' && v.raw_detail !== b.raw_detail) patch.raw_detail = v.raw_detail
     return patch
   }
@@ -187,15 +147,6 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
   const submitRef = useRef<() => Promise<void>>(async () => {})
   const submit = async () => {
     if (busy) return
-    // A filled-in date that does not parse must never be sent as "no date":
-    // add would store now and edit would reset the captured time.
-    if (isInvalidCaptured(values.captured)) {
-      setSummary(undefined)
-      setFieldErrors({ captured_at: CAPTURED_INVALID_COPY })
-      setMoreOpen(true)
-      setFocusInvalid(true)
-      return
-    }
     let call: () => Promise<Evidence>
     if (existing) {
       const patch = buildPatch()
@@ -221,7 +172,6 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
       const split = splitFieldErrors(e, FIELDS)
       setFieldErrors(split.fieldErrors)
       setSummary(split.summary)
-      if (split.fieldErrors.source_type || split.fieldErrors.captured_at) setMoreOpen(true)
       setFocusInvalid(true)
     } finally {
       setBusy(false)
@@ -273,7 +223,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
         />
         <TextField
           label="Where to find it"
-          hint={capture?.reference}
+          hint="The file, page or person, and the date"
           value={values.source_ref}
           onChange={set('source_ref')}
           error={fieldErrors.source_ref}
@@ -282,7 +232,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
         />
         <TextArea
           label="Exact words or numbers (optional)"
-          hint={capture?.detail}
+          hint="The lines or numbers that matter"
           value={values.raw_detail}
           onChange={set('raw_detail')}
           error={fieldErrors.raw_detail}
@@ -291,33 +241,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
           rows={4}
           spellCheck={false}
         />
-        <div className="evidence-more">
-          <div>
-            <Button variant="ghost" className="disclosure-button" aria-expanded={moreOpen} onClick={() => setMoreOpen((v) => !v)}>
-              <ChevronDown className={['disclosure-icon', moreOpen ? 'is-open' : ''].filter(Boolean).join(' ')} size={16} strokeWidth={1.75} aria-hidden="true" />
-              More
-            </Button>
-          </div>
-          {moreOpen && (
-            <div className="evidence-dialog-row">
-              <Select
-                label="Kind of source"
-                value={values.source_type}
-                onChange={(v) => set('source_type')(v as SourceType)}
-                options={typeOptions.map((t) => ({ value: t, label: sourceTypeLabels[t] }))}
-                error={fieldErrors.source_type}
-              />
-              <TextField
-                label="Date of the source (optional)"
-                hint={existing ? 'Leave empty for the day it was added' : 'Leave empty for today'}
-                type="datetime-local"
-                value={values.captured}
-                onChange={set('captured')}
-                error={fieldErrors.captured_at}
-              />
-            </div>
-          )}
-        </div>
+        {!existing && <p className="evidence-dialog-note">{ADDED_COUNTS_AS_CHECKED}</p>}
       </div>
     </Dialog>
   )

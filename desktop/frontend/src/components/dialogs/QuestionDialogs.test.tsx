@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
 import { ApiError, REQUIRED_COPY } from '../../api/errors'
 import type { Question } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
-import { hypotheses, questions } from '../../test/fixtures'
+import { questions } from '../../test/fixtures'
 import { question } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
@@ -31,38 +31,20 @@ describe('QuestionDialog', () => {
     Object.assign(mocks.api, mockApi({ addQuestion: async () => question({ ref: 'Q-004', question: 'New?' }) }))
   })
 
-  it('adds a question by default and reports the new ref', async () => {
+  it('adds something to find out with no choice to make, and reports the new ref', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const onCreated = vi.fn()
     render(providers(<QuestionDialog invRef="INV-0001" onClose={onClose} onCreated={onCreated} />))
     expect(screen.getByRole('dialog', { name: ADD_TO_FIND_OUT })).toBeInTheDocument()
-    const kind = screen.getByRole('radiogroup', { name: 'Is this a guess to test or a question to answer?' })
-    expect(within(kind).getByRole('radio', { name: 'A question to answer' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('radiogroup')).toBeNull()
+    expect(screen.queryByText(/guess/i)).toBeNull()
     await user.type(screen.getByLabelText('What do you still need to find out?'), 'Who signs off a refund over $100?')
     await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(mocks.api.addQuestion).toHaveBeenCalledWith('INV-0001', { question: 'Who signs off a refund over $100?' })
     expect(mocks.api.addHypothesis).not.toHaveBeenCalled()
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('Q-004'))
     expect(onClose).toHaveBeenCalled()
-  })
-
-  it('adds a guess to test as a finding with no confidence and no sources', async () => {
-    const user = userEvent.setup()
-    const onCreated = vi.fn()
-    Object.assign(mocks.api, mockApi({ addHypothesis: async () => ({ ...hypotheses[0], ref: 'H-004' }) }))
-    render(providers(<QuestionDialog invRef="INV-0001" onClose={() => {}} onCreated={onCreated} />))
-    await user.type(screen.getByLabelText('What do you still need to find out?'), 'The refunds went out late.')
-    await user.click(screen.getByRole('radio', { name: 'A guess to test' }))
-    await user.click(screen.getByRole('button', { name: 'Add' }))
-    expect(mocks.api.addHypothesis).toHaveBeenCalledWith('INV-0001', {
-      statement: 'The refunds went out late.',
-      confidence: 'unknown',
-      rationale: '',
-      links: [],
-    })
-    expect(mocks.api.addQuestion).not.toHaveBeenCalled()
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('H-004'))
   })
 
   it('shows Adding... while the call runs', async () => {
@@ -78,9 +60,9 @@ describe('QuestionDialog', () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(providers(<QuestionDialog invRef="INV-0001" question={Q001} onClose={onClose} />))
-    expect(screen.getByRole('dialog', { name: 'Edit follow-up question' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Edit what to find out' })).toBeInTheDocument()
     expect(screen.queryByRole('radiogroup')).toBeNull()
-    const box = screen.getByLabelText('Follow-up question')
+    const box = screen.getByLabelText('What do you still need to find out?')
     expect(box).toHaveValue(Q001.question)
     await user.clear(box)
     await user.type(box, 'Can the refunds go out this week?')
@@ -116,7 +98,7 @@ describe('ResolveQuestionDialog', () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(providers(<ResolveQuestionDialog invRef="INV-0001" question={Q001} onClose={onClose} />))
-    expect(screen.getByRole('dialog', { name: 'Answer this follow-up question' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'What did you find out?' })).toBeInTheDocument()
     expect(screen.getByText('What is the answer, and how do you know?')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save answer' }))
     expect(mocks.api.resolveQuestion).not.toHaveBeenCalled()

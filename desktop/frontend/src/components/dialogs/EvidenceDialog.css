@@ -1,34 +1,5 @@
-/* Evidence dialog: short fields share a row when the dialog is wide enough. */
-.evidence-dialog-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-6) var(--space-4);
-  align-items: end;
-}
-
-.evidence-more {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-/* Disclosure buttons in dialogs (More): ghost, aligned
-   with the field labels, chevron first. */
-.dialog .disclosure-button.btn-ghost {
-  margin-left: calc(-1 * var(--space-2));
-}
-
-.dialog .disclosure-button .btn-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.dialog .disclosure-icon {
-  flex: none;
-  transition: transform var(--duration-hover) ease-out;
-}
-
-.dialog .disclosure-icon.is-open {
-  transform: rotate(180deg);
+.evidence-dialog-note {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  color: var(--ink-muted);
 }

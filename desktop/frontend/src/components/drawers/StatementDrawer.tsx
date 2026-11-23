@@ -1,19 +1,21 @@
 // Finding drawer body (a claim or a hypothesis):
-//   1. the finding in Literata 20 under its labels, with "Edit finding"
-//      opening an inline editor;
-//   2. why you think so. Confidence is stored and never shown or sent;
-//   3. "Check this finding": I checked this, Sources disagree, Rule this out
-//      and Replace with a newer finding; a replaced or ruled-out finding
-//      shows only Bring this back;
-//   4. the sources that back it up and go against it (each opens the source
+//   1. the finding in Literata 20 under its one label, why the person thinks
+//      so, and "Edit finding", which opens both in an inline editor;
+//   2. what a person can decide about it. A finding has no check of its own:
+//      its label comes from its sources. Where sources disagree: It still
+//      holds (after a confirmation) or Rule this out. Any finding on the
+//      page: Rule this out and Replace with a newer finding. One not tested
+//      yet: also This turned out right. A replaced or ruled out finding:
+//      Bring this back;
+//   3. the sources that back it up and go against it (each opens the source
 //      drawer), then Add a source to this finding.
 //
 // Every write goes through useWrite. Saves show no toast; the group simply
-// shows the saved value. Edit-in-place safety: the editors snapshot the
+// shows the saved value. Edit-in-place safety: the editor snapshots the
 // stored values; a reload never touches unsaved input, and when the stored
 // values changed meanwhile the group says so and offers the new version.
-// While a group holds unsaved input, Esc discards that input first; the next
-// Esc closes the drawers.
+// While it holds unsaved input, Esc discards that input first; the next Esc
+// closes the drawers.
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { Link as LinkIcon, Pencil, Replace, Trash2, Unlink } from 'lucide-react'
 import { api } from '../../api/api'
@@ -28,23 +30,22 @@ import type {
   HypothesisStatus,
   InvestigationDetail,
   Relation,
-  Verification,
 } from '../../api/types'
 import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { pushLayer } from '../../lib/layers'
-import { statementMarks } from '../../lib/recordState'
+import { evidenceByRef, isReplaced, isRuledOut, sourcesDisagree, type Finding } from '../../lib/records'
+import { useAppData } from '../../state/appData'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { ImportedTag } from '../record/ImportedTag'
 import { RecordId } from '../record/RecordId'
-import { RecordStatusLabel } from '../record/StatusLabel'
-import { VerificationBadge } from '../record/VerificationBadge'
+import { FindingLabel } from '../record/StatusLabel'
 import { DeleteDialog } from '../dialogs/DeleteDialog'
 import { EvidenceDialog } from '../dialogs/EvidenceDialog'
 import { LinkEvidenceDialog } from '../dialogs/LinkEvidenceDialog'
-import { SupersedeDialog } from '../dialogs/SupersedeDialog'
+import { ReplaceFindingDialog } from '../dialogs/ReplaceFindingDialog'
 import { Banner } from '../ui/Banner'
 import { Button } from '../ui/Button'
 import { ChangedElsewhereBanner, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
@@ -61,24 +62,23 @@ export type StatementDrawerProps = {
   onDeleted?: () => void
 } & ({ kind: 'claim'; record: Claim } | { kind: 'hypothesis'; record: Hypothesis })
 
-/** The one act a person records: they compared the finding with its sources. */
-export const CHECKED_ACTION = 'I checked this'
-export const SETTLE_ACTION = 'Yes, I checked it'
+export const STILL_HOLDS_ACTION = 'It still holds'
+export const SETTLE_ACTION = 'Yes, it still holds'
 export const SETTLE_COPY = 'The sources disagree about this finding. Choose this only if you read them and the finding still holds.'
-export const DISAGREE_ACTION = 'Sources disagree'
+export const TURNED_OUT_RIGHT_ACTION = 'This turned out right'
 export const RULE_OUT_ACTION = 'Rule this out'
 export const REPLACE_ACTION = 'Replace with a newer finding'
 export const BRING_BACK_ACTION = 'Bring this back'
 export const SUPPORTING_TITLE = 'Sources that back it up'
 export const CONTRADICTING_TITLE = 'Sources that go against it'
-export const FINDING_CHANGED_COPY = 'This finding or its sources changed. Read the new version before you check it.'
+export const MOVE_TO_AGAINST = 'Move to: goes against it'
+export const MOVE_TO_BACKS = 'Move to: backs it up'
+export const FINDING_CHANGED_COPY = 'Your AI changed this finding or its sources. Read it again before you decide.'
 
 type Kind = 'claim' | 'hypothesis'
 type StatementRecord = Claim | Hypothesis
 /** A claim or hypothesis patch; useRecordCalls sends it to the matching call. */
 type Patch = Omit<ClaimPatch, 'status'> & Omit<HypothesisPatch, 'status'> & { status?: ClaimStatus | HypothesisStatus }
-
-const RETIRED = new Set(['superseded', 'rejected', 'disproven'])
 
 /** A drawer group: an h3 heading and its content, labelled for assistive technology. */
 export function DrawerGroup({
@@ -126,20 +126,17 @@ export function SupersededBy({ refText, onOpen }: { refText: string; onOpen: (re
 
 /** The calls for one claim or hypothesis, by kind. */
 function useRecordCalls(kind: Kind, invRef: string, ref: string, basis?: string) {
+  const get = (): Promise<StatementRecord> => (kind === 'claim' ? api.getClaim(invRef, ref) : api.getHypothesis(invRef, ref))
   return {
     update: (patch: Patch): Promise<StatementRecord> =>
       kind === 'claim'
         ? api.updateClaim(invRef, ref, patch as ClaimPatch)
         : api.updateHypothesis(invRef, ref, patch as HypothesisPatch),
-    setVerification: async (v: Verification, settleDispute = false): Promise<StatementRecord> => {
-      if (v === 'human_verified') {
-        if (!basis) throw new ApiError('conflict', 'this finding changed; show the new version')
-        await api.reviewStatement(invRef, { kind, ref, basis, verification: v, settle_dispute: settleDispute })
-        return kind === 'claim' ? api.getClaim(invRef, ref) : api.getHypothesis(invRef, ref)
-      }
-      return kind === 'claim'
-        ? api.setClaimVerification(invRef, ref, v)
-        : api.setHypothesisVerification(invRef, ref, v)
+/** The person read the sources and decided the finding still holds, as it read to them (basis). */
+    decideHolds: async (): Promise<StatementRecord> => {
+      if (!basis) throw new ApiError('conflict', 'this finding changed; show the new version')
+      await api.reviewStatement(invRef, { kind, ref, basis, verification: 'human_verified', settle_dispute: true })
+      return get()
     },
     link: (evidenceRef: string, rel: Relation): Promise<StatementRecord> =>
       kind === 'claim'
@@ -166,35 +163,41 @@ function useEscapeLayer(active: boolean, onEscape: () => void) {
 
 export function StatementDrawer(props: StatementDrawerProps) {
   const { kind, record: r, detail, onOpenRef, onDeleted } = props
+  const { ownDetail } = useAppData()
   const invRef = detail.investigation.ref
   const latestBasis = detail.review_bases?.find((b) => b.ref === r.ref)?.basis
   const reviewKey = `${invRef}/${r.ref}`
+  // What the person has read: the finding and its sources as they stood when
+  // the drawer opened. A reload an AI caused must not move it for them (they
+  // have to read the new version first); a reload after their own save does,
+  // without a word, because they made that change themselves.
   const [reviewSnapshot, setReviewSnapshot] = useState({ key: reviewKey, basis: latestBasis })
-  useEffect(() => {
+  if (reviewSnapshot.key !== reviewKey || (detail === ownDetail && reviewSnapshot.basis !== latestBasis)) {
     setReviewSnapshot({ key: reviewKey, basis: latestBasis })
-    // A live refresh must not acknowledge new source material for the person.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviewKey])
-  const reviewChanged = reviewSnapshot.key !== reviewKey || reviewSnapshot.basis !== latestBasis
+  }
+  const reviewChanged = reviewSnapshot.key === reviewKey && reviewSnapshot.basis !== latestBasis
   const calls = useRecordCalls(kind, invRef, r.ref, reviewSnapshot.key === reviewKey ? reviewSnapshot.basis : undefined)
-  const [dialog, setDialog] = useState<'link' | 'supersede' | 'addEvidence' | null>(null)
+  const finding = { kind, record: r } as Finding
+  const sources = evidenceByRef(detail)
+  const disagree = sourcesDisagree(r, sources)
+  const [dialog, setDialog] = useState<'link' | 'replace' | 'addEvidence' | null>(null)
   // Evidence added from the link dialog is preselected when it reopens.
   const [linkInitial, setLinkInitial] = useState<string | undefined>()
   const linkButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
     <>
-      <StatementGroup kind={kind} record={r} calls={calls} />
-      <WhyGroup kind={kind} record={r} calls={calls} />
-      {reviewChanged && <Banner tone="warning" action={<Button variant="secondary" onClick={() => setReviewSnapshot({ key: reviewKey, basis: latestBasis })}>{SHOW_NEW_VERSION}</Button>}>
+      <StatementGroup finding={finding} detail={detail} calls={calls} />
+      {reviewChanged && disagree && <Banner tone="warning" action={<Button variant="secondary" onClick={() => setReviewSnapshot({ key: reviewKey, basis: latestBasis })}>{SHOW_NEW_VERSION}</Button>}>
         {FINDING_CHANGED_COPY}
       </Banner>}
-      <StatusGroup
+      <DecideGroup
         kind={kind}
         record={r}
+        disagree={disagree}
         calls={calls}
         onOpenRef={onOpenRef}
-        onSupersede={() => setDialog('supersede')}
+        onReplace={() => setDialog('replace')}
         reviewChanged={reviewChanged}
       />
       <EvidenceGroups
@@ -228,54 +231,48 @@ export function StatementDrawer(props: StatementDrawerProps) {
           onClose={() => setDialog((d) => (d === 'addEvidence' ? 'link' : d))}
         />
       )}
-      {dialog === 'supersede' &&
-        (props.kind === 'claim' ? (
-          <SupersedeDialog
-            kind="claim"
-            record={props.record}
-            records={detail.claims}
-            invRef={invRef}
-            onClose={() => setDialog(null)}
-          />
-        ) : (
-          <SupersedeDialog
-            kind="hypothesis"
-            record={props.record}
-            records={detail.hypotheses}
-            invRef={invRef}
-            onClose={() => setDialog(null)}
-          />
-        ))}
+      {dialog === 'replace' && <ReplaceFindingDialog finding={finding} invRef={invRef} onClose={() => setDialog(null)} />}
     </>
   )
 }
 
-/* Group 1: the statement and its inline editor. */
+/* Group 1: the finding, why the person thinks so, and the inline editor for both. */
 
-function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: StatementRecord; calls: Calls }) {
+const whyOf = (kind: Kind, r: StatementRecord): string => (kind === 'claim' ? (r as Claim).confidence_rationale : (r as Hypothesis).rationale)
+
+interface Draft {
+  statement: string
+  why: string
+}
+const sameDraft = (a: Draft, b: Draft) => a.statement === b.statement && a.why === b.why
+
+function StatementGroup({ finding, detail, calls }: { finding: Finding; detail: InvestigationDetail; calls: Calls }) {
+  const { kind, record: r } = finding
   const write = useWrite()
-  const retired = RETIRED.has(r.status)
+  const retired = isReplaced(r) || isRuledOut(r)
+  const whyField = kind === 'claim' ? 'confidence_rationale' : 'rationale'
+  const why = whyOf(kind, r)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(r.statement)
-  const [snapshot, setSnapshot] = useState(r.statement)
+  const [draft, setDraft] = useState<Draft>({ statement: r.statement, why })
+  const [snapshot, setSnapshot] = useState<Draft>(draft)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const [focus, setFocus] = useState<'editor' | 'button' | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const dirty = editing && draft !== snapshot
+  const stored: Draft = { statement: r.statement, why }
+  const dirty = editing && !sameDraft(draft, snapshot)
   useDirtyEditor(dirty, 'drawer')
-  const changedElsewhere =
-    useChangedElsewhere(editing ? snapshot : null, r.statement, dirty) && !busy && r.statement !== draft
+  const changedElsewhere = useChangedElsewhere(editing ? snapshot : null, stored, dirty, sameDraft) && !busy && !sameDraft(stored, draft)
 
   // A clean editor follows reloads; a dirty one keeps its input.
   useEffect(() => {
     if (!editing || dirty) return
-    setSnapshot(r.statement)
-    setDraft(r.statement)
-  }, [r.statement, editing, dirty])
+    setSnapshot({ statement: r.statement, why })
+    setDraft({ statement: r.statement, why })
+  }, [r.statement, why, editing, dirty])
 
   useEffect(() => {
     if (focus === 'editor') editorRef.current?.querySelector('textarea')?.focus()
@@ -284,9 +281,9 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
   }, [focus])
 
   const begin = () => {
-    setDraft(r.statement)
-    setSnapshot(r.statement)
-    setError(undefined)
+    setDraft(stored)
+    setSnapshot(stored)
+    setErrors({})
     setSummary(undefined)
     setEditing(true)
     setFocus('editor')
@@ -294,7 +291,7 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
 
   const finish = useCallback(() => {
     setEditing(false)
-    setError(undefined)
+    setErrors({})
     setSummary(undefined)
     setFocus('button')
   }, [])
@@ -303,19 +300,23 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
 
   const save = async () => {
     if (busy) return
-    if (draft === r.statement) {
+    // Only what changed is sent, so a save never writes over what an AI stored beside it.
+    const patch: Patch = {}
+    if (draft.statement !== r.statement) patch.statement = draft.statement
+    if (draft.why !== why) patch[whyField] = draft.why
+    if (Object.keys(patch).length === 0) {
       finish()
       return
     }
     setBusy(true)
-    setError(undefined)
+    setErrors({})
     setSummary(undefined)
     try {
-      const saved = await write(() => calls.update({ statement: draft }))
+      const saved = await write(() => calls.update(patch))
       if (saved) finish()
     } catch (e) {
-      const split = splitFieldErrors(e, ['statement'])
-      setError(split.fieldErrors.statement)
+      const split = splitFieldErrors(e, ['statement', whyField])
+      setErrors(split.fieldErrors)
       setSummary(split.summary)
     } finally {
       setBusy(false)
@@ -329,19 +330,10 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
     }
   }
 
-  // One coherent state; a superseded record says so in the
-  // Status and verification group, with its replacement.
-  const marks = statementMarks(kind, r)
   return (
     <div className="drawer-group statement-group">
       <p className="drawer-meta-line">
-        {marks.badge && <VerificationBadge verification={marks.badge} />}
-        {!marks.superseded &&
-          (kind === 'claim' ? (
-            <RecordStatusLabel kind="claim" status={marks.status as ClaimStatus} />
-          ) : (
-            <RecordStatusLabel kind="hypothesis" status={marks.status as HypothesisStatus} />
-          ))}
+        <FindingLabel finding={finding} sources={evidenceByRef(detail)} />
         {r.imported && <ImportedTag />}
       </p>
       {editing ? (
@@ -349,9 +341,9 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
           {changedElsewhere && (
             <ChangedElsewhereBanner
               onShowLatest={() => {
-                setSnapshot(r.statement)
-                setDraft(r.statement)
-                setError(undefined)
+                setSnapshot(stored)
+                setDraft(stored)
+                setErrors({})
               }}
             />
           )}
@@ -362,10 +354,18 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
           )}
           <TextArea
             label="Finding"
-            value={draft}
-            onChange={setDraft}
-            error={error}
-            note={nearLimit(draft, LIMITS.statement)}
+            value={draft.statement}
+            onChange={(statement) => setDraft((d) => ({ ...d, statement }))}
+            error={errors.statement}
+            note={nearLimit(draft.statement, LIMITS.statement)}
+            spellCheck
+          />
+          <TextArea
+            label="Why you think so (optional)"
+            value={draft.why}
+            onChange={(text) => setDraft((d) => ({ ...d, why: text }))}
+            error={errors[whyField]}
+            note={nearLimit(draft.why, LIMITS.rationale)}
             spellCheck
           />
           <div className="drawer-form-actions">
@@ -380,6 +380,11 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
       ) : (
         <>
           <p className={['drawer-statement', retired ? 'is-retired' : ''].filter(Boolean).join(' ')}>{r.statement}</p>
+          {why.trim() !== '' && (
+            <p className="drawer-text">
+              <span className="drawer-why">Why you think so:</span> {why}
+            </p>
+          )}
           <div>
             <Button variant="ghost" icon={Pencil} className="drawer-edit-button" ref={buttonRef} onClick={begin}>
               Edit finding
@@ -391,114 +396,38 @@ function StatementGroup({ kind, record: r, calls }: { kind: Kind; record: Statem
   )
 }
 
-/* Group 2: why you think so. Only this text is sent, so a save never writes over what an AI stored beside it. */
+/* Group 2: what a person decides about the finding. The heading says where
+   it stands, in the words of its label. */
 
-const whyOf = (kind: Kind, r: StatementRecord): string => (kind === 'claim' ? (r as Claim).confidence_rationale : (r as Hypothesis).rationale)
-
-function WhyGroup({ kind, record: r, calls }: { kind: Kind; record: StatementRecord; calls: Calls }) {
-  const write = useWrite()
-  const stored = whyOf(kind, r)
-  const [draft, setDraft] = useState(stored)
-  const [snapshot, setSnapshot] = useState(stored)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | undefined>()
-  const [summary, setSummary] = useState<string | undefined>()
-  const field = kind === 'claim' ? 'confidence_rationale' : 'rationale'
-
-  const dirty = draft !== snapshot
-  useDirtyEditor(dirty, 'drawer')
-  const changedElsewhere = useChangedElsewhere(snapshot, stored, dirty) && !busy && stored !== draft
-  const changed = draft !== stored
-
-  // A clean editor follows reloads; a dirty one keeps its input.
-  useEffect(() => {
-    if (dirty) return
-    setSnapshot(stored)
-    setDraft(stored)
-  }, [stored, dirty])
-
-  const reset = useCallback(() => {
-    setSnapshot(stored)
-    setDraft(stored)
-    setError(undefined)
-    setSummary(undefined)
-  }, [stored])
-
-  useEscapeLayer(dirty, reset)
-
-  const save = async () => {
-    if (busy || !changed) return
-    setBusy(true)
-    setError(undefined)
-    setSummary(undefined)
-    const sent = draft
-    try {
-      const saved = await write(() => calls.update({ [field]: sent }))
-      if (saved) setSnapshot(sent)
-    } catch (e) {
-      const split = splitFieldErrors(e, [field])
-      setError(split.fieldErrors[field])
-      setSummary(split.summary)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div
-      className="drawer-group confidence-form"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault()
-          void save()
-        }
-      }}
-    >
-      {changedElsewhere && <ChangedElsewhereBanner onShowLatest={reset} />}
-      {summary && (
-        <p className="drawer-summary" role="alert">
-          {summary}
-        </p>
-      )}
-      <TextArea
-        label="Why you think so (optional)"
-        value={draft}
-        onChange={setDraft}
-        error={error}
-        note={nearLimit(draft, LIMITS.rationale)}
-        spellCheck
-      />
-      <div className="drawer-form-actions">
-        <Button variant="primary" busy={busy} busyLabel="Saving..." disabled={!changed} onClick={() => void save()}>
-          Save
-        </Button>
-      </div>
-    </div>
-  )
+export const DECIDE_TITLES = {
+  disagree: 'Sources disagree. You decide.',
+  notTested: 'Not tested yet',
+  standing: 'If this finding is no longer right',
+  ruledOut: 'This finding was ruled out',
+  replaced: 'This finding was replaced',
 }
 
-/* Group 3: checking the finding. Four buttons cover what a person decides;
-   a replaced or ruled-out finding offers only Bring this back. */
-
-function StatusGroup({
+function DecideGroup({
   kind,
   record: r,
+  disagree,
   calls,
   onOpenRef,
-  onSupersede,
+  onReplace,
   reviewChanged,
 }: {
   kind: Kind
   record: StatementRecord
+  disagree: boolean
   calls: Calls
   onOpenRef: (ref: string) => void
-  onSupersede: () => void
+  onReplace: () => void
   reviewChanged: boolean
 }) {
   const write = useWrite()
   const [busy, setBusy] = useState(false)
   const [summary, setSummary] = useState<string | undefined>()
-  const [settleDispute, setSettleDispute] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   const run = async (fn: () => Promise<unknown>) => {
     if (busy) return
@@ -514,24 +443,25 @@ function StatusGroup({
     }
   }
 
-  const marks = statementMarks(kind, r)
-  const retired = RETIRED.has(r.status)
-  const disputed = marks.disputed
-  const checked = !disputed && r.verification === 'human_verified'
-
-  const check = (settle = false) =>
-    run(async () => {
-      await calls.setVerification('human_verified', settle)
-      // A guess the person checked is no longer waiting to be tested.
-      if (kind === 'hypothesis' && r.status === 'open') await calls.update({ status: 'supported' })
-    })
+  const retired = isReplaced(r) || isRuledOut(r)
+  const notTested = kind === 'hypothesis' && r.status === 'open'
+  const turnedOutRight = () => calls.update({ status: 'supported' })
+  const title = isReplaced(r)
+    ? DECIDE_TITLES.replaced
+    : retired
+      ? DECIDE_TITLES.ruledOut
+      : disagree
+        ? DECIDE_TITLES.disagree
+        : notTested
+          ? DECIDE_TITLES.notTested
+          : DECIDE_TITLES.standing
 
   return (
-    <DrawerGroup title="Check this finding">
-      {r.status === 'superseded' && r.superseded_by && <SupersededBy refText={r.superseded_by} onOpen={onOpenRef} />}
+    <DrawerGroup title={title}>
+      {isReplaced(r) && r.superseded_by && <SupersededBy refText={r.superseded_by} onOpen={onOpenRef} />}
       <div className="drawer-actions">
         {retired ? (
-          // It comes back as Not checked: bringing it back is not checking it.
+          // It comes back with its label worked out from its sources again.
           <Button
             variant="secondary"
             disabled={busy}
@@ -541,32 +471,40 @@ function StatusGroup({
           </Button>
         ) : (
           <>
-            {!checked && (
-              <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => (disputed ? setSettleDispute(true) : void check())}>
-                {CHECKED_ACTION}
+            {disagree && (
+              <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => setConfirming(true)}>
+                {STILL_HOLDS_ACTION}
               </Button>
             )}
-            <Button
-              variant="secondary"
-              disabled={busy || disputed}
-              onClick={() =>
-                void run(() => (kind === 'claim' ? calls.update({ status: 'disputed', verification: 'disputed' }) : calls.setVerification('disputed')))
-              }
-            >
-              {DISAGREE_ACTION}
-            </Button>
+            {notTested && !disagree && (
+              <Button variant="secondary" disabled={busy} onClick={() => void run(turnedOutRight)}>
+                {TURNED_OUT_RIGHT_ACTION}
+              </Button>
+            )}
             <Button variant="secondary" disabled={busy} onClick={() => void run(() => calls.update({ status: kind === 'claim' ? 'rejected' : 'disproven' }))}>
               {RULE_OUT_ACTION}
             </Button>
-            <Button variant="secondary" icon={Replace} disabled={busy} onClick={onSupersede}>
+            <Button variant="secondary" icon={Replace} disabled={busy} onClick={onReplace}>
               {REPLACE_ACTION}
             </Button>
           </>
         )}
       </div>
-      {settleDispute && disputed && !retired && <Banner tone="warning" action={<>
-        <Button variant="ghost" onClick={() => setSettleDispute(false)}>Cancel</Button>
-        <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void check(true)}>{SETTLE_ACTION}</Button>
+      {confirming && disagree && !retired && <Banner tone="warning" action={<>
+        <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
+        <Button
+          variant="secondary"
+          disabled={busy || reviewChanged}
+          onClick={() =>
+            void run(async () => {
+              await calls.decideHolds()
+              // One the person decided holds is no longer waiting to be tested.
+              if (notTested) await turnedOutRight()
+            })
+          }
+        >
+          {SETTLE_ACTION}
+        </Button>
       </>}>{SETTLE_COPY}</Banner>}
       {summary && (
         <p className="drawer-summary" role="alert">
@@ -654,7 +592,7 @@ function DeleteStatement({
   )
 }
 
-/* Group 4: the sources for and against it. */
+/* Group 3: the sources for and against it. */
 
 function EvidenceGroups({
   record: r,
@@ -743,7 +681,7 @@ function EvidenceGroups({
                   disabled={pending === e.ref}
                   onClick={() => void flip(e.ref, relation === 'supports' ? 'contradicts' : 'supports')}
                 >
-                  {relation === 'supports' ? 'It goes against this' : 'It backs this'}
+                  {relation === 'supports' ? MOVE_TO_AGAINST : MOVE_TO_BACKS}
                 </Button>
                 <Button variant="ghost" icon={Unlink} disabled={pending === e.ref} onClick={() => void unlink(e.ref, relation)}>
                   Remove from this finding

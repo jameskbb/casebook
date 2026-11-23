@@ -1,4 +1,4 @@
-// A follow-up question under Still to find out. It opens no drawer: the row
+// Something to find out, under Still to find out. It opens no drawer: the row
 // takes focus by script only (tabIndex -1) so a newly added one or a search
 // hit can be focused. An answered one mutes the question and shows the
 // answer below; one left for later says Later with its note.
@@ -7,7 +7,7 @@ import type { Question } from '../../api/types'
 import { ImportedTag } from '../record/ImportedTag'
 import { CodedText } from '../record/RecordId'
 import { kindRuleClass } from '../record/KindRule'
-import { RecordStatusLabel } from '../record/StatusLabel'
+import { LaterLabel } from '../record/StatusLabel'
 import './RecordRow.css'
 import './QuestionRow.css'
 
@@ -24,7 +24,7 @@ export function QuestionRow({ question: q, actions }: QuestionRowProps) {
       <div className="question-row-main">
         <p className="row-line">
           <span className="row-ref tabular">{q.ref}</span>
-          <RecordStatusLabel kind="question" status={q.status} />
+          {q.status === 'deferred' && <LaterLabel />}
           {q.imported && <ImportedTag />}
         </p>
         <p className={['question-row-text', open ? '' : 'is-closed'].filter(Boolean).join(' ')}><CodedText text={q.question} /></p>

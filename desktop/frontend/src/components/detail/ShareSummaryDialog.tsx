@@ -1,13 +1,16 @@
 // Share the answer: the person reads exactly what Copy and Save will send.
-// Each choice (how much to share, which findings) loads its own version, so
-// what is on the sheet is always what goes out.
+// Short version or Everything; each loads its own version, so what is on the
+// sheet is always what goes out. Copy puts the sheet on the clipboard as
+// rich text and as plain text (lib/richCopy); where the window cannot do
+// that, Casebook copies the plain text itself.
 import { useEffect, useRef, useState } from 'react'
 import { ClipboardCopy, Download } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
-import type { ShareCandidate, ShareOptions, SharePreview } from '../../api/types'
+import type { ShareOptions, SharePreview } from '../../api/types'
 import type { NoteNode } from '../../lib/noteTree'
 import { parseReportHtml } from '../../lib/reportView'
+import { copyRich } from '../../lib/richCopy'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { SegmentedControl } from '../ui/SegmentedControl'
@@ -23,52 +26,35 @@ export const SHARE_CHANGED = 'The answer changed. This is how it reads now.'
 export const SHARE_LOADING = 'Getting the answer ready...'
 
 type Mode = ShareOptions['mode']
-type SelectionKey = 'claim_refs' | 'hypothesis_refs' | 'question_refs' | 'ruled_out_refs'
 
 const MODES: { value: Mode; label: string }[] = [
   { value: 'brief', label: 'Short version' },
   { value: 'report', label: 'Everything' },
 ]
 
-// The groups in the order the shared answer prints them, with the option
-// each one fills and the heading the sender reads.
-const GROUPS: { group: ShareCandidate['group']; key: SelectionKey; legend: string }[] = [
-  { group: 'claims', key: 'claim_refs', legend: 'Findings' },
-  { group: 'hypotheses', key: 'hypothesis_refs', legend: 'Findings not tested yet' },
-  { group: 'questions', key: 'question_refs', legend: 'Follow-up questions' },
-  { group: 'ruled_out', key: 'ruled_out_refs', legend: 'Ruled out' },
-]
-const keyOf = (group: ShareCandidate['group']): SelectionKey => GROUPS.find(g => g.group === group)?.key ?? 'claim_refs'
-
-function selection(preview: SharePreview): ShareOptions {
-  const refs = (group: ShareCandidate['group']) => preview.candidates.filter(c => c.group === group && c.selected).map(c => c.ref)
-  return { mode: preview.mode, claim_refs: refs('claims'), hypothesis_refs: refs('hypotheses'), question_refs: refs('questions'), ruled_out_refs: refs('ruled_out') }
-}
-
 export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClose: () => void }) {
   const toast = useToast()
   const [preview, setPreview] = useState<SharePreview | null>(null)
   const [nodes, setNodes] = useState<NoteNode[] | null>(null)
-  const [draft, setDraft] = useState<ShareOptions>({ mode: 'brief' })
+  const [mode, setMode] = useState<Mode>('brief')
   const [busy, setBusy] = useState(true)
   const [sharing, setSharing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const request = useRef(0)
 
-  // Every choice loads its own version; only the newest request lands.
-  const load = async (options: ShareOptions) => {
+  // Each version loads on its own; only the newest request lands.
+  const load = async (next: Mode) => {
     const current = ++request.current
-    setDraft(options)
+    setMode(next)
     setBusy(true)
     setError(null)
     setCopied(false)
     try {
-      const p = await api.sharePreview(invRef, options)
+      const p = await api.sharePreview(invRef, { mode: next })
       if (current !== request.current) return
       setPreview(p)
       setNodes(parseReportHtml(p.html))
-      setDraft(selection(p))
     } catch (e) {
       if (current === request.current) setError(errorCopy(toApiError(e)).message)
     } finally {
@@ -79,24 +65,19 @@ export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClos
   useEffect(() => {
     setPreview(null)
     setNodes(null)
-    void load({ mode: 'brief' })
+    void load('brief')
     return () => { request.current += 1 }
-    // Another question always starts with its own usual choice of findings.
+    // Another question always starts with the short version.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invRef])
 
-  const toggle = (c: ShareCandidate) => {
-    const key = keyOf(c.group)
-    const chosen = draft[key] ?? []
-    void load({ ...draft, [key]: chosen.includes(c.ref) ? chosen.filter(ref => ref !== c.ref) : [...chosen, c.ref] })
-  }
   // The answer changed since the sheet was loaded: show how it reads now
   // rather than send the older one.
   const failed = (e: unknown) => {
     const err = toApiError(e)
     if (err.kind !== 'conflict') return toast.error(errorCopy(err).message)
     toast.error(SHARE_CHANGED)
-    void load(draft)
+    void load(mode)
   }
   // Copy and Save send the version on the sheet, never one still loading.
   const disabled = !preview || busy || !!error || sharing
@@ -104,7 +85,9 @@ export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClos
     if (!preview || disabled) return
     setSharing(true)
     try {
-      await api.copySharePreview(preview.snapshot_id)
+      // The sheet's own words, as rich and plain text; else Casebook copies the plain text.
+      const rich = preview.text !== undefined && (await copyRich(preview.html, preview.text))
+      if (!rich) await api.copySharePreview(preview.snapshot_id)
       setCopied(true)
       toast.success(ANSWER_COPIED)
     } catch (e) { failed(e) }
@@ -129,24 +112,12 @@ export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClos
       </>}
     >
       <p className="share-summary-lede">{SHARE_LEDE}</p>
-      <SegmentedControl<Mode> label="How much to share" options={MODES} value={draft.mode} disabled={sharing} onChange={(mode) => void load({ mode })} />
-      {preview && draft.mode === 'brief' && preview.candidates.length > 0 && <details className="share-summary-selection">
-        <summary>Choose what to share</summary>
-        <p>Findings where sources disagree are always shared. Choose what else to share.</p>
-        <div className="share-summary-choices">
-          {GROUPS.map(({ group, key, legend }) => preview.candidates.some(c => c.group === group) && <fieldset key={group}>
-            <legend>{legend}</legend>
-            {preview.candidates.filter(c => c.group === group).map(c =>
-              <label key={c.ref} className="share-summary-choice"><input type="checkbox" checked={draft[key]?.includes(c.ref) ?? false} disabled={c.required || sharing} onChange={() => toggle(c)} /><span><strong className="record-id">{c.ref}</strong> {c.text}<small>{c.label}{c.required ? '; always shared' : ''}</small></span></label>
-            )}
-          </fieldset>)}
-        </div>
-      </details>}
+      <SegmentedControl<Mode> label="How much to share" options={MODES} value={mode} disabled={sharing} onChange={(m) => void load(m)} />
       {error
-        ? <p role="alert" className="share-summary-error">{error} <Button variant="ghost" onClick={() => void load(draft)}>Try again</Button></p>
+        ? <p role="alert" className="share-summary-error">{error} <Button variant="ghost" onClick={() => void load(mode)}>Try again</Button></p>
         : <>
           <p className="share-summary-snapshot" role="status">{busy ? SHARE_LOADING : SHARE_READY}</p>
-          <NotePaper nodes={nodes} text={preview?.markdown ?? ''} label="The answer" />
+          <NotePaper nodes={nodes} text={preview?.text ?? preview?.markdown ?? ''} label="The answer" />
         </>}
     </Dialog>
   )

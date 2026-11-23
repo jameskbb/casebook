@@ -41,11 +41,6 @@
   color: var(--ink);
 }
 
-.section-add {
-  flex: none;
-  margin-right: calc(-1 * var(--space-2));
-}
-
 .section-rows {
   display: flex;
   flex-direction: column;
@@ -56,25 +51,15 @@
   border-bottom: 1px solid var(--rule);
 }
 
-.section-empty {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.section-empty-text {
-  font-size: var(--text-body);
-  line-height: var(--leading-body);
-  color: var(--ink-muted);
-}
-
-/* Rows already provide the top gap; the disclosure sits right under them. */
 .section-ruled-out {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
+}
+
+/* Rows already provide the top gap; inside a section the line sits right under them. */
+.section > .section-ruled-out {
   margin-top: calc(-1 * var(--space-3));
 }
 

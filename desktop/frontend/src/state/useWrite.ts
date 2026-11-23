@@ -82,7 +82,7 @@ export function useWrite(): Write {
         return undefined
       }
       dismissRetries()
-      await refresh()
+      await refresh(true)
       return value
     },
     [refresh, toast, dismissRetries],

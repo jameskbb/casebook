@@ -8,7 +8,7 @@ import { archivedHit, archivedSummaries, hits, markupHit } from '../../test/fixt
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
 import { DataOpsProvider } from './DataOps'
-import { SEARCH_ERROR_COPY, Sidebar } from './Sidebar'
+import { HIDE_ARCHIVED, SEARCH_ERROR_COPY, SHOW_ARCHIVED, Sidebar } from './Sidebar'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -124,7 +124,7 @@ describe('Sidebar search', () => {
     await typeQuery('billing')
     expect(await screen.findByText('No matches for "billing"')).toBeInTheDocument()
     expect(
-      screen.getByText('Try fewer or different words. Archived questions are searched only when Show archived is on.'),
+      screen.getByText('Try fewer or different words. Archived questions are searched only while they are shown in the list.'),
     ).toBeInTheDocument()
   })
 
@@ -191,10 +191,13 @@ describe('Sidebar search', () => {
     Object.assign(mocks.api, mockApi({ search: async () => [archivedHit] }))
     renderSidebar()
     const user = userEvent.setup()
-    const toggle = await screen.findByRole('switch', { name: 'Show archived' })
-    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    // A small line under the list, not a switch at the top.
+    const toggle = await screen.findByRole('button', { name: SHOW_ARCHIVED })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('switch')).toBeNull()
     await user.click(toggle)
-    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle).toHaveAccessibleName(HIDE_ARCHIVED)
     await waitFor(() =>
       expect(mocks.api.listInvestigations).toHaveBeenCalledWith(expect.objectContaining({ include_archived: true })),
     )
@@ -211,8 +214,11 @@ describe('Sidebar search', () => {
     )
     renderSidebar()
     expect(
-      await screen.findByText('Nothing here. Turn on Show archived to see archived questions.'),
+      await screen.findByText(`Nothing here. Choose ${SHOW_ARCHIVED} below.`),
     ).toBeInTheDocument()
+    // Home stays reachable when every question is archived.
+    expect(screen.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: SHOW_ARCHIVED })).toBeInTheDocument()
     expect(mocks.api.listInvestigations).toHaveBeenCalledWith({ include_archived: true, limit: 1 })
     expect(screen.queryByText('No questions yet.')).not.toBeInTheDocument()
   })

@@ -21,11 +21,11 @@ describe('actorPhrase', () => {
     [a('human', ''), 'You'],
     [a('human', 'casebook-cli'), 'You'],
     [a('human', 'other'), 'You'],
-    [a('ai', 'claude-code'), 'Claude Code'],
-    [a('ai', 'codex'), 'Codex'],
+    [a('ai', 'claude-code'), 'Your AI'],
+    [a('ai', 'codex'), 'Your AI'],
     [a('ai', 'mcp-client'), 'Your AI'],
     [a('ai', ''), 'Your AI'],
-    [a('ai', 'other'), 'Your AI (other)'],
+    [a('ai', 'other'), 'Your AI'],
     [a('import', 'casebook-ui'), 'Casebook'],
     [a('import', 'my-tool'), 'Casebook'],
     [a('system', 'casebook'), 'Casebook'],
@@ -76,14 +76,14 @@ describe('the verb phrase of a row', () => {
     ['link.add', 'C-001', 'added a source to the finding C-001'],
     ['link.update', 'C-001', 'changed whether a source backs the finding C-001'],
     ['link.remove', 'H-003', 'removed a source from the finding H-003'],
-    ['question.add', 'Q-004', 'asked a follow-up question Q-004'],
-    ['question.add', '', 'asked a follow-up question'],
-    ['question.update', 'Q-001', 'reworded a follow-up question Q-001'],
-    ['question.resolve', 'Q-001', 'answered a follow-up question Q-001'],
-    ['question.defer', 'Q-003', 'left a follow-up question for later Q-003'],
-    ['question.reopen', 'Q-002', 'asked a follow-up question again Q-002'],
+    ['question.add', 'Q-004', 'added something to find out Q-004'],
+    ['question.add', '', 'added something to find out'],
+    ['question.update', 'Q-001', 'reworded something to find out Q-001'],
+    ['question.resolve', 'Q-001', 'answered something to find out Q-001'],
+    ['question.defer', 'Q-003', 'left something to find out for later Q-003'],
+    ['question.reopen', 'Q-002', 'opened something to find out again Q-002'],
     ['evidence.delete', 'E-002', 'deleted a source E-002'],
-    ['question.delete', 'Q-001', 'deleted a follow-up question Q-001'],
+    ['question.delete', 'Q-001', 'deleted something to find out Q-001'],
     ['investigation.delete', 'INV-0003', 'deleted a question INV-0003'],
     ['active.set', 'INV-0001', 'chose this question for your AI to work on'],
     ['active.clear', 'INV-0001', 'stopped your AI working on this question'],
@@ -104,7 +104,7 @@ describe('the verb phrase of a row', () => {
 describe('activitySentence', () => {
   it('makes E, C and H refs ref segments', () => {
     const s = activitySentence(row('evidence.add', 'E-005', a('ai', 'claude-code')))
-    expect(s.actor).toBe('Claude Code')
+    expect(s.actor).toBe('Your AI')
     expect(s.tooltip).toBe('AI, Claude Code')
     expect(s.segments).toEqual([{ text: 'added the source ' }, { ref: 'E-005' }])
     expect(activitySentence(row('link.update', 'C-001')).segments).toEqual([
@@ -118,7 +118,7 @@ describe('activitySentence', () => {
   })
 
   it('makes a code nothing opens an id segment, so the sentence reads without it', () => {
-    expect(activitySentence(row('question.resolve', 'Q-001')).segments).toEqual([{ text: 'answered a follow-up question' }, { id: 'Q-001' }])
+    expect(activitySentence(row('question.resolve', 'Q-001')).segments).toEqual([{ text: 'answered something to find out' }, { id: 'Q-001' }])
     expect(activitySentence(row('investigation.create', 'INV-0001')).segments).toEqual([
       { text: 'created this question' },
     ])
@@ -172,8 +172,8 @@ describe('activitySummary', () => {
     ['conclusion.update', 'Cleared the answer', 'Cleared the answer.'],
     ['claim.update', 'Updated claim C-002: confidence_rationale', 'Changed why.'],
     ['claim.update', 'Updated claim C-002: statement, confidence high', 'Changed the wording.'],
-    ['claim.update', 'Updated claim C-002: verification human_verified', 'Checked this.'],
-    ['claim.update', 'Set verification of C-002 to human_verified', 'Checked this.'],
+    ['claim.update', 'Updated claim C-002: verification human_verified', 'Decided this still holds.'],
+    ['claim.update', 'Set verification of C-002 to human_verified', 'Decided this still holds.'],
     ['claim.update', 'Set verification of C-002 to disputed; status disputed', 'Said sources disagree.'],
     ['claim.update', 'Updated claim C-002: status rejected', 'Ruled this out.'],
     ['investigation.update', 'Updated question INV-0001: status', ''],
@@ -191,10 +191,10 @@ describe('activitySummary', () => {
     ['evidence.add', 'Added evidence E-005 "Call log"', ''],
     ['claim.update', 'Updated claim C-001: statement, verification; verification reset to ai_generated after AI edit', `Changed the wording. ${NEEDS_CHECKING_AGAIN}`],
     ['hypothesis.update', 'Updated hypothesis H-002: rationale, confidence high, verification; verification reset to ai_generated after AI edit', `Changed why. ${NEEDS_CHECKING_AGAIN}`],
-    ['hypothesis.update', 'Updated hypothesis H-004: verification human_verified', 'Checked this.'],
+    ['hypothesis.update', 'Updated hypothesis H-004: verification human_verified', 'Decided this still holds.'],
     ['evidence.update', 'Updated evidence E-003: verification human_verified', 'Checked this.'],
     ['claim.update', 'Updated claim C-001: status disputed, verification disputed', 'Said sources disagree.'],
-    ['hypothesis.update', 'Set verification of H-001 to source_verified; status supported', 'Now: Looks right so far.'],
+    ['hypothesis.update', 'Set verification of H-001 to source_verified; status supported', 'Said this turned out right.'],
     ['evidence.update', 'Updated evidence E-001: source_ref, raw_detail, metadata', 'Changed where to find it, the exact words or numbers, extra details.'],
     // An action nobody knows, with any summary.
     ['x.y', 'Frobnicated claim C-001 (status active)', ''],

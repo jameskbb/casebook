@@ -1,7 +1,5 @@
-// Add something to find out, or edit a follow-up question. Adding asks one
-// thing, "What do you still need to find out?", and saves it as a follow-up
-// question unless the person says it is a guess to test, which saves it as a
-// finding not tested yet.
+// Add something to find out, or reword one. One field, no choice: it is
+// saved as an open question under Still to find out.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
 import type { Question } from '../../api/types'
@@ -9,21 +7,13 @@ import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { useWrite } from '../../state/useWrite'
 import { Dialog } from '../ui/Dialog'
-import { SegmentedControl } from '../ui/SegmentedControl'
 import { TextArea } from '../ui/TextArea'
 
 export const ADD_TO_FIND_OUT = 'Add something to find out'
 
-type Kind = 'question' | 'guess'
-
-const KINDS: { value: Kind; label: string }[] = [
-  { value: 'question', label: 'A question to answer' },
-  { value: 'guess', label: 'A guess to test' },
-]
-
 export interface QuestionDialogProps {
   invRef: string
-  /** The follow-up question to edit; absent to add something to find out. */
+  /** The one to reword; absent to add one. */
   question?: Question
   onClose: () => void
   /** Called with the code of what was added before the dialog closes (add only). */
@@ -34,7 +24,6 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
   const write = useWrite()
   const initial = question?.question ?? ''
   const [text, setText] = useState(initial)
-  const [kind, setKind] = useState<Kind>('question')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
@@ -54,11 +43,7 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
     try {
       const saved = await write<{ ref: string }>(
         () =>
-          question
-            ? api.updateQuestion(invRef, question.ref, text)
-            : kind === 'guess'
-              ? api.addHypothesis(invRef, { statement: text, confidence: 'unknown', rationale: '', links: [] })
-              : api.addQuestion(invRef, { question: text }),
+          question ? api.updateQuestion(invRef, question.ref, text) : api.addQuestion(invRef, { question: text }),
         { onRetry: () => void submitRef.current() },
       )
       if (saved) {
@@ -66,8 +51,8 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
         onClose()
       }
     } catch (e) {
-      const split = splitFieldErrors(e, ['question', 'statement'])
-      setError(split.fieldErrors.question ?? split.fieldErrors.statement)
+      const split = splitFieldErrors(e, ['question'])
+      setError(split.fieldErrors.question)
       setSummary(split.summary)
     } finally {
       setBusy(false)
@@ -78,7 +63,7 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
 
   return (
     <Dialog
-      title={question ? 'Edit follow-up question' : ADD_TO_FIND_OUT}
+      title={question ? 'Edit what to find out' : ADD_TO_FIND_OUT}
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
@@ -96,14 +81,13 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
     >
       <div className="dialog-fields">
         <TextArea
-          label={question ? 'Follow-up question' : 'What do you still need to find out?'}
+          label="What do you still need to find out?"
           value={text}
           onChange={setText}
           error={error}
           note={nearLimit(text, LIMITS.question)}
           spellCheck
         />
-        {!question && <SegmentedControl<Kind> label="Is this a guess to test or a question to answer?" options={KINDS} value={kind} onChange={setKind} />}
       </div>
     </Dialog>
   )

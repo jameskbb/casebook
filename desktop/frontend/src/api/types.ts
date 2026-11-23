@@ -76,15 +76,17 @@ export interface InvestigationSummary {
   archived: boolean
   is_active: boolean
   counts: RecordCounts
-  // Newer backends send the four below. Read them through lib/questions.ts,
+  // Newer backends send the ones below. Read them through lib/questions.ts,
   // which defaults them when an older backend leaves them out.
   /** The answer text, "" when none. */
   conclusion?: string
   /** Sources that have not been replaced. */
   sources_total?: number
   sources_checked_by_you?: number
-  /** Findings where sources disagree. */
+  /** Findings where sources disagree (lib/records sourcesDisagree is the same rule). */
   findings_disagree?: number
+  /** There is an answer, a person checked it, and nothing changed since. */
+  answer_checked_by_you?: boolean
 }
 
 export interface RecordLink {
@@ -200,25 +202,11 @@ export interface InvestigationDetail {
   review_bases?: { ref: string; basis: string }[]
 }
 
-export interface ReviewFinding {
-  kind: 'claim' | 'hypothesis'
-  ref: string
-  statement: string
-  confidence: Confidence
-  rationale: string
-  status: string
-  verification: Verification
-  evidence: { relation: Relation; evidence: Evidence }[]
-  filters: string[]
-  warnings: string[]
-  basis: string
-}
-
 export interface ReviewStatementInput {
   kind: 'claim' | 'hypothesis'
   ref: string
   basis: string
-  verification: 'human_verified' | 'disputed'
+  verification: 'human_verified'
   settle_dispute: boolean
 }
 
@@ -426,6 +414,8 @@ export interface ShareCandidate {
 }
 
 export interface SharePreview extends ReportPreview {
+  /** The same content with no marks, for pasting into a plain box. Older backends leave it out. */
+  text?: string
   snapshot_id: string
   investigation_ref: string
   mode: 'brief' | 'report'
@@ -470,10 +460,15 @@ export interface RestorePick {
 
 export type WindowTheme = 'system' | 'light' | 'dark'
 
-// Connect AI clients panel (desktop/clients.go). Read-only: the desktop app
-// never writes client configs; `casebook setup <client>` does.
+// Connect your AI (desktop/clients.go). ConnectClient and DisconnectClient
+// write a tool's settings the way `casebook setup <client>` does.
+
+/** The AI tools Casebook can connect itself to: the keys of ClientConnections. */
+export type ClientTool = 'claude' | 'codex' | 'claude_desktop'
 
 export interface ClientConnection {
+  /** The tool looks installed on this computer. Older backends leave it out. */
+  found?: boolean
   configured: boolean
   matches_cli: boolean
   command: string
@@ -503,6 +498,19 @@ export interface ClientConnections {
   shell?: string
   claude: ClientConnection
   codex: ClientConnection
+  /** The Claude desktop app. Older backends leave it out. */
+  claude_desktop?: ClientConnection
+}
+
+/** What ConnectClient or DisconnectClient did. */
+export interface ClientChange {
+  tool: ClientTool
+  connected: boolean
+  changed: boolean
+  /** One or two plain sentences, shown as they are. */
+  message: string
+  /** Every settings file looked at, for Technical details. */
+  files: { file: string; action: 'added' | 'updated' | 'removed' | 'unchanged'; backup: string }[]
 }
 
 // Check for updates (internal/update, desktop/update.go). The

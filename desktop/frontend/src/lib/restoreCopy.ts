@@ -11,7 +11,7 @@ export function countPhrase(n: number, one: string, many: string): string {
 
 /**
  * "{file name}, saved {date}, contains 3 questions, 7 sources,
- * 9 findings and 5 follow-up questions."
+ * 9 findings and 5 things to find out."
  */
 export function restoreSummary(fileName: string, info: BackupInfo): string {
   const c = info.counts
@@ -21,6 +21,6 @@ export function restoreSummary(fileName: string, info: BackupInfo): string {
     countPhrase(c.evidence, 'source', 'sources'),
     countPhrase(c.claims + c.hypotheses, 'finding', 'findings'),
   ]
-  const counts = `${parts.join(', ')} and ${countPhrase(c.questions, 'follow-up question', 'follow-up questions')}`
+  const counts = `${parts.join(', ')} and ${countPhrase(c.questions, 'thing to find out', 'things to find out')}`
   return saved ? `${fileName}, saved ${saved}, contains ${counts}.` : `${fileName} contains ${counts}.`
 }

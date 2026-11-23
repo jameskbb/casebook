@@ -12,11 +12,11 @@ const CODE = '(?:INV-\\d+|[ECHQ]-\\d+)'
 const TOKEN = new RegExp(` ?\\((?:\\s*${CODE}\\s*(?:,|;|and)?)+\\)|( ?)\\b(${CODE})\\b`, 'g')
 
 /** What a bare code stands for when codes are hidden and its own words are not known. */
-const NOUN: Record<string, string> = { E: 'a source', C: 'a finding', H: 'a finding', Q: 'a follow-up question', I: 'this question' }
+const NOUN: Record<string, string> = { E: 'a source', C: 'a finding', H: 'a finding', Q: 'something to find out', I: 'this question' }
 
 /**
- * Text someone wrote (a note, how you know, an answer to a follow-up
- * question) that may name codes. With codes hidden it still reads as a
+ * Text someone wrote (a note, how you know, an answer to something
+ * to find out) that may name codes. With codes hidden it still reads as a
  * sentence: a bracket holding only codes goes away with its brackets, and a
  * bare code is replaced by that finding's or source's own words, or by "a
  * finding" or "a source". With codes on, the text shows as written.

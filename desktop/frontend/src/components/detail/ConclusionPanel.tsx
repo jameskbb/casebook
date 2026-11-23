@@ -1,8 +1,9 @@
 // The answer: the one bold element on the screen. View mode shows the answer
 // in Literata 20, how many of the question's sources a person has checked,
 // one line saying whether they checked the answer, one row of buttons (Check
-// the next source while one is left, Share the answer, I checked this
-// answer) and how the person knows. Edit mode is inline in the same panel:
+// the next source while one is left, I checked this answer, Share the
+// answer; the first one that applies is the main button) and how the person
+// knows. Edit mode is inline in the same panel:
 // the answer and how you know, saved together through UpdateConclusion with
 // the findings on the page behind it (lib/records answerFindings). Confidence
 // is stored and passed through unchanged, never shown. Clearing asks first.
@@ -16,13 +17,13 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Pencil, ScrollText } from 'lucide-react'
 import { api } from '../../api/api'
 import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
-import type { Claim, Confidence, Evidence, Investigation } from '../../api/types'
+import type { Claim, ConclusionInput, Confidence, Evidence, Investigation } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { formatDate } from '../../lib/relativeTime'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { confidenceOptions } from '../../lib/labels'
 import { countOf, plural } from '../../lib/plural'
-import { answerFindings, sourceChecks } from '../../lib/records'
+import { answerFindings, evidenceByRef, sourceChecks, sourcesToCheck } from '../../lib/records'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { CodedText } from '../record/RecordId'
@@ -55,10 +56,15 @@ export interface ConclusionPanelProps {
   claims?: Claim[]
   /** The question's sources, for the count of how many a person has checked. */
   evidence?: Evidence[]
-  /** Opens a source; with it the panel offers Check the next source. */
-  onOpenSource?: (ref: string) => void
-  /** Show Share the answer beside it. */
+  /** Starts the source check; with it the panel offers Check the next source. */
+  onCheckSources?: () => void
+  /** Offer Share the answer once there is an answer. */
   share?: boolean
+  /** The question has nothing in it yet: no Write the answer button. */
+  bare?: boolean
+  /** Opened from Home to write the answer or to check it. */
+  intent?: 'write-answer' | 'check-answer' | null
+  onIntentDone?: () => void
 }
 
 export const CHECK_NEXT_SOURCE = 'Check the next source'
@@ -66,10 +72,22 @@ export const SHARE_THE_ANSWER = 'Share the answer'
 export const CHECKED_ANSWER_ACTION = 'I checked this answer'
 export const NOT_CHECKED_ANSWER = 'You have not checked this answer yet.'
 export const CHECK_ANSWER_AGAIN = 'Something changed after you checked this answer. Check it again.'
+export const WHAT_DID_YOU_CHECK = 'What did you check? Write one sentence.'
 
-/** The first source a person has not checked. Replaced sources are skipped. */
-export function nextSourceToCheck(evidence: Evidence[]): Evidence | undefined {
-  return evidence.find((e) => e.verification !== 'human_verified' && e.verification !== 'superseded')
+/** True when the person checked the answer and nothing changed since. */
+export const answerChecked = (inv: Investigation) => Boolean(inv.conclusion_reviewed_at) && !inv.conclusion_needs_review
+
+/** The save that records a person's own check of the answer as it read to them. */
+export function answerCheckInput(inv: Investigation, basis: string): ConclusionInput {
+  return {
+    conclusion: inv.conclusion,
+    confidence: storedConfidence(inv),
+    rationale: inv.conclusion_rationale,
+    verification: 'human_verified',
+    review: true,
+    review_basis: basis,
+    expected_review_token: inv.conclusion_review_token,
+  }
 }
 
 /** "1 of 3 sources checked by you", then who checked the rest. A count, not a rating. */
@@ -85,7 +103,7 @@ export function SourcesChecked({ evidence }: { evidence: Evidence[] }) {
   )
 }
 
-export function ConclusionPanel({ investigation: inv, claims = [], evidence = [], onOpenSource, share = false }: ConclusionPanelProps) {
+export function ConclusionPanel({ investigation: inv, claims = [], evidence = [], onCheckSources, share = false, bare = false, intent, onIntentDone }: ConclusionPanelProps) {
   const write = useWrite()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => draftOf(inv))
@@ -182,7 +200,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           rationale: draft.rationale,
           // The answer rests on the findings on the page now. An answer the
           // person checked and then changed is not checked any more.
-          ...(filled ? answerFindings(claims) : {}),
+          ...(filled ? answerFindings(claims, evidenceByRef({ evidence })) : {}),
           ...(filled && inv.conclusion_verification === 'human_verified' ? { verification: 'ai_generated' as const } : {}),
         }),
       )
@@ -216,15 +234,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
     setFieldErrors({})
     setSummary(undefined)
     try {
-      const saved = await write(() => api.updateConclusion(inv.ref, {
-        conclusion: checking.conclusion,
-        confidence: storedConfidence(checking),
-        rationale: checking.conclusion_rationale,
-        verification: 'human_verified',
-        review: true,
-        review_basis: checkBasis,
-        expected_review_token: checking.conclusion_review_token,
-      }))
+      const saved = await write(() => api.updateConclusion(inv.ref, answerCheckInput(checking, checkBasis)))
       if (saved) endCheck(false)
     } catch (e) { showErrors(e) } finally { setBusy(false) }
   }
@@ -234,20 +244,32 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
   const backing = inv.conclusion_supporting_claims ?? []
   const against = inv.conclusion_contradicting_claims ?? []
   const checkedAt = inv.conclusion_reviewed_at
-  const upToDate = Boolean(checkedAt) && !inv.conclusion_needs_review
+  const upToDate = answerChecked(inv)
   const checkStale = checking !== null && checking.conclusion_review_token !== inv.conclusion_review_token
 
-  // One row of buttons: the next source to check while one is left, Share the
-  // answer, and the person's own check of the answer until it is up to date.
-  const next = onOpenSource ? nextSourceToCheck(evidence) : undefined
+  // One row of buttons, in the order a person does them: check the sources,
+  // check the answer, share it. The first one left is the main button, so
+  // Share the answer is never the main one before the checking is done.
+  const next = Boolean(onCheckSources) && sourcesToCheck(evidence).length > 0
   const canCheck = has && !upToDate
-  const actions = (next || share || canCheck) && !checking && (
+  const canShare = share && has
+  const actions = (next || canShare || canCheck) && !checking && (
     <div className="conclusion-next">
-      {next && <Button variant="primary" onClick={() => onOpenSource?.(next.ref)}>{CHECK_NEXT_SOURCE}</Button>}
-      {share && <Button variant={next ? 'secondary' : 'primary'} icon={ScrollText} onClick={() => setSharing(true)}>{SHARE_THE_ANSWER}</Button>}
-      {canCheck && <Button variant="secondary" ref={checkButtonRef} onClick={beginCheck}>{CHECKED_ANSWER_ACTION}</Button>}
+      {next && <Button variant="primary" onClick={onCheckSources}>{CHECK_NEXT_SOURCE}</Button>}
+      {canCheck && <Button variant={next ? 'secondary' : 'primary'} ref={checkButtonRef} onClick={beginCheck}>{CHECKED_ANSWER_ACTION}</Button>}
+      {canShare && <Button variant={next || canCheck ? 'secondary' : 'primary'} icon={ScrollText} onClick={() => setSharing(true)}>{SHARE_THE_ANSWER}</Button>}
     </div>
   )
+
+  // Home opens the page straight on the answer editor or the answer check.
+  useEffect(() => {
+    if (!intent) return
+    if (intent === 'write-answer') begin()
+    else if (canCheck) beginCheck()
+    onIntentDone?.()
+    // Runs once per intent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent])
 
   const clear = async () => {
     setClearing(true)
@@ -336,7 +358,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
             <div className="conclusion-check-form" ref={checkFormRef}>
               {checkStale && <Banner action={<Button variant="ghost" onClick={() => setChecking(inv)}>{SHOW_NEW_VERSION}</Button>}>{CHANGED_ELSEWHERE_COPY}</Banner>}
               {summary && <p className="conclusion-summary" role="alert">{summary}</p>}
-              <TextArea label="What did you check?" value={checkBasis} onChange={setCheckBasis} error={fieldErrors.review_basis} note={nearLimit(checkBasis, LIMITS.conclusionRationale)} />
+              <TextArea label={WHAT_DID_YOU_CHECK} value={checkBasis} onChange={setCheckBasis} error={fieldErrors.review_basis} note={nearLimit(checkBasis, LIMITS.conclusionRationale)} />
               <div className="conclusion-actions">
                 <Button variant="secondary" onClick={() => endCheck(true)} disabled={busy}>Cancel</Button>
                 <Button variant="primary" onClick={() => void recordCheck()} busy={busy} busyLabel="Saving..." disabled={!checkBasis.trim() || checkStale}>{CHECKED_ANSWER_ACTION}</Button>
@@ -351,10 +373,12 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
         </div>
       ) : (
         <div className="conclusion-empty">
-          <p className="conclusion-empty-text">No answer yet. Write it here when the findings back one.</p>
-          <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
-            Write the answer
-          </Button>
+          <p className="conclusion-empty-text">{bare ? 'No answer yet.' : 'No answer yet. Write it here when the findings back one.'}</p>
+          {!bare && (
+            <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
+              Write the answer
+            </Button>
+          )}
           {actions}
         </div>
       )}

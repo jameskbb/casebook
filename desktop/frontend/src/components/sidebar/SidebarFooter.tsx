@@ -47,7 +47,6 @@ export function SidebarFooter() {
       <Menu
         label={SETTINGS_LABEL}
         items={items}
-        footer={<>Made with <span role="img" aria-label="love">❤️</span> by jameskbb</>}
         trigger={(props) => (
           <button {...props} type="button" className="sidebar-footer-data">
             <Settings size={16} strokeWidth={1.75} aria-hidden="true" />

@@ -3,8 +3,9 @@
 // only when codes are on), a second line in plain words when it adds
 // something (lib/activity activitySummary; the stored engine text is never
 // shown), and a relative time with the absolute time in its title,
-// re-rendered once a minute (useNow). Twenty rows at first; the show-more
-// button reloads the detail with up to 200.
+// re-rendered once a minute (useNow). The last three rows show; Show all
+// opens the rest and reloads the detail with up to 200.
+import { useState } from 'react'
 import { ScrollText } from 'lucide-react'
 import type { Activity } from '../../api/types'
 import { activitySentence, activitySummary } from '../../lib/activity'
@@ -18,6 +19,8 @@ import { SectionList } from './SectionList'
 import './ActivityList.css'
 
 export const MAX_ACTIVITY_LIMIT = 200
+/** How many rows show before Show all. */
+export const HISTORY_SHOWN = 3
 
 export interface ActivityListProps {
   /** detail.recent_activity, newest first. */
@@ -42,22 +45,27 @@ export function shortName(text: string, max = 60): string {
 export function ActivityList({ activities, onOpenRef, nameOf, conclusionReviewedAt }: ActivityListProps) {
   const { activityLimit, setActivityLimit } = useAppData()
   const now = useNow()
-  const more = activityLimit < MAX_ACTIVITY_LIMIT && activities.length >= activityLimit
+  const [all, setAll] = useState(false)
+  // The page may hold fewer rows than there are; then the count is not known.
+  const partial = activityLimit < MAX_ACTIVITY_LIMIT && activities.length >= activityLimit
+  const toggle = () => {
+    if (!all && partial) setActivityLimit(MAX_ACTIVITY_LIMIT)
+    setAll(!all)
+  }
   return (
     <SectionList<Activity>
       id="history"
       icon={ScrollText}
       kind="history"
       heading="How we got here"
-      emptyText="Nothing has happened yet."
-      items={activities}
+      items={all ? activities : activities.slice(0, HISTORY_SHOWN)}
       itemKey={(a) => String(a.id)}
       renderItem={(a) => <ActivityRow activity={a} onOpenRef={onOpenRef} nameOf={nameOf} now={now} conclusionReviewedAt={conclusionReviewedAt} />}
       footer={
-        more ? (
+        activities.length > HISTORY_SHOWN ? (
           <div className="activity-more">
-            <Button variant="ghost" onClick={() => setActivityLimit(MAX_ACTIVITY_LIMIT)}>
-              Show more
+            <Button variant="ghost" aria-expanded={all} onClick={toggle}>
+              {all ? `Show only the last ${HISTORY_SHOWN}` : partial ? 'Show all' : `Show all ${activities.length}`}
             </Button>
           </div>
         ) : null

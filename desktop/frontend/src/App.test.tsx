@@ -140,7 +140,7 @@ describe('App main pane states', () => {
 
     // Show archived loads the list again; that load fails.
     fail = true
-    await user.click(screen.getByRole('switch', { name: 'Show archived' }))
+    await user.click(screen.getByRole('button', { name: 'Show archived questions' }))
     const nav = screen.getByRole('navigation', { name: 'Questions' })
     expect(await within(nav).findByRole('alert')).toHaveTextContent(LIST_ERROR_COPY)
     expect(within(main).getByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
@@ -164,14 +164,23 @@ describe('App main pane states', () => {
     const main = await screen.findByRole('main')
     expect(await within(main).findByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
     expect(mocks.api.getInvestigationDetail).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: /^To check/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'true')
 
     await user.click(within(main).getByRole('button', { name: 'Check: Why did calls go up 30% in October when sales stayed the same?' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })).toBeInTheDocument()
     expect(mocks.api.getInvestigationDetail).toHaveBeenCalledWith('INV-0001', { activity_limit: 20 })
 
-    // To check goes back to Home.
-    await user.click(screen.getByRole('button', { name: /^To check/ }))
+    // Home goes back to Home.
+    await user.click(screen.getByRole('button', { name: /^Home/ }))
     expect(await within(main).findByRole('heading', { level: 1, name: '2 questions need you' })).toBeInTheDocument()
+  })
+
+  it('keeps the Home entry in the sidebar when every question is archived', async () => {
+    Object.assign(mocks.api, mockApi({ listInvestigations: async (o?: { include_archived?: boolean }) => (o?.include_archived ? summaries.filter((s) => s.archived) : []) }))
+    render(<App />)
+    const nav = await screen.findByRole('navigation', { name: 'Questions' })
+    const home = await within(nav).findByRole('button', { name: 'Home' })
+    expect(home).toHaveAttribute('aria-current', 'true')
+    expect(await within(nav).findByRole('button', { name: 'Show archived questions' })).toBeInTheDocument()
   })
 })

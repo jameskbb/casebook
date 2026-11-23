@@ -5,7 +5,9 @@ import * as Desktop from '../../wailsjs/go/main/Desktop'
 import { toApiError } from './errors'
 import type {
   BackupOutcome,
+  ClientChange,
   ClientConnections,
+  ClientTool,
   Claim,
   ClaimInput,
   ClaimPatch,
@@ -32,7 +34,6 @@ import type {
   ReportPreview,
   ShareOptions,
   SharePreview,
-  ReviewFinding,
   ReviewStatementInput,
   RestorePick,
   RestoreResult,
@@ -48,6 +49,18 @@ import type {
 // model classes; the JSON on the wire is exactly the plain shapes in
 // types.ts, so the casts below only bridge the two type systems.
 type Loose = never
+
+// shortcut: ConnectClient and DisconnectClient are called by name, so this
+// file builds whether or not wailsjs was regenerated with them; Wails binds
+// every Desktop method on window.go at run time. Import them like the rest
+// once the generated bindings list them.
+function bound(name: string, ...args: unknown[]): Promise<unknown> {
+  const generated = (Desktop as unknown as Record<string, unknown>)[name]
+  const live = (window as unknown as { go?: { main?: { Desktop?: Record<string, unknown> } } }).go?.main?.Desktop?.[name]
+  const fn = typeof generated === 'function' ? generated : live
+  if (typeof fn !== 'function') return Promise.reject(new Error(`${name} is not available`))
+  return (fn as (...a: unknown[]) => Promise<unknown>)(...args)
+}
 
 async function call<T>(fn: () => Promise<unknown>): Promise<T> {
   try {
@@ -93,10 +106,10 @@ export const api = {
   clearActiveInvestigation: (invRef: string) => call<boolean>(() => Desktop.ClearActiveInvestigation(invRef)),
   search: (query: string, o: SearchOptions = {}) => call<SearchHit[]>(() => Desktop.Search(query, o as Loose)),
 
-  // Focused human review.
-  getReviewFindings: (invRef: string) => call<ReviewFinding[]>(() => Desktop.GetReviewFindings(invRef)),
+  // A person decides a finding still holds although a source goes against
+  // it: checked against the finding and sources as they read to them (basis).
   reviewStatement: (invRef: string, input: ReviewStatementInput) =>
-    call<ReviewFinding>(() => Desktop.ReviewStatement(invRef, input as Loose)),
+    call<unknown>(() => Desktop.ReviewStatement(invRef, input as Loose)),
 
   // Evidence.
   addEvidence: (invRef: string, input: EvidenceInput) =>
@@ -160,7 +173,7 @@ export const api = {
   copyContext: (invRef: string) => call<void>(() => Desktop.CopyContext(invRef)),
   copyContextPlain: (invRef: string) => call<void>(() => Desktop.CopyContextPlain(invRef)),
   copyReport: (invRef: string) => call<void>(() => Desktop.CopyReport(invRef)),
-  /** The report as Markdown and HTML for the Share summary dialog. */
+  /** The answer as Markdown, HTML and plain text for the Share the answer window. */
   sharePreview: (invRef: string, options: ShareOptions) => call<SharePreview>(() => Desktop.SharePreview(invRef, options as Loose)),
   copySharePreview: (snapshotID: string) => call<void>(() => Desktop.CopySharePreview(snapshotID)),
   saveSharePreview: (snapshotID: string) => call<FileResult>(() => Desktop.SaveSharePreview(snapshotID)),
@@ -170,8 +183,10 @@ export const api = {
   copyText: (text: string) => call<void>(() => Desktop.CopyText(text)),
   setWindowTheme: (theme: WindowTheme) => call<void>(() => Desktop.SetWindowTheme(theme)),
 
-  // AI clients (read-only status and setup instructions).
+  // AI tools: what is connected, and connecting or disconnecting one.
   clientConnections: () => call<ClientConnections>(() => Desktop.ClientConnections()),
+  connectClient: (tool: ClientTool) => call<ClientChange>(() => bound('ConnectClient', tool)),
+  disconnectClient: (tool: ClientTool) => call<ClientChange>(() => bound('DisconnectClient', tool)),
 
   // Files: native dialogs run in Go; cancelled dialogs resolve with
   // cancelled: true.

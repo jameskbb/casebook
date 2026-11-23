@@ -59,8 +59,14 @@ export interface AppData {
   setActivityLimit(n: number): void
   /** Increments after every completed refresh. */
   dataVersion: number
-  /** Reloads the list and the open detail. */
-  refresh(): Promise<void>
+  /**
+   * Reloads the list and the open detail. own marks the reload that follows
+   * the person's own save (useWrite passes it), so the page can tell it from
+   * a change an AI made.
+   */
+  refresh(own?: boolean): Promise<void>
+  /** The detail as it loaded right after the person's own last save; null before one. */
+  ownDetail: InvestigationDetail | null
   /** True after three consecutive ChangeToken failures, until the next success. */
   pollTrouble: boolean
 }
@@ -78,6 +84,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [pendingOpen, setPendingOpen] = useState<string | null>(null)
   const [detail, setDetail] = useState<InvestigationDetail | null>(null)
+  const [ownDetail, setOwnDetail] = useState<InvestigationDetail | null>(null)
   const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle')
   const [detailError, setDetailError] = useState<ApiError | null>(null)
   const [activityLimit, setActivityLimitState] = useState(DEFAULT_ACTIVITY_LIMIT)
@@ -89,6 +96,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const activityLimitRef = useRef(DEFAULT_ACTIVITY_LIMIT)
   const listSeq = useRef(0)
   const detailSeq = useRef(0)
+  const ownPending = useRef(false)
   const mounted = useRef(true)
   const refreshRef = useRef<() => Promise<void>>(async () => {})
 
@@ -152,6 +160,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const d = await api.getInvestigationDetail(ref, { activity_limit: activityLimitRef.current })
       if (!mounted.current || seq !== detailSeq.current) return true
       setDetail(d)
+      // The first load to land after the person's own save carries it, even
+      // when a poll's reload overtook the one the save asked for. Set together
+      // with the detail, so no render sees one without the other.
+      if (ownPending.current) setOwnDetail(d)
+      ownPending.current = false
       setDetailStatus('ready')
       setDetailError(null)
       return true
@@ -232,7 +245,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const clearPendingOpen = useCallback(() => setPendingOpen(null), [])
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (own = false) => {
+    if (own) ownPending.current = true
     const token = await readToken()
     const [list, detailOk] = await Promise.all([loadList(), loadDetail(selectedRefRef.current, true)])
     // Only a reload that fully succeeded handles the change; otherwise the
@@ -281,6 +295,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setActivityLimit,
       dataVersion,
       refresh,
+      ownDetail,
       pollTrouble,
     }),
     [
@@ -302,6 +317,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setActivityLimit,
       dataVersion,
       refresh,
+      ownDetail,
       pollTrouble,
     ],
   )

@@ -58,7 +58,7 @@ describe('LinkEvidenceDialog', () => {
     expect(within(dialog).getByRole('radio', { name: /E-004/ })).toBeDisabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ })).toBeEnabled()
     expect(within(dialog).getByRole('radio', { name: /E-002/ }).closest('label')).toHaveTextContent(
-      'Sales were $510k in September and $512k in October',
+      'Sales were $510,000 in September and $512,000 in October',
     )
     const relation = within(dialog).getByRole('radiogroup', { name: 'Does this source back the finding?' })
     expect(within(relation).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Backs it up', 'Goes against it'])

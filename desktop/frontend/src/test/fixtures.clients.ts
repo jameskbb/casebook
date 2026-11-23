@@ -12,6 +12,7 @@ export const clientConnections: ClientConnections = {
   db_path: '',
   shell: 'PowerShell',
   claude: {
+    found: true,
     configured: true,
     matches_cli: true,
     command: CLI_PATH,
@@ -26,6 +27,7 @@ export const clientConnections: ClientConnections = {
       'Claude Code MCP server (user scope): merge into the top-level "mcpServers" object of C:\\Users\\Ada\\.claude.json\n{\n  "mcpServers": {}\n}\n',
   },
   codex: {
+    found: true,
     configured: false,
     matches_cli: false,
     command: '',
@@ -37,5 +39,19 @@ export const clientConnections: ClientConnections = {
     setup_command_cmd: '',
     setup_command_wsl: `codex mcp add casebook -- ${CLI_WSL_PATH} mcp`,
     snippet: '# Codex MCP server: add this block to C:\\Users\\Ada\\.codex\\config.toml\n[mcp_servers.casebook]\n',
+  },
+  claude_desktop: {
+    found: false,
+    configured: false,
+    matches_cli: false,
+    command: '',
+    command_exists: false,
+    config_path: 'C:\\Users\\Ada\\AppData\\Roaming\\Claude\\claude_desktop_config.json',
+    config_problem: false,
+    hooks: [],
+    setup_command: '',
+    setup_command_cmd: '',
+    setup_command_wsl: '',
+    snippet: '{\n  "mcpServers": {}\n}\n',
   },
 }

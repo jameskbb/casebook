@@ -25,31 +25,6 @@
   white-space: pre-line;
 }
 
-/* Source: label above value on narrow drawers, side by side otherwise. */
-.source-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.source-row {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  column-gap: var(--space-4);
-  font-size: var(--text-label);
-  line-height: var(--leading-label);
-}
-
-.source-row dt {
-  font-weight: var(--weight-semibold);
-  color: var(--ink);
-}
-
-.source-row dd {
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-
 /* Paths, URLs and ticket keys: selectable plain text that wraps anywhere. */
 .source-reference {
   overflow-wrap: anywhere;
@@ -137,8 +112,6 @@
   color: var(--ink);
 }
 
-.used-by-minus {
-  color: var(--disputed);
 }
 
 .used-by-status {

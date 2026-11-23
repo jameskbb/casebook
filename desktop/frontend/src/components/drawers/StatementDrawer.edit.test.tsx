@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
 import { ApiError, NOT_SAVED_COPY, REQUIRED_COPY } from '../../api/errors'
 import type { Claim, Hypothesis, InvestigationDetail } from '../../api/types'
+import { DECIDED_HOLDS, REPLACED, SOURCES_DISAGREE } from '../../lib/labels'
 import { AppDataProvider } from '../../state/appData'
 import { claims, detail, hypotheses } from '../../test/fixtures'
 import { claim, hypothesis } from '../../test/fixtures.records'
@@ -14,16 +15,19 @@ import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhere
 import { ToastProvider } from '../ui/Toaster'
 import {
   BRING_BACK_ACTION,
-  CHECKED_ACTION,
   CONTRADICTING_TITLE,
-  DISAGREE_ACTION,
+  DECIDE_TITLES,
   FINDING_CHANGED_COPY,
+  MOVE_TO_AGAINST,
+  MOVE_TO_BACKS,
   REPLACE_ACTION,
   RULE_OUT_ACTION,
   SETTLE_ACTION,
   SETTLE_COPY,
   StatementDrawer,
+  STILL_HOLDS_ACTION,
   SUPPORTING_TITLE,
+  TURNED_OUT_RIGHT_ACTION,
 } from './StatementDrawer'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -58,35 +62,33 @@ function renderDrawer(r: Claim | Hypothesis, d: InvestigationDetail = detail) {
 }
 
 const group = (name: string) => screen.getByRole('region', { name })
-const check = () => group('Check this finding')
+const titles: string[] = Object.values(DECIDE_TITLES)
+/** The group of what a person decides; its heading says where the finding stands. */
+const decide = () => screen.getByRole('region', { name: (n) => titles.includes(n) })
 const buttonNames = (g: HTMLElement) => within(g).getAllByRole('button').map((b) => b.textContent)
-
-const WHY = 'Why you think so (optional)'
-/** The why field and the group around it (the group has no heading of its own). */
-const whyField = () => screen.getByLabelText(WHY)
-const whyGroup = () => whyField().closest('.drawer-group') as HTMLElement
+const metaLine = () => document.querySelector('.statement-group .drawer-meta-line') as HTMLElement
 
 describe('StatementDrawer statement', () => {
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('asks the person to read the new version before checking when the finding changes while the drawer is open', async () => {
+  it('asks the person to read the new version before deciding when the finding changes while the drawer is open', async () => {
     const user = userEvent.setup()
-    const renderSnapshot = (basis: string) => providers(<StatementDrawer kind="claim" record={C002}
-      detail={{ ...detail, review_bases: [{ ref: C002.ref, basis }] }} onOpenRef={vi.fn()} />)
+    const renderSnapshot = (basis: string) => providers(<StatementDrawer kind="claim" record={C004}
+      detail={{ ...detail, review_bases: [{ ref: C004.ref, basis }] }} onOpenRef={vi.fn()} />)
     const view = render(renderSnapshot('sources-read'))
-    expect(screen.getByRole('button', { name: CHECKED_ACTION })).toBeEnabled()
+    expect(screen.getByRole('button', { name: STILL_HOLDS_ACTION })).toBeEnabled()
     expect(screen.queryByText(FINDING_CHANGED_COPY)).toBeNull()
     view.rerender(renderSnapshot('sources-changed'))
     expect(screen.getByText(FINDING_CHANGED_COPY)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: CHECKED_ACTION })).toBeDisabled()
-    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: STILL_HOLDS_ACTION })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: SHOW_NEW_VERSION }))
     expect(screen.queryByText(FINDING_CHANGED_COPY)).toBeNull()
-    await user.click(screen.getByRole('button', { name: CHECKED_ACTION }))
+    await user.click(screen.getByRole('button', { name: STILL_HOLDS_ACTION }))
+    await user.click(screen.getByRole('button', { name: SETTLE_ACTION }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref,
-      expect.objectContaining({ basis: 'sources-changed', verification: 'human_verified' }))
+      expect.objectContaining({ basis: 'sources-changed', verification: 'human_verified', settle_dispute: true }))
   })
 
   it('edits the claim statement inline and saves it without a toast', async () => {
@@ -145,253 +147,231 @@ describe('StatementDrawer statement', () => {
 })
 
 describe('StatementDrawer why', () => {
+  const WHY = 'Why you think so (optional)'
+
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('shows no confidence control and no heading Why next to the field label', () => {
+  it('shows why as text, with no box or Save of its own and no confidence', () => {
     renderDrawer(C001)
-    expect(whyField()).toBeInTheDocument()
+    expect(screen.getByText(C001.confidence_rationale, { exact: false })).toBeInTheDocument()
+    expect(screen.queryByLabelText(WHY)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
     expect(screen.queryByRole('radio')).toBeNull()
     expect(screen.queryByText(/confidence/i)).toBeNull()
-    expect(screen.queryByRole('heading', { name: /^Why/ })).toBeNull()
-    expect(screen.queryByRole('region', { name: /^Why/ })).toBeNull()
-    expect(within(whyGroup()).queryByRole('heading')).toBeNull()
   })
 
-  it('enables Save only after a change and sends only confidence_rationale for a claim', async () => {
+  it('Edit finding holds the finding and why; a change to why sends only confidence_rationale for a claim', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    const save = within(whyGroup()).getByRole('button', { name: 'Save' })
-    expect(save).toBeDisabled()
-    await user.clear(whyField())
-    await user.type(whyField(), 'Only the code agrees.')
-    expect(save).toBeEnabled()
-    await user.click(save)
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.clear(screen.getByLabelText(WHY))
+    await user.type(screen.getByLabelText(WHY), 'Only the code agrees.')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-001', { confidence_rationale: 'Only the code agrees.' })
-    expect(Object.keys(vi.mocked(mocks.api.updateClaim).mock.calls[0][2])).toEqual(['confidence_rationale'])
   })
 
   it('sends only rationale for a hypothesis', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    await user.clear(whyField())
-    await user.type(whyField(), 'Two sources.')
-    await user.click(within(whyGroup()).getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.clear(screen.getByLabelText(WHY))
+    await user.type(screen.getByLabelText(WHY), 'Two sources.')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { rationale: 'Two sources.' })
-    expect(Object.keys(vi.mocked(mocks.api.updateHypothesis).mock.calls[0][2])).toEqual(['rationale'])
   })
 
   it('shows Saving... while the save is pending', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ updateClaim: () => new Promise<Claim>(() => {}) }))
     renderDrawer(C001)
-    await user.type(whyField(), ' More.')
-    await user.click(within(whyGroup()).getByRole('button', { name: 'Save' }))
-    expect(within(whyGroup()).getByRole('button', { name: 'Saving...' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.type(screen.getByLabelText(WHY), ' More.')
+    await user.click(screen.getByRole('button', { name: 'Save finding' }))
+    expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled()
   })
 
   it('keeps dirty input when the record changes elsewhere and offers Show the new version (backstop)', async () => {
     const user = userEvent.setup()
     const { rerenderWith } = renderDrawer(C001)
-    await user.type(whyField(), ' Mine.')
-
-    rerenderWith({
-      ...C001,
-      confidence_rationale: 'Codex rewrote it.',
-      updated_at: '2026-10-02T10:00:00.000Z',
-    })
-    expect(whyField()).toHaveValue(`${C001.confidence_rationale} Mine.`)
-    expect(within(whyGroup()).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
-
-    await user.click(within(whyGroup()).getByRole('button', { name: SHOW_NEW_VERSION }))
-    expect(whyField()).toHaveValue('Codex rewrote it.')
-    expect(within(whyGroup()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
+    await user.type(screen.getByLabelText(WHY), ' Mine.')
+    rerenderWith({ ...C001, confidence_rationale: 'Codex rewrote it.', updated_at: '2026-10-02T10:00:00.000Z' })
+    expect(screen.getByLabelText(WHY)).toHaveValue(`${C001.confidence_rationale} Mine.`)
+    expect(screen.getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: SHOW_NEW_VERSION }))
+    expect(screen.getByLabelText(WHY)).toHaveValue('Codex rewrote it.')
+    expect(screen.queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })
 
-  it('follows the latest values while the form is clean', async () => {
+  it('follows the latest values while the editor is clean', async () => {
+    const user = userEvent.setup()
     const { rerenderWith } = renderDrawer(C001)
+    await user.click(screen.getByRole('button', { name: 'Edit finding' }))
     rerenderWith({ ...C001, confidence_rationale: 'Rewritten.' })
-    expect(whyField()).toHaveValue('Rewritten.')
-    expect(within(whyGroup()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
+    expect(screen.getByLabelText(WHY)).toHaveValue('Rewritten.')
+    expect(screen.queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })
 })
 
-describe('StatementDrawer check this finding', () => {
+describe('StatementDrawer deciding about a finding', () => {
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('a finding that stands shows exactly four buttons, and no More options, Status or Label', () => {
+  it('a finding that stands offers Rule this out and Replace, and no check of its own', () => {
     renderDrawer(C002)
-    expect(buttonNames(check())).toEqual(['I checked this', 'Sources disagree', 'Rule this out', 'Replace with a newer finding'])
-    expect([CHECKED_ACTION, DISAGREE_ACTION, RULE_OUT_ACTION, REPLACE_ACTION]).toEqual(buttonNames(check()))
-    expect(screen.queryByRole('button', { name: 'More options' })).toBeNull()
-    expect(screen.queryByLabelText('Status')).toBeNull()
-    expect(screen.queryByLabelText('Label')).toBeNull()
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.standing)
+    expect(buttonNames(decide())).toEqual([RULE_OUT_ACTION, REPLACE_ACTION])
+    expect(screen.queryByRole('button', { name: 'I checked this' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sources disagree' })).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
   })
 
-  it('I checked this on a claim calls reviewStatement only', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C002)
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-002', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: false })
-    await waitFor(() => expect(within(check()).getByRole('button', { name: CHECKED_ACTION })).toBeEnabled())
-    expect(mocks.api.updateClaim).not.toHaveBeenCalled()
-    expect(mocks.api.setClaimVerification).not.toHaveBeenCalled()
+  it('the label comes from the sources, not from the stored check', () => {
+    // C-001 is stored as checked by a person, but only one of its two sources is.
+    renderDrawer(C001)
+    expect(metaLine()).toHaveTextContent('1 of 2 sources checked by you')
+    expect(metaLine()).not.toHaveTextContent('You checked this')
   })
 
-  it('I checked this on a finding not tested yet calls reviewStatement, then marks it supported', async () => {
+  it('a finding not tested yet also offers This turned out right, which marks it supported only', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    await waitFor(() => expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { status: 'supported' }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'hypothesis', ref: 'H-001', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: false })
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.notTested)
+    expect(buttonNames(decide())).toEqual([TURNED_OUT_RIGHT_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: TURNED_OUT_RIGHT_ACTION }))
+    expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { status: 'supported' })
+    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
+  })
+
+  it('a hypothesis that already turned out right does not offer it again', () => {
+    renderDrawer(H003)
+    expect(buttonNames(decide())).toEqual([RULE_OUT_ACTION, REPLACE_ACTION])
+  })
+
+  it('where sources disagree, It still holds first asks, and Yes, it still holds settles it', async () => {
+    const user = userEvent.setup()
+    renderDrawer(C004)
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.disagree)
+    expect(buttonNames(decide())).toEqual([STILL_HOLDS_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
+    expect(screen.queryByText(SETTLE_COPY)).toBeNull()
+    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
+    expect(within(decide()).getByText(SETTLE_COPY)).toBeInTheDocument()
+    await user.click(within(decide()).getByRole('button', { name: SETTLE_ACTION }))
+    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: true })
+    expect(screen.getAllByText(SOURCES_DISAGREE)).toHaveLength(1)
+  })
+
+  it('a source that goes against a finding puts it where sources disagree, until the person decides it holds', () => {
+    const against = claim({ ref: 'C-009', status: 'active', verification: 'ai_generated', links: [C004.links[0]] })
+    const view = renderDrawer(against)
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.disagree)
+    expect(metaLine()).toHaveTextContent(SOURCES_DISAGREE)
+    view.rerenderWith({ ...against, verification: 'human_verified' })
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.standing)
+    expect(metaLine()).toHaveTextContent(DECIDED_HOLDS)
+  })
+
+  it('a hypothesis not tested yet that the person decides holds is also marked supported', async () => {
+    const user = userEvent.setup()
+    renderDrawer(hypothesis({ ref: 'H-009', status: 'open', verification: 'disputed' }))
+    expect(buttonNames(decide())).toEqual([STILL_HOLDS_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    await user.click(within(decide()).getByRole('button', { name: SETTLE_ACTION }))
+    await waitFor(() => expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-009', { status: 'supported' }))
     expect(vi.mocked(mocks.api.reviewStatement).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(mocks.api.updateHypothesis).mock.invocationCallOrder[0],
     )
   })
 
-  it('I checked this on a hypothesis already supported does not call updateHypothesis', async () => {
+  it('Cancel takes the question about disagreeing sources away without a call', async () => {
     const user = userEvent.setup()
-    renderDrawer(H003)
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ kind: 'hypothesis', ref: 'H-003', verification: 'human_verified' }))
-    await waitFor(() => expect(within(check()).getByRole('button', { name: CHECKED_ACTION })).toBeEnabled())
-    expect(mocks.api.updateHypothesis).not.toHaveBeenCalled()
-  })
-
-  it('a finding the AI checked can still be checked by the person', async () => {
-    const user = userEvent.setup()
-    renderDrawer({ ...C002, verification: 'source_verified' })
-    expect(within(check()).getByRole('button', { name: CHECKED_ACTION })).toBeEnabled()
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ verification: 'human_verified', basis: 'displayed-review-basis' }))
-    expect(mocks.api.setClaimVerification).not.toHaveBeenCalled()
-  })
-
-  it('a finding the person already checked shows no I checked this button, enabled or disabled', () => {
-    renderDrawer(C001)
-    expect(buttonNames(check())).toEqual([DISAGREE_ACTION, RULE_OUT_ACTION, REPLACE_ACTION])
-    expect(screen.queryByRole('button', { name: CHECKED_ACTION })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'You checked this' })).toBeNull()
-    // The label at the top says it.
-    expect(document.querySelector('.statement-group .drawer-meta-line')).toHaveTextContent('You checked this')
-  })
-
-  it('Sources disagree on a claim sets status and verification in one patch', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C002)
-    await user.click(within(check()).getByRole('button', { name: DISAGREE_ACTION }))
-    expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-002', { status: 'disputed', verification: 'disputed' })
-  })
-
-  it('Sources disagree on a hypothesis sets its verification', async () => {
-    const user = userEvent.setup()
-    renderDrawer(H001)
-    await user.click(within(check()).getByRole('button', { name: DISAGREE_ACTION }))
-    expect(mocks.api.setHypothesisVerification).toHaveBeenCalledWith('INV-0001', 'H-001', 'disputed')
+    renderDrawer(C004)
+    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    await user.click(within(decide()).getByRole('button', { name: 'Cancel' }))
+    expect(within(decide()).queryByText(SETTLE_COPY)).toBeNull()
+    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
   })
 
   it('Rule this out sends status rejected for a claim', async () => {
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(check()).getByRole('button', { name: RULE_OUT_ACTION }))
+    await user.click(within(decide()).getByRole('button', { name: RULE_OUT_ACTION }))
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-002', { status: 'rejected' })
   })
 
   it('Rule this out sends status disproven for a hypothesis', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    await user.click(within(check()).getByRole('button', { name: RULE_OUT_ACTION }))
+    await user.click(within(decide()).getByRole('button', { name: RULE_OUT_ACTION }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { status: 'disproven' })
   })
 
-  it('a replaced claim shows its replacement and only Bring this back, which makes it active and not checked', async () => {
+  it('a replaced claim says so at the top, shows its replacement and only Bring this back, which makes it active and not checked', async () => {
     const user = userEvent.setup()
     renderDrawer(C003)
-    expect(buttonNames(check())).toEqual(['Open the finding that replaced it C-002', BRING_BACK_ACTION])
-    await user.click(within(check()).getByRole('button', { name: BRING_BACK_ACTION }))
+    expect(metaLine()).toHaveTextContent(REPLACED)
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.replaced)
+    expect(buttonNames(decide())).toEqual(['Open the finding that replaced it C-002', BRING_BACK_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: BRING_BACK_ACTION }))
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-003', { status: 'active', verification: 'ai_generated' })
   })
 
   it('a ruled-out claim shows only Bring this back', async () => {
     const user = userEvent.setup()
     renderDrawer(claim({ ref: 'C-009', status: 'rejected', verification: 'ai_generated' }))
-    expect(buttonNames(check())).toEqual([BRING_BACK_ACTION])
-    await user.click(within(check()).getByRole('button', { name: BRING_BACK_ACTION }))
+    expect(decide()).toHaveAccessibleName(DECIDE_TITLES.ruledOut)
+    expect(buttonNames(decide())).toEqual([BRING_BACK_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: BRING_BACK_ACTION }))
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-009', { status: 'active', verification: 'ai_generated' })
   })
 
   it('a ruled-out hypothesis shows only Bring this back, which makes it open and not checked', async () => {
     const user = userEvent.setup()
     renderDrawer(H002)
-    expect(buttonNames(check())).toEqual([BRING_BACK_ACTION])
-    await user.click(within(check()).getByRole('button', { name: BRING_BACK_ACTION }))
+    expect(buttonNames(decide())).toEqual([BRING_BACK_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: BRING_BACK_ACTION }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-002', { status: 'open', verification: 'ai_generated' })
   })
 
   it('a replaced hypothesis comes back as open and not checked', async () => {
     const user = userEvent.setup()
     renderDrawer(hypothesis({ ref: 'H-009', status: 'superseded', verification: 'superseded', superseded_by: 'H-003' }))
-    expect(buttonNames(check())).toEqual(['Open the finding that replaced it H-003', BRING_BACK_ACTION])
-    await user.click(within(check()).getByRole('button', { name: BRING_BACK_ACTION }))
+    expect(buttonNames(decide())).toEqual(['Open the finding that replaced it H-003', BRING_BACK_ACTION])
+    await user.click(within(decide()).getByRole('button', { name: BRING_BACK_ACTION }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-009', { status: 'open', verification: 'ai_generated' })
-  })
-
-  it('where sources disagree, I checked this first asks, and Yes, I checked it settles it', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C004)
-    const g = check()
-    expect(within(g).getByRole('button', { name: DISAGREE_ACTION })).toBeDisabled()
-    expect(within(g).queryByText(SETTLE_COPY)).toBeNull()
-    await user.click(within(g).getByRole('button', { name: CHECKED_ACTION }))
-    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
-    expect(within(g).getByText(SETTLE_COPY)).toBeInTheDocument()
-    expect(SETTLE_ACTION).toBe('Yes, I checked it')
-    await user.click(within(g).getByRole('button', { name: 'Yes, I checked it' }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: true })
-    // The meta line shows one Sources disagree mark, not a badge plus a status.
-    expect(screen.getAllByText('Sources disagree', { selector: '.badge' })).toHaveLength(1)
-  })
-
-  it('Cancel takes the question about disagreeing sources away without a call', async () => {
-    const user = userEvent.setup()
-    renderDrawer(C004)
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    await user.click(within(check()).getByRole('button', { name: 'Cancel' }))
-    expect(within(check()).queryByText(SETTLE_COPY)).toBeNull()
-    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
   })
 
   it('an older contradicting pair still shows one state: the status wins', () => {
     renderDrawer(claim({ ref: 'C-009', status: 'rejected', verification: 'superseded' }))
-    expect(screen.getByText('Ruled out')).toBeInTheDocument()
-    expect(screen.queryByText('Replaced', { selector: '.badge' })).toBeNull()
-    expect(buttonNames(check())).toEqual([BRING_BACK_ACTION])
+    expect(metaLine()).toHaveTextContent('Ruled out')
+    expect(metaLine()).not.toHaveTextContent(REPLACED)
+    expect(buttonNames(decide())).toEqual([BRING_BACK_ACTION])
   })
 
   it('shows a refused change in plain words next to the buttons, never the engine text', async () => {
     Object.assign(
       mocks.api,
       mockApi({
-        reviewStatement: async () => {
+        updateClaim: async () => {
           throw new ApiError('conflict', 'conflict: C-002 is superseded; set its status first')
         },
       }),
     )
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(check()).getByRole('button', { name: CHECKED_ACTION }))
-    expect(await within(check()).findByRole('alert')).toHaveTextContent(NOT_SAVED_COPY)
+    await user.click(within(decide()).getByRole('button', { name: RULE_OUT_ACTION }))
+    expect(await within(decide()).findByRole('alert')).toHaveTextContent(NOT_SAVED_COPY)
     expect(screen.queryByText(/superseded; set its status first/)).toBeNull()
   })
 
-  it('Replace with a newer finding opens the replace dialog', async () => {
+  it('Replace with a newer finding opens the replace window', async () => {
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(check()).getByRole('button', { name: REPLACE_ACTION }))
+    await user.click(within(decide()).getByRole('button', { name: REPLACE_ACTION }))
     expect(screen.getByRole('dialog', { name: 'Replace with a newer finding' })).toBeInTheDocument()
   })
 })
@@ -401,20 +381,19 @@ describe('StatementDrawer links', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('flips a source that backs the finding to one that goes against it', async () => {
+  it('moves a source that backs the finding to the ones that go against it', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    const supporting = group(SUPPORTING_TITLE)
-    const block = supporting.querySelector('[data-ref="E-001"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'It goes against this' }))
+    const block = group(SUPPORTING_TITLE).querySelector('[data-ref="E-001"]') as HTMLElement
+    await user.click(within(block).getByRole('button', { name: MOVE_TO_AGAINST }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-001', 'contradicts')
   })
 
-  it('flips a hypothesis source that goes against it to one that backs it', async () => {
+  it('moves a hypothesis source that goes against it to the ones that back it', async () => {
     const user = userEvent.setup()
     renderDrawer(H002)
     const block = group(CONTRADICTING_TITLE).querySelector('[data-ref="E-003"]') as HTMLElement
-    await user.click(within(block).getByRole('button', { name: 'It backs this' }))
+    await user.click(within(block).getByRole('button', { name: MOVE_TO_BACKS }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-002', 'E-003', 'supports')
   })
 

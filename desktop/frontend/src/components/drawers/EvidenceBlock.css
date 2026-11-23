@@ -24,8 +24,7 @@
   pointer-events: none;
 }
 
-.evidence-block-line,
-.evidence-block-source {
+.evidence-block-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -55,14 +54,6 @@
   white-space: pre-line;
 }
 
-.evidence-block-source {
-  color: var(--ink-muted);
-}
-
-.evidence-block-source > span {
-  overflow-wrap: anywhere;
-}
-
 /* References are plain selectable text, never links: clicks on them select
    text instead of opening the drawer. */
 .evidence-block-reference {
@@ -75,16 +66,6 @@
   user-select: text;
   cursor: text;
   pointer-events: auto;
-}
-
-.evidence-block-captured {
-  font-size: var(--text-label);
-  line-height: var(--leading-label);
-  color: var(--ink-muted);
-}
-
-.evidence-block-captured-label {
-  font-weight: var(--weight-semibold);
 }
 
 .evidence-block-actions {

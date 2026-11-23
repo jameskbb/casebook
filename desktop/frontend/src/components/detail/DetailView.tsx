@@ -1,40 +1,41 @@
 // The question page: sticky header, then the reading column in this exact
-// order: the question, the answer, What backs this up, Where sources
-// disagree, Ruled out, Still to find out, Other sources, How we got here.
-// Findings (claims and hypotheses) are grouped by what happened to them and
-// each one lists its own sources; Other sources holds the ones no finding on
-// the page uses.
+// order: the question, the answer, the add buttons, What backs this up,
+// Where sources disagree, the ruled out and replaced findings (each behind
+// one line), Still to find out, Other sources, How we got here. A section
+// with nothing in it is not drawn. Findings (claims and hypotheses) are
+// grouped by what happened to them and each one lists its own sources; Other
+// sources holds the ones no finding on the page uses.
 //
 // Reloads keep the previous content on screen (the column is never keyed on
 // dataVersion, so scroll position and open editors survive). A first load
 // shows nothing for 300 ms, then the header plus skeleton blocks.
 //
-// Drill-down: the column sits inside a DrawerStackProvider.
-// Finding rows, the sources nested under them, source rows and the records
-// named in How we got here open the drawer stack. A search hit's record (pendingOpen) opens
-// its drawer once the matching detail is loaded; a question hit focuses its
-// row instead.
+// Drill-down: the column sits inside a DrawerStackProvider. Finding rows,
+// the sources nested under them, source rows and the records named in How we
+// got here open the drawer stack. pendingOpen says what to open once the
+// matching detail is loaded: a search hit's record opens its drawer or
+// focuses its row; Home's buttons open the source check, the first finding
+// where sources disagree, the answer editor or the answer check.
 //
-// Still to find out holds findings not tested yet and follow-up questions in
-// one list with one add button. A follow-up question offers Answer and
+// Still to find out holds findings not tested yet and the things a person
+// or an AI still wants to find out, in one list. Those offer Answer and
 // Later; answered ones collapse under Show N answered. Focus moves to a new
 // row.
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, CircleQuestionMark, CircleX, FileText, Pencil, Quote, Trash2 } from 'lucide-react'
+import { CircleAlert, CircleQuestionMark, FileText, Pencil, Plus, Quote, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { plainError } from '../../api/errors'
 import type { Evidence, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { evidenceByRef, groupFindings, partitionQuestions, type Finding } from '../../lib/records'
 import { useAppData } from '../../state/appData'
-import { useRequestNavigate } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
 import { drawerKind, DrawerStackProvider, useDrawers } from '../drawers/DrawerStack'
 import { DeferQuestionDialog } from '../dialogs/DeferQuestionDialog'
 import { DeleteDialog } from '../dialogs/DeleteDialog'
 import { EditInvestigationDialog } from '../dialogs/EditInvestigationDialog'
 import { EvidenceDialog } from '../dialogs/EvidenceDialog'
-import { QuestionDialog } from '../dialogs/QuestionDialog'
+import { ADD_TO_FIND_OUT, QuestionDialog } from '../dialogs/QuestionDialog'
 import { ResolveQuestionDialog } from '../dialogs/ResolveQuestionDialog'
 import { StatementDialog } from '../dialogs/StatementDialog'
 import { Banner } from '../ui/Banner'
@@ -44,16 +45,16 @@ import { LabelsLegend } from '../record/LabelsLegend'
 import { useToast } from '../ui/Toaster'
 import { ActivityList } from './ActivityList'
 import { ArchivedBanner } from './ArchivedBanner'
+import { CheckSources } from './CheckSources'
 import { ConclusionPanel } from './ConclusionPanel'
 import { DetailHeader } from './DetailHeader'
 import { RecordId } from '../record/RecordId'
 import { EvidenceRow } from './EvidenceRow'
-import { caseHasNoRecords, FirstFindingGuide } from './FirstFindingGuide'
+import { ADD_FINDING, ADD_SOURCE, caseHasNoRecords, FirstFindingGuide } from './FirstFindingGuide'
 import { QuestionBlock } from './QuestionBlock'
 import { QuestionRow } from './QuestionRow'
 import { RecordRow } from './RecordRow'
-import { ReviewFindings } from './ReviewFindings'
-import { SectionList } from './SectionList'
+import { Collapsed, SectionList } from './SectionList'
 import './DetailView.css'
 
 export interface DetailViewProps {
@@ -65,8 +66,6 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
   const { detail, detailStatus, detailError, investigations, selectedRef } = useAppData()
   const showSkeleton = useDelayedFlag(!detail && detailStatus === 'loading')
   const [editOpen, setEditOpen] = useState(false)
-  const [reviewRef, setReviewRef] = useState<string | null>(null)
-  const requestNavigate = useRequestNavigate()
 
   if (!detail) {
     if (detailStatus === 'error' && detailError) {
@@ -91,29 +90,74 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
   return (
     <DrawerStackProvider>
       <div className="detail">
-        <DetailHeader investigation={inv} focusTitle={focusTitle} onTitleFocused={onTitleFocused} onCheckFindings={() => requestNavigate(() => setReviewRef(inv.ref), 'detail')} />
-        {reviewRef === inv.ref ? <ReviewFindings key={inv.ref} detail={detail} onClose={() => setReviewRef(null)} /> : <div className="reading-column">
+        <DetailHeader investigation={inv} focusTitle={focusTitle} onTitleFocused={onTitleFocused} />
+        <div className="reading-column">
           {detailStatus === 'error' && <StaleDetailBanner />}
           {inv.archived && <ArchivedBanner investigationRef={inv.ref} />}
           <QuestionBlock investigation={inv} onEdit={() => setEditOpen(true)} />
-          <Answer detail={detail} />
-          <ReadingSections detail={detail} />
-        </div>}
+          <Page key={inv.ref} detail={detail} />
+        </div>
         {editOpen && <EditInvestigationDialog investigation={inv} onClose={() => setEditOpen(false)} />}
       </div>
     </DrawerStackProvider>
   )
 }
 
-/** The answer panel, wired to the drawers: Check the next source opens that source. */
-function Answer({ detail }: { detail: InvestigationDetail }) {
+type AnswerIntent = 'write-answer' | 'check-answer'
+
+/** The answer, the sections and the source check, for one question. */
+function Page({ detail }: { detail: InvestigationDetail }) {
   const { open } = useDrawers()
+  const { pendingOpen, clearPendingOpen, selectedRef } = useAppData()
   const inv = detail.investigation
-  return <ConclusionPanel key={inv.ref} investigation={inv} claims={detail.claims} evidence={detail.evidence} onOpenSource={open} share />
+  const [checking, setChecking] = useState(false)
+  const [answerIntent, setAnswerIntent] = useState<AnswerIntent | null>(null)
+
+  // Consumes pendingOpen once the matching detail is loaded.
+  useEffect(() => {
+    if (!pendingOpen || inv.ref !== selectedRef) return
+    if (pendingOpen === 'check-sources') {
+      setChecking(true)
+    } else if (pendingOpen === 'write-answer' || pendingOpen === 'check-answer') {
+      setAnswerIntent(pendingOpen)
+    } else if (pendingOpen === 'decide') {
+      const first = groupFindings(detail.claims, detail.hypotheses, evidenceByRef(detail)).disagree[0]
+      if (first) open(first.record.ref)
+    } else if (drawerKind(pendingOpen)) {
+      open(pendingOpen)
+    } else {
+      const row = document.querySelector<HTMLElement>(`[data-ref="${pendingOpen}"]`)
+      if (row) {
+        row.focus()
+        row.scrollIntoView?.({ block: 'center' })
+      } else {
+        // An answered one sits behind its Show N answered line.
+        document.querySelector<HTMLElement>('[aria-labelledby="section-questions"] .section-disclosure')?.focus()
+      }
+    }
+    clearPendingOpen()
+  }, [pendingOpen, inv.ref, selectedRef, open, clearPendingOpen, detail])
+
+  return (
+    <>
+      <ConclusionPanel
+        investigation={inv}
+        claims={detail.claims}
+        evidence={detail.evidence}
+        onCheckSources={() => setChecking(true)}
+        share
+        bare={caseHasNoRecords(detail)}
+        intent={answerIntent}
+        onIntentDone={() => setAnswerIntent(null)}
+      />
+      <ReadingSections detail={detail} />
+      {checking && <CheckSources detail={detail} onClose={() => setChecking(false)} />}
+    </>
+  )
 }
 
 export const deleteQuestionBody = (q: Question) =>
-  `This follow-up question will be removed${q.status === 'resolved' ? ' with its answer' : ''}. Use this for one asked by mistake. To keep it for later, choose Later instead.`
+  `This will be removed from Still to find out${q.status === 'resolved' ? ' with its answer' : ''}. Use this for one added by mistake. To keep it for later, choose Later instead.`
 
 export const DETAIL_GONE_COPY = 'Casebook could not find this question. Your AI may have changed it. Choose a question from the list.'
 export const DETAIL_STALE_COPY = 'Casebook could not load this question again. This is how it looked last time.'
@@ -144,36 +188,10 @@ function StaleDetailBanner() {
   )
 }
 
-/**
- * Consumes pendingOpen (a search hit's record) once the matching detail is
- * loaded: E, C and H refs open their drawer, a question focuses its row.
- */
-function usePendingOpen(detail: InvestigationDetail) {
-  const { pendingOpen, clearPendingOpen, selectedRef } = useAppData()
-  const { open } = useDrawers()
-  const invRef = detail.investigation.ref
-  useEffect(() => {
-    if (!pendingOpen || invRef !== selectedRef) return
-    if (drawerKind(pendingOpen)) {
-      open(pendingOpen)
-    } else {
-      const row = document.querySelector<HTMLElement>(`[data-ref="${pendingOpen}"]`)
-      if (row) {
-        row.focus()
-        row.scrollIntoView?.({ block: 'center' })
-      } else {
-        // A resolved question sits behind its disclosure.
-        document.querySelector<HTMLElement>('[aria-labelledby="section-questions"] .section-disclosure')?.focus()
-      }
-    }
-    clearPendingOpen()
-  }, [pendingOpen, invRef, selectedRef, open, clearPendingOpen])
-}
-
 export const OTHER_SOURCES_HEADING = 'Other sources'
-export const ALL_SOURCES_USED_COPY = 'Every source is under the finding it backs or goes against.'
+export const LABELS_LINK = 'What the labels mean'
 
-/** A row under Still to find out: a finding not tested yet, or a follow-up question. */
+/** A row under Still to find out: a finding not tested yet, or something to find out. */
 type ToFind = { finding: Finding } | { question: Question }
 
 type RecordDialog =
@@ -181,15 +199,14 @@ type RecordDialog =
   | { type: 'editQuestion' | 'resolve' | 'defer' | 'delete'; question: Question }
 
 /**
- * The record sections plus their add and question dialogs. After a record is
- * added (or a question changes state) focus moves to its row; a question
- * that moved behind its disclosure leaves focus on the disclosure.
+ * The add buttons, the sections and their dialogs. After something is added
+ * (or changes state) focus moves to its row; one that moved behind its Show
+ * line leaves focus on that line.
  */
 function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   const { open } = useDrawers()
   const write = useWrite()
   const toast = useToast()
-  usePendingOpen(detail)
   const invRef = detail.investigation.ref
   const [dialog, setDialog] = useState<RecordDialog | null>(null)
   const [focusRef, setFocusRef] = useState<string | null>(null)
@@ -226,7 +243,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   }
 
   const deleteButton = (q: Question) => (
-    <IconButton icon={Trash2} label={`Delete follow-up question: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
+    <IconButton icon={Trash2} label={`Delete: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
   )
   const questionActions = (q: Question) =>
     q.status === 'resolved' ? (
@@ -246,15 +263,15 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
             <Button variant="ghost" onClick={() => setDialog({ type: 'defer', question: q })}>
               Later
             </Button>
-            <IconButton icon={Pencil} label="Edit follow-up question" onClick={() => setDialog({ type: 'editQuestion', question: q })} />
+            <IconButton icon={Pencil} label={`Edit: ${q.question}`} onClick={() => setDialog({ type: 'editQuestion', question: q })} />
           </>
         )}
         {deleteButton(q)}
       </>
     )
 
-  const findings = groupFindings(detail.claims, detail.hypotheses)
   const sources = evidenceByRef(detail)
+  const findings = groupFindings(detail.claims, detail.hypotheses, sources)
   // Sources under a finding are read there; the rest are listed on their own,
   // and so is one whose only findings sit behind Show replaced findings.
   const hidden = new Set(findings.replaced.map((f) => f.record.ref))
@@ -266,72 +283,35 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   ])
   const questions = partitionQuestions(detail.questions)
   const close = () => setDialog(null)
-  const findingRow = (f: Finding) =>
-    f.kind === 'claim' ? (
-      <RecordRow kind="claim" record={f.record} sources={sources} onOpen={open} />
-    ) : (
-      <RecordRow kind="hypothesis" record={f.record} sources={sources} onOpen={open} />
-    )
+  const findingRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} />
   const findingKey = (f: Finding) => f.record.ref
   const toFind: ToFind[] = [...findings.notTested.map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
   return (
     <div className="reading-sections" ref={sectionsRef}>
-      {caseHasNoRecords(detail) && !detail.investigation.archived && <FirstFindingGuide onAddEvidence={() => setDialog({ type: 'evidence' })} />}
-      <SectionList<Finding>
-        id="findings"
-        icon={Quote}
-        kind="claim"
-        heading="What backs this up"
-        addLabel="Add finding"
-        onAdd={() => setDialog({ type: 'claim' })}
-        headingExtra={
-          <button type="button" className="text-button" onClick={() => setLegendOpen(true)}>
-            What the labels mean
+      {caseHasNoRecords(detail) ? (
+        <FirstFindingGuide onAddSource={() => setDialog({ type: 'evidence' })} onAddFinding={() => setDialog({ type: 'claim' })} />
+      ) : (
+        <div className="reading-add" role="group" aria-label="Add to this question">
+          <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'claim' })}>{ADD_FINDING}</Button>
+          <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'evidence' })}>{ADD_SOURCE}</Button>
+          <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'question' })}>{ADD_TO_FIND_OUT}</Button>
+          <button type="button" className="text-button reading-add-legend" onClick={() => setLegendOpen(true)}>
+            {LABELS_LINK}
           </button>
-        }
-        emptyText="No findings yet. Your AI adds them here, or you can add one."
-        items={findings.backing}
-        ruledOut={findings.replaced}
-        ruledOutNoun={['replaced finding', 'replaced findings']}
-        itemKey={findingKey}
-        renderItem={findingRow}
-      />
-      {findings.disagree.length > 0 && (
-        <SectionList<Finding>
-          id="disagree"
-          icon={CircleAlert}
-          kind="claim"
-          heading="Where sources disagree"
-          emptyText=""
-          items={findings.disagree}
-          itemKey={findingKey}
-          renderItem={findingRow}
-        />
+        </div>
       )}
-      {findings.ruledOut.length > 0 && (
-        <SectionList<Finding>
-          id="ruled-out"
-          icon={CircleX}
-          kind="hypothesis"
-          heading="Ruled out"
-          emptyText=""
-          items={findings.ruledOut}
-          itemKey={findingKey}
-          renderItem={findingRow}
-        />
-      )}
+      <SectionList<Finding> id="findings" icon={Quote} kind="claim" heading="What backs this up" items={findings.backing} itemKey={findingKey} renderItem={findingRow} />
+      <SectionList<Finding> id="disagree" icon={CircleAlert} kind="claim" heading="Where sources disagree" items={findings.disagree} itemKey={findingKey} renderItem={findingRow} />
+      <Collapsed items={findings.ruledOut} noun={['ruled out finding', 'ruled out findings']} itemKey={findingKey} renderItem={findingRow} />
+      <Collapsed items={findings.replaced} noun={['replaced finding', 'replaced findings']} itemKey={findingKey} renderItem={findingRow} />
       <SectionList<ToFind>
         id="questions"
         icon={CircleQuestionMark}
         kind="question"
         heading="Still to find out"
-        addLabel="Add something to find out"
-        onAdd={() => setDialog({ type: 'question' })}
-        emptyText="Nothing is left to find out."
-        emptyWithRuledOut
         items={toFind}
-        ruledOut={questions.ruledOut.map((question) => ({ question }))}
-        ruledOutNoun={['answered', 'answered']}
+        collapsed={questions.ruledOut.map((question) => ({ question }))}
+        collapsedNoun={['answered', 'answered']}
         itemKey={(x) => ('finding' in x ? findingKey(x.finding) : x.question.ref)}
         renderItem={(x) => ('finding' in x ? findingRow(x.finding) : <QuestionRow question={x.question} actions={questionActions(x.question)} />)}
       />
@@ -340,9 +320,6 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
         icon={FileText}
         kind="evidence"
         heading={otherSources.length < detail.evidence.length ? OTHER_SOURCES_HEADING : 'Sources'}
-        addLabel="Add source"
-        onAdd={() => setDialog({ type: 'evidence' })}
-        emptyText={detail.evidence.length === 0 ? 'No sources yet. Add what you found and where you found it.' : ALL_SOURCES_USED_COPY}
         items={otherSources}
         itemKey={(e) => e.ref}
         renderItem={(e) => <EvidenceRow evidence={e} onOpen={open} />}
@@ -383,13 +360,13 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       )}
       {dialog?.type === 'delete' && (
         <DeleteDialog
-          title="Delete this follow-up question?"
+          title="Delete this?"
           body={deleteQuestionBody(dialog.question)}
-          confirmLabel="Delete follow-up question"
+          confirmLabel="Delete"
           onConfirm={async () => {
             const ref = dialog.question.ref
             const done = await write(() => api.deleteQuestion(invRef, ref).then(() => true), { rethrowConflict: true })
-            if (done) toast.success('Deleted the follow-up question.')
+            if (done) toast.success('Deleted it.')
             return Boolean(done)
           }}
           onClose={close}

@@ -12,6 +12,7 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { findSourceButton } from '../../test/openQuestion'
 import { ADD_TO_FIND_OUT } from '../dialogs/QuestionDialog'
+import { ADD_FINDING, ADD_SOURCE } from './FirstFindingGuide'
 import { ToastProvider } from '../ui/Toaster'
 import { DetailView } from './DetailView'
 
@@ -69,7 +70,7 @@ describe('DetailView drawers', () => {
     const user = userEvent.setup()
     renderDetail()
     const nested = await screen.findAllByRole('button', {
-      name: 'Goes against this: E-003 Calls about a bill: 400 in September, 1,070 in October Call log Not checked',
+      name: 'Goes against it: E-003 Calls about a bill: 400 in September, 1,070 in October Not checked',
     })
     await user.click(nested[0])
     expect(screen.getByRole('dialog', { name: 'Source E-003' })).toBeInTheDocument()
@@ -93,7 +94,7 @@ describe('DetailView drawers', () => {
     await waitFor(() => expect(nested).toHaveFocus())
   })
 
-  it('names sources and findings in How we got here as buttons that open drawers, and leaves follow-up questions as text', async () => {
+  it('names sources and findings in How we got here as buttons that open drawers, and leaves what is still to find out as text', async () => {
     const user = userEvent.setup()
     renderDetail(
       detailWith({
@@ -102,7 +103,9 @@ describe('DetailView drawers', () => {
     )
     const history = await screen.findByRole('region', { name: 'How we got here' })
     expect(within(history).queryByRole('button', { name: 'Q-001' })).toBeNull()
-    expect(within(history).getByText('answered a follow-up question')).toBeInTheDocument()
+    expect(within(history).getByText('answered something to find out')).toBeInTheDocument()
+    // Only the last three rows show until Show all opens the rest.
+    await user.click(within(history).getByRole('button', { name: /^Show all/ }))
     await user.click(within(history).getByRole('button', { name: 'E-003 Calls about a bill: 400 in September, 1,070 in October' }))
     expect(screen.getByRole('dialog', { name: 'Source E-003' })).toBeInTheDocument()
   })
@@ -154,15 +157,15 @@ describe('DetailView adding and question actions', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('adds a claim from the section and moves focus to the new row', async () => {
+  it('adds a finding from the add row and moves focus to the new row', async () => {
     const user = userEvent.setup()
     renderDetail()
     vi.mocked(mocks.api.addClaim).mockImplementation(async () => {
       current = detailWithNewClaim()
       return newClaim
     })
-    const claimsSection = await screen.findByRole('region', { name: 'What backs this up' })
-    await user.click(within(claimsSection).getByRole('button', { name: 'Add finding' }))
+    await screen.findByRole('region', { name: 'What backs this up' })
+    await user.click(within(screen.getByRole('group', { name: 'Add to this question' })).getByRole('button', { name: ADD_FINDING }))
     await user.type(screen.getByLabelText('Finding'), 'The bills went out twice because a file was loaded two times.')
     await user.click(within(screen.getByRole('dialog', { name: 'Add finding' })).getByRole('button', { name: 'Add finding' }))
     await waitFor(() =>
@@ -170,52 +173,51 @@ describe('DetailView adding and question actions', () => {
     )
   })
 
-  it('opens the add dialogs from every section', async () => {
+  it('opens each add dialog from the add row', async () => {
     const user = userEvent.setup()
     renderDetail()
-    // Every fixture source sits under a finding, so the section for the rest reads Other sources.
+    const add = await screen.findByRole('group', { name: 'Add to this question' })
     const cases: [string, string][] = [
-      ['What backs this up', 'Add finding'],
-      ['Still to find out', ADD_TO_FIND_OUT],
-      ['Other sources', 'Add source'],
+      [ADD_FINDING, 'Add finding'],
+      [ADD_SOURCE, 'Add source'],
+      [ADD_TO_FIND_OUT, ADD_TO_FIND_OUT],
     ]
-    for (const [section, label] of cases) {
-      const region = await screen.findByRole('region', { name: section })
-      await user.click(within(region).getByRole('button', { name: label }))
-      expect(screen.getByRole('dialog', { name: label })).toBeInTheDocument()
-      await user.click(within(screen.getByRole('dialog', { name: label })).getByRole('button', { name: 'Cancel' }))
+    for (const [button, title] of cases) {
+      await user.click(within(add).getByRole('button', { name: button }))
+      const dialog = screen.getByRole('dialog', { name: title })
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     }
   })
 
-  it('offers Answer, Later and Edit on an open follow-up question', async () => {
+  it('offers Answer, Later and Edit on something open to find out', async () => {
     const user = userEvent.setup()
     renderDetail()
     const row = (await screen.findByRole('region', { name: 'Still to find out' })).querySelector('[data-ref="Q-001"]') as HTMLElement
     await user.click(within(row).getByRole('button', { name: 'Answer' }))
-    expect(screen.getByRole('dialog', { name: 'Answer this follow-up question' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'What did you find out?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await user.click(within(row).getByRole('button', { name: 'Later' }))
     const later = screen.getByRole('dialog', { name: 'Come back to this later' })
     expect(within(later).getByLabelText('Why it can wait (optional)')).toBeInTheDocument()
     await user.click(within(later).getByRole('button', { name: 'Cancel' }))
-    await user.click(within(row).getByRole('button', { name: 'Edit follow-up question' }))
-    expect(screen.getByRole('dialog', { name: 'Edit follow-up question' })).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: /^Edit: / }))
+    expect(screen.getByRole('dialog', { name: 'Edit what to find out' })).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: /Set aside|Reopen|Ask again/ })).toBeNull()
   })
 
-  it('offers Answer and no Later on a follow-up question left for later', async () => {
+  it('offers Answer and no Later on something left for later', async () => {
     const user = userEvent.setup()
     renderDetail()
     const row = (await screen.findByRole('region', { name: 'Still to find out' })).querySelector('[data-ref="Q-003"]') as HTMLElement
     expect(within(row).queryByRole('button', { name: 'Later' })).toBeNull()
     expect(within(row).queryByRole('button', { name: /Reopen|Ask again/ })).toBeNull()
-    expect(within(row).queryByRole('button', { name: 'Edit follow-up question' })).toBeNull()
-    expect(within(row).getByRole('button', { name: /^Delete follow-up question:/ })).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: /^Edit: / })).toBeNull()
+    expect(within(row).getByRole('button', { name: /^Delete: / })).toBeInTheDocument()
     await user.click(within(row).getByRole('button', { name: 'Answer' }))
-    expect(screen.getByRole('dialog', { name: 'Answer this follow-up question' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'What did you find out?' })).toBeInTheDocument()
   })
 
-  it('keeps answered follow-up questions behind Show N answered, where Ask again reopens one', async () => {
+  it('keeps answered ones behind Show N answered, where Ask again reopens one', async () => {
     const user = userEvent.setup()
     renderDetail()
     const section = await screen.findByRole('region', { name: 'Still to find out' })
@@ -238,8 +240,8 @@ describe('DetailView adding and question actions', () => {
       current = detailWith({ questions: [...questions, added] })
       return added
     })
-    const section = await screen.findByRole('region', { name: 'Still to find out' })
-    await user.click(within(section).getByRole('button', { name: ADD_TO_FIND_OUT }))
+    await screen.findByRole('region', { name: 'Still to find out' })
+    await user.click(screen.getByRole('button', { name: ADD_TO_FIND_OUT }))
     await user.type(screen.getByLabelText('What do you still need to find out?'), 'Who signs off a refund over $100?')
     await user.click(within(screen.getByRole('dialog', { name: ADD_TO_FIND_OUT })).getByRole('button', { name: 'Add' }))
     expect(mocks.api.addQuestion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ question: 'Who signs off a refund over $100?' }))

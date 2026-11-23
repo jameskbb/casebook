@@ -12,7 +12,7 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, NOT_CHECKED_ANSWER, nextSourceToCheck, SHARE_THE_ANSWER } from './ConclusionPanel'
+import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, NOT_CHECKED_ANSWER, SHARE_THE_ANSWER, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
 import { ANSWER_COPIED } from './ShareSummaryDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -260,51 +260,56 @@ describe('ConclusionPanel with live polling (backstop)', () => {
 })
 
 
-describe('Check the next source and Share the answer', () => {
+describe('Check the next source, I checked this answer and Share the answer', () => {
   beforeEach(() => { Object.assign(mocks.api, mockApi()) })
 
-  it('picks the first source a person has not checked, skipping replaced ones', () => {
-    const [e1, e2, , e4] = detail.evidence
-    expect(nextSourceToCheck(detail.evidence)?.ref).toBe('E-001')
-    expect(nextSourceToCheck([{ ...e1, verification: 'superseded' }, { ...e2, verification: 'source_verified' }, e4])?.ref).toBe('E-002')
-    expect(nextSourceToCheck([e4, { ...e1, verification: 'human_verified' }])).toBeUndefined()
-    expect(nextSourceToCheck([])).toBeUndefined()
-  })
+  const button = (name: string) => within(panel()).queryByRole('button', { name })
 
-  it('opens the next source to check, and Share the answer steps back to secondary beside it', async () => {
+  it('leads with Check the next source while a source is left, and it opens the check', async () => {
     const user = userEvent.setup()
-    const onOpenSource = vi.fn()
-    render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onOpenSource={onOpenSource} share />))
-    const next = within(panel()).getByRole('button', { name: CHECK_NEXT_SOURCE })
-    expect(next).toHaveClass('btn-primary')
-    expect(within(panel()).getByRole('button', { name: SHARE_THE_ANSWER })).toHaveClass('btn-secondary')
-    await user.click(next)
-    expect(onOpenSource).toHaveBeenCalledWith('E-001')
+    const onCheckSources = vi.fn()
+    render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onCheckSources={onCheckSources} share />))
+    expect(button(CHECK_NEXT_SOURCE)).toHaveClass('btn-primary')
+    expect(button(CHECKED_ANSWER_ACTION)).toHaveClass('btn-secondary')
+    expect(button(SHARE_THE_ANSWER)).toHaveClass('btn-secondary')
+    await user.click(button(CHECK_NEXT_SOURCE)!)
+    expect(onCheckSources).toHaveBeenCalledTimes(1)
   })
 
-  it('offers only Share the answer, as the primary action, once every source is checked', async () => {
+  it('makes I checked this answer the main button once every source is checked, and Share the answer secondary', () => {
+    const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
+    render(providers(<ConclusionPanel investigation={investigation} evidence={checked} onCheckSources={() => {}} share />))
+    expect(button(CHECK_NEXT_SOURCE)).toBeNull()
+    expect(button(CHECKED_ANSWER_ACTION)).toHaveClass('btn-primary')
+    expect(button(SHARE_THE_ANSWER)).toHaveClass('btn-secondary')
+  })
+
+  it('offers only Share the answer, as the primary action, once the sources and the answer are checked', async () => {
     const user = userEvent.setup()
     const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
-    render(providers(<ConclusionPanel investigation={investigation} evidence={checked} onOpenSource={() => {}} share />))
-    expect(within(panel()).queryByRole('button', { name: CHECK_NEXT_SOURCE })).toBeNull()
-    const share = within(panel()).getByRole('button', { name: 'Share the answer' })
+    const inv = { ...investigation, conclusion_reviewed_at: '2026-10-20T12:00:00.000Z', conclusion_needs_review: false }
+    render(providers(<ConclusionPanel investigation={inv} evidence={checked} onCheckSources={() => {}} share />))
+    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
+    const share = button(SHARE_THE_ANSWER)!
     expect(share).toHaveClass('btn-primary')
     await user.click(share)
     const dialog = await screen.findByRole('dialog', { name: 'Share the answer' })
     expect(mocks.api.sharePreview).toHaveBeenCalledWith('INV-0001', { mode: 'brief' })
     await user.click(within(dialog).getByRole('button', { name: 'Copy' }))
+    // No rich clipboard in the test window: Casebook copies the plain text itself.
     expect(mocks.api.copySharePreview).toHaveBeenCalledWith('reviewed-1')
     expect(await screen.findByText(ANSWER_COPIED)).toBeInTheDocument()
   })
 
-  it('offers both while there is no answer yet, and neither unless asked for', () => {
-    const { unmount } = render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '' }} evidence={detail.evidence} onOpenSource={() => {}} share />))
-    expect(within(panel()).getByRole('button', { name: CHECK_NEXT_SOURCE })).toBeInTheDocument()
-    expect(within(panel()).getByRole('button', { name: 'Share the answer' })).toBeInTheDocument()
+  it('never offers Share the answer without an answer, and neither button unless asked for', () => {
+    const { unmount } = render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '' }} evidence={detail.evidence} onCheckSources={() => {}} share />))
+    expect(button(CHECK_NEXT_SOURCE)).toBeInTheDocument()
+    expect(button(SHARE_THE_ANSWER)).toBeNull()
+    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
     unmount()
     renderPanel()
-    expect(within(panel()).queryByRole('button', { name: CHECK_NEXT_SOURCE })).toBeNull()
-    expect(within(panel()).queryByRole('button', { name: 'Share the answer' })).toBeNull()
+    expect(button(CHECK_NEXT_SOURCE)).toBeNull()
+    expect(button(SHARE_THE_ANSWER)).toBeNull()
   })
 })
 
@@ -365,11 +370,11 @@ describe('Checking the answer', () => {
     expect(checkButton()).toBeNull()
   })
 
-  it('opens What did you check?, needs words, and sends the check with the token of what is shown', async () => {
+  it('opens What did you check?, keeps the button disabled until there are words, and sends the check with the token of what is shown', async () => {
     const user = userEvent.setup()
     renderPanel()
     await user.click(checkButton()!)
-    const basis = within(panel()).getByLabelText('What did you check?')
+    const basis = within(panel()).getByLabelText(WHAT_DID_YOU_CHECK)
     expect(basis).toHaveFocus()
     const record = within(panel()).getByRole('button', { name: CHECKED_ANSWER_ACTION })
     expect(record).toBeDisabled()
@@ -390,9 +395,9 @@ describe('Checking the answer', () => {
     const user = userEvent.setup()
     renderPanel()
     await user.click(checkButton()!)
-    await user.type(within(panel()).getByLabelText('What did you check?'), 'Half a thought')
+    await user.type(within(panel()).getByLabelText(WHAT_DID_YOU_CHECK), 'Half a thought')
     await user.click(within(panel()).getByRole('button', { name: 'Cancel' }))
-    expect(within(panel()).queryByLabelText('What did you check?')).toBeNull()
+    expect(within(panel()).queryByLabelText(WHAT_DID_YOU_CHECK)).toBeNull()
     expect(checkButton()).toHaveFocus()
     expect(mocks.api.updateConclusion).not.toHaveBeenCalled()
   })
@@ -401,10 +406,10 @@ describe('Checking the answer', () => {
     const user = userEvent.setup()
     const { rerender } = renderPanel()
     await user.click(checkButton()!)
-    await user.type(within(panel()).getByLabelText('What did you check?'), 'Original export.')
+    await user.type(within(panel()).getByLabelText(WHAT_DID_YOU_CHECK), 'Original export.')
     expect(within(panel()).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
     rerender(providers(<ConclusionPanel investigation={{ ...investigation, conclusion_review_token: 'changed-basis' }} />))
-    expect(within(panel()).getByLabelText('What did you check?')).toHaveValue('Original export.')
+    expect(within(panel()).getByLabelText(WHAT_DID_YOU_CHECK)).toHaveValue('Original export.')
     expect(within(panel()).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
     expect(within(panel()).getByRole('button', { name: CHECKED_ANSWER_ACTION })).toBeDisabled()
     expect(mocks.api.updateConclusion).not.toHaveBeenCalled()

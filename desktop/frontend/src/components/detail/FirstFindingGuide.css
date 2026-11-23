@@ -7,12 +7,6 @@
   border-radius: var(--radius-md);
 }
 
-.first-finding-guide h2 {
-  margin: 0;
-  font-size: var(--text-body);
-  font-weight: var(--weight-semibold);
-}
-
 .first-finding-guide p {
   margin: 0;
   max-width: 70ch;

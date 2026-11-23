@@ -98,12 +98,3 @@
   margin: var(--space-1) calc(-1 * var(--space-1));
   background: var(--rule);
 }
-
-.menu-footer {
-  margin-top: var(--space-1);
-  padding: var(--space-3);
-  border-top: 1px solid var(--rule);
-  color: var(--ink-muted);
-  font-size: var(--text-label);
-  line-height: var(--leading-label);
-}

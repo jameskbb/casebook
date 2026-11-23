@@ -14,7 +14,7 @@ const binding = vi.hoisted(() => {
     'ClientConnections', 'AppVersion', 'OpenDataFolder', 'CopyDataLocation', 'PickBackupToRecover',
     'RecoverFromBackup', 'DeleteInvestigation', 'DeleteEvidence', 'DeleteClaim', 'DeleteHypothesis',
     'DeleteQuestion', 'GetReviewFindings', 'ReviewStatement',
-    'SharePreview', 'CopySharePreview', 'SaveSharePreview',
+    'SharePreview', 'CopySharePreview', 'SaveSharePreview', 'ConnectClient', 'DisconnectClient',
   ]
   return Object.fromEntries(names.map((n) => [n, vi.fn()])) as Record<string, ReturnType<typeof vi.fn>>
 })
@@ -32,8 +32,10 @@ describe('api', () => {
     }
   })
 
-  it('wraps every generated binding', () => {
-    expect(Object.keys(api)).toHaveLength(Object.keys(binding).length)
+  // GetReviewFindings fed the retired one-by-one screen; nothing on screen calls it.
+  it('wraps every generated binding but the one the retired check screen used', () => {
+    expect(Object.keys(api)).toHaveLength(Object.keys(binding).length - 1)
+    expect(Object.keys(api)).not.toContain('getReviewFindings')
   })
 
   it('has no note-block, notebook or ENEX methods, and neither does the test mock', () => {
@@ -73,6 +75,11 @@ describe('api', () => {
     expect(binding.CopySharePreview).toHaveBeenCalledWith('reviewed-snapshot')
     await api.saveSharePreview('reviewed-snapshot')
     expect(binding.SaveSharePreview).toHaveBeenCalledWith('reviewed-snapshot')
+
+    await api.connectClient('claude_desktop')
+    expect(binding.ConnectClient).toHaveBeenCalledWith('claude_desktop')
+    await api.disconnectClient('codex')
+    expect(binding.DisconnectClient).toHaveBeenCalledWith('codex')
 
     await api.setWindowTheme('dark')
     expect(binding.SetWindowTheme).toHaveBeenCalledWith('dark')

@@ -125,6 +125,12 @@ describe('people-facing copy', () => {
     expect(offenders).toEqual([])
   })
 
+  // Retired in round 3: one list of things to find out, one way to check
+  // (source by source), and no kind of source to fill in.
+  it('never shows a word retired in round 3', () => {
+    expect(copyOffenders(/follow-up questions?|one by one|guess to test|kind of source/i)).toEqual([])
+  })
+
   it('allows MCP only once, where another AI tool has to support it', () => {
     const mentions = Object.entries(sources)
       .filter(([file]) => !/\.test\./.test(file))

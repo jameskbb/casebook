@@ -1,26 +1,26 @@
-// Source drawer body: the name, its check label and what it shows; about
-// this source as a list that leaves out what is missing; the exact words or
-// numbers, fetched on demand through GetEvidence with include_raw_detail; the
-// extra details an AI stored, shown only when codes are on; and the findings
-// that use it, each opening its drawer.
+// Source drawer body: the name, its check label and what it shows; where to
+// find it; the exact words or numbers, fetched on demand through GetEvidence
+// with include_raw_detail; the stored kind and the extra details an AI
+// stored, shown only when codes are on; and the findings that use it, each
+// opening its drawer.
 //
 // The exact words and the extra details are text written by people, AI tools
 // and files, so they render as text inside a pre block (never markup), and
 // where to find it is plain selectable text (never a link).
 //
-// Actions: Edit source opens the source dialog over the drawer; I checked
-// this and Sources disagree set the check label; the More menu holds A newer
-// source replaces this (after a confirmation) and Delete source...
+// Actions: Edit opens the source dialog over the drawer; I checked this, or
+// Undo my check once the person has; the More menu holds A newer source
+// replaces this (after a confirmation) and Delete source... A replaced
+// source offers Bring this back.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, Ellipsis, Minus, Pencil, Replace, Trash2 } from 'lucide-react'
+import { ChevronDown, Ellipsis, Pencil, Replace, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
-import type { Claim, Evidence, Hypothesis, InvestigationDetail, Verification } from '../../api/types'
+import type { Evidence, InvestigationDetail, Verification } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
-import { claimStatusLabels, relationLabels, sourceTypeLabels } from '../../lib/labels'
+import { relationTags, REPLACED, RULED_OUT, sourceKindWord } from '../../lib/labels'
 import { prettyMetadata } from '../../lib/metadata'
-import { usedBy } from '../../lib/records'
-import { formatAbsolute } from '../../lib/relativeTime'
+import { isReplaced, isRuledOut, usedBy } from '../../lib/records'
 import { ImportedTag } from '../record/ImportedTag'
 import { kindRuleClass } from '../record/KindRule'
 import { RecordId } from '../record/RecordId'
@@ -34,10 +34,11 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { IconButton } from '../ui/IconButton'
 import { Menu } from '../ui/Menu'
 import { useToast } from '../ui/Toaster'
-import { CHECKED_ACTION, DISAGREE_ACTION, DrawerGroup } from './StatementDrawer'
+import { BRING_BACK_ACTION, DrawerGroup } from './StatementDrawer'
 import './EvidenceDrawer.css'
 
-const RETIRED = new Set(['superseded', 'rejected', 'disproven'])
+export const CHECKED_ACTION = 'I checked this'
+export const UNDO_CHECK_ACTION = 'Undo my check'
 
 export interface EvidenceDrawerProps {
   evidence: Evidence
@@ -50,13 +51,9 @@ export interface EvidenceDrawerProps {
 
 export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: EvidenceDrawerProps) {
   const retired = e.verification === 'superseded'
-  const captured = formatAbsolute(e.captured_at)
   const metadata = prettyMetadata(e.metadata)
   const users = usedBy(e, detail)
-  const records = new Map<string, Claim | Hypothesis>([
-    ...detail.claims.map((c) => [c.ref, c] as const),
-    ...detail.hypotheses.map((h) => [h.ref, h] as const),
-  ])
+  const records = new Map([...detail.claims, ...detail.hypotheses].map((r) => [r.ref, r] as const))
 
   return (
     <>
@@ -75,36 +72,19 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
         />
       </div>
 
-      <DrawerGroup title="About this source">
-        <dl className="source-list">
-          <div className="source-row">
-            <dt>Kind of source</dt>
-            <dd>{sourceTypeLabels[e.source_type] ?? e.source_type}</dd>
-          </div>
-          {e.source_label && (
-            <div className="source-row">
-              <dt>From</dt>
-              <dd>{e.source_label}</dd>
-            </div>
-          )}
-          {e.source_ref && (
-            <div className="source-row">
-              <dt>Where to find it</dt>
-              <dd className="source-reference">
-                <BreakablePath text={e.source_ref} />
-              </dd>
-            </div>
-          )}
-          {captured && (
-            <div className="source-row">
-              <dt>Dated</dt>
-              <dd className="tabular">{captured}</dd>
-            </div>
-          )}
-        </dl>
-      </DrawerGroup>
+      {e.source_ref && (
+        <DrawerGroup title="Where to find it">
+          <p className="source-reference">
+            <BreakablePath text={e.source_ref} />
+          </p>
+        </DrawerGroup>
+      )}
 
       {e.has_raw_detail && <RawDetail evidence={e} invRef={detail.investigation.ref} />}
+
+      <DrawerGroup title="Kind" className="codes-only">
+        <p>{sourceKindWord[e.source_type] ?? e.source_type}</p>
+      </DrawerGroup>
 
       {metadata !== '' && (
         <DrawerGroup title="Extra details" className="codes-only">
@@ -119,7 +99,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
           <ul className="used-by-list">
             {users.map((u) => {
               const rec = records.get(u.ref)
-              const retired = rec ? RETIRED.has(rec.status) : false
+              const retired = rec ? isReplaced(rec) || isRuledOut(rec) : false
               return (
                 <li key={u.ref}>
                   <button
@@ -130,14 +110,11 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                     <span className="used-by-line">
                       <span className="used-by-ref tabular">{u.ref}</span>
                       <span className={`used-by-relation used-by-${u.relation}`}>
-                        {u.relation === 'contradicts' && (
-                          <Minus className="used-by-minus" size={12} strokeWidth={1.75} aria-hidden="true" />
-                        )}
-                        {relationLabels[u.relation]}
+                        {relationTags[u.relation]}
                       </span>
                       {retired && rec && (
                         <span className="used-by-status">
-                          {rec.status === 'superseded' ? claimStatusLabels.superseded : claimStatusLabels.rejected}
+                          {rec.status === 'superseded' ? REPLACED : RULED_OUT}
                           {rec.status === 'superseded' && rec.superseded_by && (
                             <>
                               {' '}
@@ -162,7 +139,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
 }
 
 export const REPLACED_SOURCE_LABEL = 'A newer source replaces this'
-export const supersedeEvidenceBody = `This source stays here, crossed out. Add the newer source. To bring this one back, choose "${CHECKED_ACTION}".`
+export const supersedeEvidenceBody = `This source stays here, crossed out, and is no longer counted. Add the newer source. To use this one again, choose "${BRING_BACK_ACTION}".`
 
 export const deleteEvidenceBody = (e: Evidence) =>
   `"${e.title}" will be removed from this question with everything saved about it.`
@@ -187,6 +164,7 @@ function EvidenceActions({
   const [deleting, setDeleting] = useState(false)
   const [superseding, setSuperseding] = useState(false)
   const checked = e.verification === 'human_verified'
+  const replaced = e.verification === 'superseded'
 
   const setVerification = async (v: Verification) => {
     if (busy) return
@@ -205,18 +183,20 @@ function EvidenceActions({
       <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
         Edit
       </Button>
-      {!checked && (
-        <Button variant="secondary" disabled={busy} onClick={() => void setVerification('human_verified')}>
+      {replaced ? (
+        // It comes back as Not checked: bringing it back is not checking it.
+        <Button variant="secondary" disabled={busy} onClick={() => void setVerification('ai_generated')}>
+          {BRING_BACK_ACTION}
+        </Button>
+      ) : checked ? (
+        <Button variant="secondary" disabled={busy} onClick={() => void setVerification('ai_generated')}>
+          {UNDO_CHECK_ACTION}
+        </Button>
+      ) : (
+        <Button variant="primary" disabled={busy} onClick={() => void setVerification('human_verified')}>
           {CHECKED_ACTION}
         </Button>
       )}
-      <Button
-        variant="secondary"
-        disabled={busy || e.verification === 'disputed'}
-        onClick={() => void setVerification('disputed')}
-      >
-        {DISAGREE_ACTION}
-      </Button>
       <Menu
         label="More"
         align="end"
@@ -224,7 +204,7 @@ function EvidenceActions({
           {
             label: REPLACED_SOURCE_LABEL,
             icon: Replace,
-            disabled: busy || e.verification === 'superseded',
+            disabled: busy || replaced,
             onSelect: () => setSuperseding(true),
           },
           {

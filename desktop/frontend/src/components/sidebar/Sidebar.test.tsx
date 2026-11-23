@@ -8,7 +8,7 @@ import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
 import { DataOpsProvider } from './DataOps'
-import { LIST_CAPPED_COPY, Sidebar } from './Sidebar'
+import { HOME_LABEL, LIST_CAPPED_COPY, needYouCount, Sidebar } from './Sidebar'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -68,17 +68,21 @@ describe('Sidebar', () => {
     expect(container.querySelectorAll('.inv-skeleton')).toHaveLength(0)
   })
 
-  it('groups questions under No answer yet and Answered, with To check on top', async () => {
+  it('groups questions under No answer yet and Answered, with Home on top', async () => {
     renderSidebar()
     const nav = await screen.findByRole('navigation', { name: 'Questions' })
     const noAnswer = await within(nav).findByRole('list', { name: 'No answer yet' })
     const answered = within(nav).getByRole('list', { name: 'Answered' })
     expect(within(noAnswer).getAllByRole('button').map((b) => b.dataset.ref)).toEqual(['INV-0002'])
     expect(within(answered).getAllByRole('button').map((b) => b.dataset.ref)).toEqual(['INV-0001', 'INV-0003'])
-    // Nothing is open at launch: To check is the current item, and it counts what needs a person.
+    // Nothing is open at launch: Home is the current item, and it counts what needs a person.
     const home = within(nav).getByRole('button', { current: true })
-    expect(home).toHaveTextContent('To check')
-    expect(home).toHaveTextContent('2 questions')
+    expect(home).toHaveTextContent(HOME_LABEL)
+    expect(home).toHaveTextContent(needYouCount(2))
+    expect(home).toHaveAccessibleName('Home, 2 need you')
+    expect(needYouCount(2)).toBe('2 need you')
+    expect(needYouCount(1)).toBe('1 needs you')
+    expect(needYouCount(0)).toBe('')
   })
 
   it('shows the checked count on a row with sources and when it was last worked on otherwise', async () => {
@@ -108,7 +112,7 @@ describe('Sidebar', () => {
     expect(within(first).queryByRole('img')).toBeNull()
     expect(first).not.toHaveTextContent(/Investigating|Resolved|High/)
 
-    const archived = within(nav).getByText('Why was March payroll $18k over budget?').closest('button')!
+    const archived = within(nav).getByText('Why was March payroll $18,000 over budget?').closest('button')!
     expect(archived).toHaveTextContent('Archived')
     expect(archived).not.toHaveAttribute('aria-current')
     expect(archived).not.toHaveTextContent('Your AI is working on this')

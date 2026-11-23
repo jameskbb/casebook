@@ -1,9 +1,7 @@
 // Source row, for a source no finding uses yet (the others sit under their
-// finding). Line 1: its check label. Title 16/600, summary clamped to two
-// lines (the full text is in the drawer), then where it came from, or the
-// kind of source when that is not known.
+// finding). Line 1: its check label. Title 16/600, then the summary clamped
+// to two lines (the full text is in the drawer).
 import type { Evidence } from '../../api/types'
-import { sourceTypeLabels } from '../../lib/labels'
 import { ImportedTag } from '../record/ImportedTag'
 import { kindRuleClass } from '../record/KindRule'
 import { VerificationBadge } from '../record/VerificationBadge'
@@ -35,9 +33,6 @@ export function EvidenceRow({ evidence: e, onOpen }: EvidenceRowProps) {
         </p>
         <p className={['evidence-title', retired ? 'is-retired' : ''].filter(Boolean).join(' ')}>{e.title}</p>
         {e.summary && <p className="evidence-summary is-clamped">{e.summary}</p>}
-        <p className="evidence-meta">
-          <span>{e.source_label || sourceTypeLabels[e.source_type]}</span>
-        </p>
       </div>
     </div>
   )

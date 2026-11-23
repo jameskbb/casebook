@@ -1,11 +1,12 @@
-// The sidebar: wordmark, New question, the search field, the Show archived
-// switch, then the scrolling list: To check (opens Home), the questions
+// The sidebar: wordmark, New question, the search field, then the scrolling
+// list: Home (always there, with how many questions need you), the questions
 // under No answer yet and Answered (grouped search hits while a query is
-// present), and the footer with the data menu and theme. Everything but the
+// present), one small line that shows or hides archived questions, and the
+// footer with the Settings menu and theme. Everything but the
 // list stays fixed while the list scrolls.
 //
-// Search: typing waits 200 ms, then calls Search with the switch's
-// include_archived; an empty or blank query shows the list without a call.
+// Search: typing waits 200 ms, then calls Search with include_archived as
+// the list has it; an empty or blank query shows the list without a call.
 // While a newer search runs the previous results stay visible, and a data
 // change (dataVersion) reruns the current search. The list and the hits are
 // each one Tab stop (roving tabindex, running through both groups); Down
@@ -19,12 +20,11 @@ import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { useNow } from '../../hooks/useNow'
 import { useRovingFocus } from '../../hooks/useRovingFocus'
 import { hasOpenLayer } from '../../lib/layers'
-import { countOf } from '../../lib/plural'
+import { plural } from '../../lib/plural'
 import { groupQuestions, homeLists } from '../../lib/questions'
 import { LIST_LIMIT, useAppData } from '../../state/appData'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
-import { Switch } from '../ui/Switch'
 import { InvestigationRow } from './InvestigationRow'
 import { SearchResults, type SearchResultsHandle } from './SearchResults'
 import { SidebarFooter } from './SidebarFooter'
@@ -34,7 +34,11 @@ export const SEARCH_DEBOUNCE_MS = 200
 export const SEARCH_LIMIT = 50
 export const SEARCH_FIELD_ID = 'sidebar-search'
 export const SEARCH_LABEL = 'Search answers and sources'
-export const TO_CHECK_LABEL = 'To check'
+export const HOME_LABEL = 'Home'
+export const SHOW_ARCHIVED = 'Show archived questions'
+export const HIDE_ARCHIVED = 'Hide archived questions'
+/** "3 need you", "1 needs you", "" when none does. */
+export const needYouCount = (n: number) => (n === 0 ? '' : `${n} ${plural(n, 'needs you', 'need you')}`)
 export const NO_ANSWER_GROUP = 'No answer yet'
 export const ANSWERED_GROUP = 'Answered'
 export const LIST_ERROR_COPY = 'Casebook could not load the list.'
@@ -118,8 +122,8 @@ export function Sidebar({ onNew }: SidebarProps) {
     [],
   )
 
-  // With the switch off and nothing listed, learn whether archived
-  // questions exist so the empty line can point to the switch.
+  // With archived questions hidden and nothing listed, learn whether any
+  // exist so the empty line can point to the line that shows them.
   const listEmpty = listStatus === 'ready' && investigations.length === 0
   const [archivedExist, setArchivedExist] = useState<boolean | null>(null)
   useEffect(() => {
@@ -189,7 +193,7 @@ export function Sidebar({ onNew }: SidebarProps) {
   let emptyLine: string | null = null
   if (listEmpty) {
     if (includeArchived || archivedExist === false) emptyLine = 'No questions yet.'
-    else if (archivedExist) emptyLine = 'Nothing here. Turn on Show archived to see archived questions.'
+    else if (archivedExist) emptyLine = `Nothing here. Choose ${SHOW_ARCHIVED} below.`
   }
 
   return (
@@ -232,7 +236,6 @@ export function Sidebar({ onNew }: SidebarProps) {
             <span>{searchError}</span>
           </p>
         )}
-        <Switch label="Show archived" checked={includeArchived} onChange={setIncludeArchived} />
       </div>
       <div className="sidebar-list" aria-busy={loading || undefined}>
         {showResults && result ? (
@@ -263,22 +266,28 @@ export function Sidebar({ onNew }: SidebarProps) {
               </div>
             )}
             {investigations.length >= LIST_LIMIT && <p className="sidebar-empty">{LIST_CAPPED_COPY}</p>}
+            {listStatus !== 'loading' && (
+              <button
+                type="button"
+                className={['inv-row', 'sidebar-home', selectedRef === null ? 'is-selected' : ''].filter(Boolean).join(' ')}
+                aria-current={selectedRef === null ? 'true' : undefined}
+                aria-label={[HOME_LABEL, needYouCount(toCheck)].filter(Boolean).join(', ')}
+                onClick={() => select(null)}
+              >
+                <span className="inv-row-title">{HOME_LABEL}</span>
+                <span className="inv-row-time">{needYouCount(toCheck)}</span>
+              </button>
+            )}
             {investigations.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  className={['inv-row', 'sidebar-home', selectedRef === null ? 'is-selected' : ''].filter(Boolean).join(' ')}
-                  aria-current={selectedRef === null ? 'true' : undefined}
-                  onClick={() => select(null)}
-                >
-                  <span className="inv-row-title">{TO_CHECK_LABEL}</span>
-                  <span className="inv-row-time">{countOf(toCheck, 'question', 'questions')}</span>
-                </button>
-                <div className="sidebar-groups" onKeyDown={roving.onKeyDown}>
-                  {group(NO_ANSWER_GROUP, groups.noAnswer, 0)}
-                  {group(ANSWERED_GROUP, groups.answered, groups.noAnswer.length)}
-                </div>
-              </>
+              <div className="sidebar-groups" onKeyDown={roving.onKeyDown}>
+                {group(NO_ANSWER_GROUP, groups.noAnswer, 0)}
+                {group(ANSWERED_GROUP, groups.answered, groups.noAnswer.length)}
+              </div>
+            )}
+            {listStatus === 'ready' && (includeArchived || archivedExist !== false) && (
+              <button type="button" className="text-button sidebar-archived" aria-pressed={includeArchived} onClick={() => setIncludeArchived(!includeArchived)}>
+                {includeArchived ? HIDE_ARCHIVED : SHOW_ARCHIVED}
+              </button>
             )}
           </>
         )}

@@ -22,7 +22,6 @@ import {
 } from './fixtures'
 import { clientConnections } from './fixtures.clients'
 import { upToDate } from './fixtures.update'
-import { reviewFinding } from './fixtures.review'
 
 export type MockedApi = { [K in keyof Api]: Api[K] & Mock<Api[K]> }
 
@@ -70,8 +69,7 @@ export function mockApi(overrides: Partial<Api> = {}): MockedApi {
     setActiveInvestigation: async () => ({ ...investigation, is_active: true }),
     clearActiveInvestigation: async () => true,
     search: async () => [],
-    getReviewFindings: async () => [reviewFinding],
-    reviewStatement: async (_inv, input) => ({ ...reviewFinding, ref: input.ref, kind: input.kind, verification: input.verification }),
+    reviewStatement: async () => undefined,
     addEvidence: async () => evidence[0],
     getEvidence: async (_inv, ref) => evidence.find((e) => e.ref === ref) ?? evidence[0],
     updateEvidence: async (_inv, ref) => evidence.find((e) => e.ref === ref) ?? evidence[0],
@@ -114,7 +112,7 @@ export function mockApi(overrides: Partial<Api> = {}): MockedApi {
     copyContext: async () => undefined,
     copyContextPlain: async () => undefined,
     copyReport: async () => undefined,
-    sharePreview: async (ref, options) => ({ markdown: `# ${ref}: Why did calls go up in October?\n`, html: `<h1>${ref}: Why did calls go up in October?</h1>\n`, snapshot_id: 'reviewed-1', investigation_ref: ref, mode: options.mode, candidates: [], omitted: { claims: 0, hypotheses: 0, questions: 0, evidence: 0, claim_refs: [], hypothesis_refs: [], question_refs: [], evidence_refs: [] } }),
+    sharePreview: async (ref, options) => ({ markdown: `# ${ref}: Why did calls go up in October?\n`, text: `${ref}: Why did calls go up in October?\n`, html: `<h1>${ref}: Why did calls go up in October?</h1>\n`, snapshot_id: 'reviewed-1', investigation_ref: ref, mode: options.mode, candidates: [], omitted: { claims: 0, hypotheses: 0, questions: 0, evidence: 0, claim_refs: [], hypothesis_refs: [], question_refs: [], evidence_refs: [] } }),
     copySharePreview: async () => undefined,
     saveSharePreview: async () => ({ cancelled: false, path: 'Why did calls go up.html', file_name: 'Why did calls go up.html' }),
     reportPreview: async () => ({ markdown: '# INV-0001: Why did calls go up in October?\n', html: '<h1>INV-0001: Why did calls go up in October?</h1>\n' }),
@@ -126,6 +124,8 @@ export function mockApi(overrides: Partial<Api> = {}): MockedApi {
     copyText: async () => undefined,
     setWindowTheme: async () => undefined,
     clientConnections: async () => clientConnections,
+    connectClient: async (tool) => ({ tool, connected: true, changed: true, message: "Casebook added itself to Claude Code's settings and kept a backup of the file. Close Claude Code and open it again to start.", files: [] }),
+    disconnectClient: async (tool) => ({ tool, connected: false, changed: true, message: "Casebook took itself out of Claude Code's settings and kept a backup of the file.", files: [] }),
     exportInvestigation: async () => ({
       cancelled: false,
       path: 'C:\\Users\\Ada\\Documents\\INV-0001-why-did-calls-go-up.json',

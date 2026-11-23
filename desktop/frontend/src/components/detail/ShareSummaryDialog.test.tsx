@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/api'
 import { WENT_WRONG_COPY } from '../../api/errors'
 import type { SharePreview } from '../../api/types'
@@ -13,17 +13,12 @@ const preview = (patch: Partial<SharePreview> = {}): SharePreview => ({
   markdown: '# INV-0001: Margin\n\n## Question\n\nWhy?\n',
   html: '<h1>INV-0001: Margin</h1>\n<h2>Question</h2>\n<p>Why?</p>\n',
   snapshot_id: 'reviewed-original', investigation_ref: 'INV-0001', mode: 'brief',
-  candidates: [
-    { ref: 'C-001', text: 'Selected cost change', label: 'Not checked', group: 'claims', required: false, selected: true },
-    { ref: 'C-002', text: 'Material cost went down', label: 'Sources disagree', group: 'claims', required: true, selected: true },
-    { ref: 'H-003', text: 'Policy change explains it', label: 'Looks right so far; Not checked', group: 'hypotheses', required: false, selected: true },
-    { ref: 'H-004', text: 'Travel is growing', label: 'Not tested yet; Not checked', group: 'hypotheses', required: false, selected: false },
-  ], omitted: { claims: 0, hypotheses: 1, questions: 1, evidence: 2, claim_refs: [], hypothesis_refs: ['H-004'], question_refs: ['Q-001'], evidence_refs: ['E-002', 'E-003'] }, ...patch,
+  // The dialog sends only the mode; whatever candidates come back are ignored.
+  candidates: [], omitted: { claims: 0, hypotheses: 0, questions: 0, evidence: 0, claim_refs: [], hypothesis_refs: [], question_refs: [], evidence_refs: [] }, ...patch,
 })
 function renderDialog(invRef = 'INV-0001') {
   return render(<ToastProvider><ShareSummaryDialog invRef={invRef} onClose={() => {}} /></ToastProvider>)
 }
-const choices = () => screen.getByText('Choose what to share', { selector: 'summary' })
 
 describe('ShareSummaryDialog', () => {
   beforeEach(() => {
@@ -101,62 +96,55 @@ describe('ShareSummaryDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
     expect(mocked.copySharePreview).toHaveBeenLastCalledWith('reviewed-report')
   })
-  it('keeps Choose what to share closed until asked, and has no refresh button and no block about another app', async () => {
+  it('has no Choose what to share, no ticks, no refresh button and no block about another app', async () => {
     renderDialog()
     await screen.findByRole('heading', { level: 1 })
-    expect(choices().closest('details')).toHaveProperty('open', false)
+    expect(screen.queryByText('Choose what to share')).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(document.querySelector('details')).toBeNull()
     expect(screen.queryByRole('button', { name: /refresh|update|reload/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /example/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/another app/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     expect(mocked.copyText).not.toHaveBeenCalled()
   })
-  it('keeps findings where sources disagree ticked, and a changed choice loads its own version before Copy works', async () => {
-    renderDialog()
-    await screen.findByRole('heading', { level: 1 })
-    await userEvent.click(choices())
-    expect(screen.getByRole('checkbox', { name: /Material cost went down/ })).toBeDisabled()
-    let resolve!: (p: SharePreview) => void
-    mocked.sharePreview.mockReturnValueOnce(new Promise((yes) => { resolve = yes }))
-    await userEvent.click(screen.getByRole('checkbox', { name: /Selected cost change/ }))
-    expect(mocked.sharePreview).toHaveBeenCalledTimes(2)
-    expect(mocked.sharePreview).toHaveBeenLastCalledWith('INV-0001', { mode: 'brief', claim_refs: ['C-002'], hypothesis_refs: ['H-003'], question_refs: [], ruled_out_refs: [] })
-    expect(screen.getByText(SHARE_LOADING)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save as a file...' })).toBeDisabled()
-    resolve(preview({ snapshot_id: 'reviewed-selected', candidates: preview().candidates.map(c => c.ref === 'C-001' ? { ...c, selected: false } : c) }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled())
-    expect(screen.getByRole('checkbox', { name: /Selected cost change/ })).not.toBeChecked()
-    await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
-    expect(mocked.copySharePreview).toHaveBeenLastCalledWith('reviewed-selected')
-  })
-  it('offers findings not tested yet as their own group, and ticking one loads again with it', async () => {
-    renderDialog()
-    await screen.findByRole('heading', { level: 1 })
-    await userEvent.click(choices())
-    const group = screen.getByRole('group', { name: 'Findings not tested yet' })
-    const backed = within(group).getByRole('checkbox', { name: /Policy change explains it/ })
-    const open = within(group).getByRole('checkbox', { name: /Travel is growing/ })
-    expect(backed).toBeChecked()
-    expect(open).not.toBeChecked()
-    expect(within(group).getByText('Not tested yet; Not checked')).toBeInTheDocument()
-    mocked.sharePreview.mockResolvedValue(preview({ snapshot_id: 'reviewed-travel', candidates: preview().candidates.map(c => c.ref === 'H-004' ? { ...c, selected: true } : c) }))
-    await userEvent.click(open)
-    expect(mocked.sharePreview).toHaveBeenLastCalledWith('INV-0001', { mode: 'brief', claim_refs: ['C-001', 'C-002'], hypothesis_refs: ['H-003', 'H-004'], question_refs: [], ruled_out_refs: [] })
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled())
-    expect(open).toBeChecked()
-    await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
-    expect(mocked.copySharePreview).toHaveBeenLastCalledWith('reviewed-travel')
-  })
-  it('lists the groups in the order the shared answer prints them', async () => {
-    mocked.sharePreview.mockResolvedValue(preview({ candidates: [
-      { ref: 'C-009', text: 'Ruled out early', label: 'Ruled out', group: 'ruled_out', required: false, selected: false },
-      { ref: 'Q-001', text: 'Did refunds go out?', label: 'Not answered', group: 'questions', required: false, selected: false },
-      ...preview().candidates,
-    ] }))
-    renderDialog()
-    await screen.findByRole('heading', { level: 1 })
-    expect(Array.from(document.querySelectorAll('.share-summary-choices legend'), l => l.textContent)).toEqual(['Findings', 'Findings not tested yet', 'Follow-up questions', 'Ruled out'])
+  describe('Copy as rich text', () => {
+    const write = vi.fn()
+    class FakeClipboardItem { constructor(public items: Record<string, Blob>) {} }
+    beforeEach(() => {
+      write.mockReset().mockResolvedValue(undefined)
+      vi.stubGlobal('ClipboardItem', FakeClipboardItem)
+      Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true })
+      mocked.sharePreview.mockResolvedValue(preview({ text: 'INV-0001: Margin\n\nQuestion\n\nWhy?\n' }))
+    })
+    afterEach(() => { vi.unstubAllGlobals() })
+    it('puts the html and the plain text on the clipboard in one item, without calling Casebook', async () => {
+      renderDialog()
+      await screen.findByText(SHARE_READY)
+      await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(await screen.findByText(ANSWER_COPIED)).toBeInTheDocument()
+      expect(write).toHaveBeenCalledTimes(1)
+      const [[item]] = write.mock.calls[0] as [[FakeClipboardItem]]
+      expect(Object.keys(item.items).sort()).toEqual(['text/html', 'text/plain'])
+      expect(await item.items['text/html'].text()).toBe(preview().html)
+      expect(await item.items['text/plain'].text()).toBe('INV-0001: Margin\n\nQuestion\n\nWhy?\n')
+      expect(mocked.copySharePreview).not.toHaveBeenCalled()
+    })
+    it('falls back to the plain copy when the window refuses rich text', async () => {
+      write.mockRejectedValue(new Error('denied'))
+      renderDialog()
+      await screen.findByText(SHARE_READY)
+      await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(await screen.findByText(ANSWER_COPIED)).toBeInTheDocument()
+      expect(mocked.copySharePreview).toHaveBeenCalledWith('reviewed-original')
+    })
+    it('copies plain text through Casebook when the preview has no plain version', async () => {
+      mocked.sharePreview.mockResolvedValue(preview())
+      renderDialog()
+      await screen.findByText(SHARE_READY)
+      await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(await screen.findByText(ANSWER_COPIED)).toBeInTheDocument()
+      expect(write).not.toHaveBeenCalled()
+      expect(mocked.copySharePreview).toHaveBeenCalledWith('reviewed-original')
+    })
   })
   it('ignores a late response for the previous question', async () => {
     let resolveOld!: (p: SharePreview) => void

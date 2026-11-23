@@ -1,10 +1,10 @@
 // How we got here, in plain words. A row reads "{actor} {verb phrase}", for
-// example "Claude Code added the source E-005" (the screen shows the source's
-// title in place of its code). The names AI tools give themselves are engine
-// data, so they are only ever rendered as text; the stored kind and name stay
-// in the actor tooltip.
-import type { Activity, Actor, ClaimStatus, HypothesisStatus, Verification } from '../api/types'
-import { actorKindLabels, claimStatusLabels, hypothesisStatusLabels } from './labels'
+// example "Your AI added the source E-005" (the screen shows the source's
+// title in place of its code). An AI tool is always "Your AI" in the
+// sentence; its name is engine data and stays in the actor tooltip, rendered
+// as text.
+import type { Activity, Actor, Verification } from '../api/types'
+import { actorKindLabels } from './labels'
 
 const ANY_AI = 'Your AI'
 
@@ -19,20 +19,9 @@ function friendlyClient(client: string): string {
   return FRIENDLY_CLIENT[client] ?? client
 }
 
-/** "You", "Claude Code", "Codex", "Your AI", "Your AI (name)". */
+/** "You", "Your AI" or "Casebook". Which AI tool it was is in the tooltip. */
 export function actorPhrase(actor: Actor): string {
-  const { kind, client } = actor
-  switch (kind) {
-    case 'human':
-      return 'You'
-    case 'ai':
-      if (client === 'claude-code') return 'Claude Code'
-      if (client === 'codex') return 'Codex'
-      if (client === 'mcp-client' || !client) return ANY_AI
-      return `${ANY_AI} (${client})`
-    default:
-      return 'Casebook'
-  }
+  return actor.kind === 'human' ? 'You' : actor.kind === 'ai' ? ANY_AI : 'Casebook'
 }
 
 /** "{kind}, {name}", for example "AI, Claude Code". */
@@ -60,16 +49,16 @@ const VERBS: Record<string, string> = {
   'link.add': 'added a source to the finding {T}',
   'link.update': 'changed whether a source backs the finding {T}',
   'link.remove': 'removed a source from the finding {T}',
-  'question.add': 'asked a follow-up question {T}',
-  'question.update': 'reworded a follow-up question {T}',
-  'question.resolve': 'answered a follow-up question {T}',
-  'question.defer': 'left a follow-up question for later {T}',
-  'question.reopen': 'asked a follow-up question again {T}',
+  'question.add': 'added something to find out {T}',
+  'question.update': 'reworded something to find out {T}',
+  'question.resolve': 'answered something to find out {T}',
+  'question.defer': 'left something to find out for later {T}',
+  'question.reopen': 'opened something to find out again {T}',
   'investigation.delete': 'deleted a question {T}',
   'evidence.delete': 'deleted a source {T}',
   'claim.delete': 'deleted a finding {T}',
   'hypothesis.delete': 'deleted a finding {T}',
-  'question.delete': 'deleted a follow-up question {T}',
+  'question.delete': 'deleted something to find out {T}',
   'active.set': 'chose this question for your AI to work on',
   'active.clear': 'stopped your AI working on this question',
   checkpoint: 'saved its progress',
@@ -133,7 +122,9 @@ export function activitySentence(activity: Activity): ActivitySentence {
 // does not know gives no second line: the stored text is never shown as it
 // is, and no sentence here carries a code that could be hidden.
 
-/** A stored check value as a sentence about what was done. */
+const DECIDED_SENTENCE = 'Decided this still holds.'
+
+/** A stored check value on a source as a sentence about what was done. A person's own check of a finding reads DECIDED_SENTENCE. */
 const CHECK_SENTENCE: Record<Verification, string> = {
   human_verified: 'Checked this.',
   source_verified: 'Compared this with its source.',
@@ -143,12 +134,13 @@ const CHECK_SENTENCE: Record<Verification, string> = {
 }
 
 /** A stored state as a sentence about what was done. */
-function stateSentence(kind: string, value: string): string {
+function stateSentence(value: string): string {
   if (value === 'rejected' || value === 'disproven') return 'Ruled this out.'
   if (value === 'disputed') return CHECK_SENTENCE.disputed
   if (value === 'active' || value === 'open') return 'Brought this back.'
-  const word = kind === 'hypothesis' ? hypothesisStatusLabels[value as HypothesisStatus] : claimStatusLabels[value as Exclude<ClaimStatus, 'active'>]
-  return word ? `Now: ${word}.` : ''
+  if (value === 'supported') return 'Said this turned out right.'
+  if (value === 'superseded') return CHECK_SENTENCE.superseded
+  return ''
 }
 
 /** The engine's field names, as a person reads them. A field not listed (how sure the AI is) is never shown. */
@@ -159,7 +151,6 @@ const FIELD_WORD: Record<string, string> = {
   rationale: 'why',
   confidence_rationale: 'why',
   summary: 'what it shows',
-  source_type: 'the kind of source',
   source_label: 'where it came from',
   source_ref: 'where to find it',
   captured_at: 'its date',
@@ -178,8 +169,8 @@ function changeSentences(kind: string, items: string[]): string {
   let check = ''
   for (const item of items) {
     const [field, value] = item.split(' ', 2)
-    if (field === 'status' && value) state = stateSentence(kind, value)
-    else if (field === 'verification' && value) check = CHECK_SENTENCE[value as Verification] ?? ''
+    if (field === 'status' && value) state = stateSentence(value)
+    else if (field === 'verification' && value) check = (value === 'human_verified' && kind !== 'evidence' ? DECIDED_SENTENCE : CHECK_SENTENCE[value as Verification]) ?? ''
     else {
       // A source's title is its name; a question's title is the question.
       const word = field === 'title' && kind === 'evidence' ? 'its name' : FIELD_WORD[field]
@@ -188,7 +179,7 @@ function changeSentences(kind: string, items: string[]): string {
   }
   // A person's own check says the most; otherwise ruling out or bringing back
   // says more than the check value that rides along with it.
-  if (check === CHECK_SENTENCE.human_verified || !state) out.push(check)
+  if (check === CHECK_SENTENCE.human_verified || check === DECIDED_SENTENCE || !state) out.push(check)
   else out.push(state)
   if (fields.length) out.push(`Changed ${fields.join(', ')}.`)
   return out.filter(Boolean).join(' ')
@@ -223,7 +214,7 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     m = /^Updated \w+ \S+: (.+)$/.exec(sum)
     if (m) return again(changeSentences(kind, m[1].split(', ')))
   }
-  // The words of a follow-up question, or of its answer.
+  // The words of something to find out, or of its answer.
   if (action === 'question.add' || action === 'question.update' || action === 'question.resolve') {
     m = /^\w+ question \S+: (.+)$/.exec(sum)
     if (m) return m[1]

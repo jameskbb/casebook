@@ -1,47 +1,29 @@
-// Verification badge: an icon plus the
-// enum label, so color is never the only signal. The title explains the label
-// in one plain sentence.
-import { BadgeCheck, Bot, CircleAlert } from 'lucide-react'
+// A source's one label: who has checked it. An icon plus the words, so color
+// is never the only signal.
+import { BadgeCheck, CircleAlert, CircleDashed } from 'lucide-react'
 import type { Verification } from '../../api/types'
-import { verificationHelp, verificationLabels } from '../../lib/labels'
+import { REPLACED, SOURCES_DISAGREE, sourceLabel } from '../../lib/labels'
 import './VerificationBadge.css'
 
 export function VerificationBadge({ verification }: { verification: Verification }) {
-  const label = verificationLabels[verification] ?? verification
-  const help = verificationHelp[verification]
-  switch (verification) {
-    case 'human_verified':
-    case 'source_verified':
-      return (
-        <span className="badge badge-verified" title={help}>
-          <BadgeCheck className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-          {label}
-        </span>
-      )
-    case 'ai_generated':
-      return (
-        <span className="badge badge-ai" title={help}>
-          <Bot className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-          {label}
-        </span>
-      )
-    case 'disputed':
-      return <DisputedMark />
-    default:
-      return (
-        <span className="badge badge-muted" title={help}>
-          {label}
-        </span>
-      )
-  }
+  const label = sourceLabel(verification)
+  if (label === REPLACED) return <span className="badge badge-muted">{label}</span>
+  const checked = verification === 'human_verified' || verification === 'source_verified'
+  const Icon = checked ? BadgeCheck : CircleDashed
+  return (
+    <span className={`badge ${checked ? 'badge-verified' : 'badge-ai'}`}>
+      <Icon className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
+      {label}
+    </span>
+  )
 }
 
-/** CircleAlert plus "Sources disagree" in the disputed hue, 14/600. */
-export function DisputedMark({ title = verificationHelp.disputed }: { title?: string }) {
+/** CircleAlert plus "Sources disagree" in its own hue, 14/600. */
+export function DisputedMark() {
   return (
-    <span className="badge badge-disputed" title={title}>
+    <span className="badge badge-disputed">
       <CircleAlert className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-      {verificationLabels.disputed}
+      {SOURCES_DISAGREE}
     </span>
   )
 }

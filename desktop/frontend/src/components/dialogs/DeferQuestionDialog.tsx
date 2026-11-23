@@ -1,4 +1,4 @@
-// Leave a follow-up question for later, with an optional note on why it
+// Leave something to find out for later, with an optional note on why it
 // can wait.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'

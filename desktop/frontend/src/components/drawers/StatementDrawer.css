@@ -71,8 +71,7 @@
   gap: var(--space-2);
 }
 
-.statement-editor,
-.confidence-form {
+.statement-editor {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -124,4 +123,8 @@
   justify-content: flex-start;
   padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
+}
+
+.drawer-why {
+  font-weight: var(--weight-semibold);
 }

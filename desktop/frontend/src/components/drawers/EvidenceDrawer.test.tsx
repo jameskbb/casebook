@@ -12,7 +12,8 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { findSourceButton } from '../../test/openQuestion'
 import { DetailView } from '../detail/DetailView'
-import { REPLACED_SOURCE_LABEL, supersedeEvidenceBody } from './EvidenceDrawer'
+import { CHECKED_ACTION, REPLACED_SOURCE_LABEL, supersedeEvidenceBody, UNDO_CHECK_ACTION } from './EvidenceDrawer'
+import { BRING_BACK_ACTION } from './StatementDrawer'
 import { ToastProvider } from '../ui/Toaster'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -48,14 +49,8 @@ async function openEvidence(ref: string) {
   return { user, drawer: screen.getByRole('dialog', { name: `Source ${ref}` }) }
 }
 
-/** The definition list rows of About this source as [label, value] pairs. */
-function sourceRows(drawer: HTMLElement): [string, string][] {
-  const source = within(drawer).getByRole('region', { name: 'About this source' })
-  return Array.from(source.querySelectorAll('dt')).map((dt) => [
-    dt.textContent ?? '',
-    dt.nextElementSibling?.textContent ?? '',
-  ])
-}
+/** The drawer's group headings, in order. */
+const groupNames = (drawer: HTMLElement) => Array.from(drawer.querySelectorAll('.drawer-group-heading')).map((h) => h.textContent)
 
 describe('EvidenceDrawer', () => {
   beforeEach(() => {
@@ -71,28 +66,27 @@ describe('EvidenceDrawer', () => {
     const { drawer } = await openEvidence('E-003')
     expect(within(drawer).getByText('Calls about a bill: 400 in September, 1,070 in October')).toHaveClass('evidence-drawer-title')
     expect(within(drawer).getByText(/In the call log, calls about a bill went from 400/)).toBeInTheDocument()
-    const rows = sourceRows(drawer)
-    expect(rows.map(([label]) => label)).toEqual(['Kind of source', 'From', 'Dated'])
-    expect(rows[0][1]).toBe('Numbers your AI looked up')
-    expect(rows[1][1]).toBe('Call log')
-    expect(rows[2][1]).toBe(formatAbsolute(T0))
+    // No From, no date: Where to find it says enough. The stored kind is one word, shown only with codes on.
+    expect(within(drawer).queryByText('Call log')).toBeNull()
+    expect(within(drawer).queryByText(formatAbsolute(T0), { exact: false })).toBeNull()
+    expect(within(drawer).queryByText('Kind of source')).toBeNull()
+    expect(within(drawer).getByRole('region', { name: 'Kind' })).toHaveClass('codes-only')
+    expect(within(drawer).getByRole('region', { name: 'Kind' })).toHaveTextContent('Numbers')
   })
 
   it('shows the reference as selectable text, never a link', async () => {
     renderDetail()
     const { drawer } = await openEvidence('E-001')
-    const rows = sourceRows(drawer)
-    expect(rows.find(([l]) => l === 'Where to find it')?.[1]).toBe('Shared drive, Billing, notice-2026-10-04.pdf')
+    expect(within(drawer).getByRole('region', { name: 'Where to find it' })).toHaveTextContent('Shared drive, Billing, notice-2026-10-04.pdf')
     expect(drawer.querySelector('a')).toBeNull()
   })
 
   it('omits the rows, exact words and extra details a bare source does not have', async () => {
     renderDetail(detailWithBareEvidence())
     const { drawer } = await openEvidence('E-009')
-    expect(sourceRows(drawer).map(([l]) => l)).toEqual(['Kind of source'])
+    expect(groupNames(drawer)).toEqual(['Kind', 'Findings that use this source'])
     expect(within(drawer).queryByRole('button', { name: 'Show the exact words' })).toBeNull()
     expect(within(drawer).queryByRole('region', { name: 'Extra details' })).toBeNull()
-    expect(drawer.querySelector('.codes-only')).toBeNull()
     expect(within(drawer).getByText('No finding uses this source yet.')).toBeInTheDocument()
   })
 
@@ -184,7 +178,7 @@ describe('EvidenceDrawer', () => {
     const usedBy = within(drawer).getByRole('region', { name: 'Findings that use this source' })
     const items = within(usedBy).getAllByRole('button')
     expect(items.map((b) => b.textContent)).toEqual([
-      'C-002Backs it upThe extra calls were about a bill. About the same number of people called to buy.',
+      'C-002Backs itThe extra calls were about a bill. About the same number of people called to buy.',
       'C-003Goes against itReplaced by C-002The extra calls were people calling to buy.',
       'C-004Goes against itCallers waited too long and hung up before buying.',
       'H-002Goes against itRuled outA new ad brought in more callers.',
@@ -202,13 +196,28 @@ describe('EvidenceDrawer actions', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('I checked this sets human_verified and Sources disagree sets disputed', async () => {
+  it('I checked this sets human_verified, and a source offers no Sources disagree', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
-    await user.click(within(drawer).getByRole('button', { name: 'I checked this' }))
+    expect(within(drawer).queryByRole('button', { name: 'Sources disagree' })).toBeNull()
+    await user.click(within(drawer).getByRole('button', { name: CHECKED_ACTION }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'human_verified')
-    await user.click(within(drawer).getByRole('button', { name: 'Sources disagree' }))
-    expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'disputed')
+  })
+
+  it('Undo my check sets a source the person checked back to Not checked', async () => {
+    renderDetail()
+    const { user, drawer } = await openEvidence('E-004')
+    await user.click(within(drawer).getByRole('button', { name: UNDO_CHECK_ACTION }))
+    expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-004', 'ai_generated')
+  })
+
+  it('a replaced source offers Bring this back, which makes it Not checked', async () => {
+    const d = detailWith({ evidence: evidence.map((e) => (e.ref === 'E-003' ? { ...e, verification: 'superseded' as const } : e)) })
+    renderDetail(d)
+    const { user, drawer } = await openEvidence('E-003')
+    expect(within(drawer).queryByRole('button', { name: CHECKED_ACTION })).toBeNull()
+    await user.click(within(drawer).getByRole('button', { name: BRING_BACK_ACTION }))
+    expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'ai_generated')
   })
 
   it('a source the AI checked can be checked by the person', async () => {
@@ -227,6 +236,7 @@ describe('EvidenceDrawer actions', () => {
     expect(within(drawer).queryByRole('button', { name: 'I checked this' })).toBeNull()
     expect(within(drawer).queryByRole('button', { name: 'You checked this' })).toBeNull()
     expect(within(drawer).getByText('You checked this')).toBeInTheDocument()
+    expect(within(drawer).getByRole('button', { name: UNDO_CHECK_ACTION })).toBeInTheDocument()
   })
 
   it('the More menu holds only A newer source replaces this (after a confirmation) and Delete source...', async () => {

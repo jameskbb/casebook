@@ -10,9 +10,8 @@ import { investigation } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { ACTIVE_CLEARED_COPY, ACTIVE_OFF_LABEL, ACTIVE_ON_LABEL, ACTIVE_SET_COPY, ACTIVE_TITLE_OFF, ACTIVE_TITLE_ON } from './ActiveToggle'
 import { DetailHeader } from './DetailHeader'
-import { ARCHIVED_COPY, BACK_IN_LIST_COPY, CHECK_FINDINGS_LABEL, COPY_FOR_AI_LABEL, PUT_BACK_LABEL, SAVE_COPY_LABEL } from './MoreMenu'
+import { AI_OFF_COPY, AI_OFF_LABEL, AI_ON_COPY, AI_ON_LABEL, ARCHIVED_COPY, BACK_IN_LIST_COPY, COPY_FOR_AI_LABEL, PUT_BACK_LABEL, SAVE_COPY_LABEL } from './MoreMenu'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -20,16 +19,16 @@ vi.mock('../../api/api', () => ({ api: mocks.api }))
 const inactive: Investigation = {
   ...investigation,
   ref: 'INV-0003',
-  title: 'Why was March payroll $18k over budget?',
+  title: 'Why was March payroll $18,000 over budget?',
   is_active: false,
 }
 
-function renderHeader(inv: Investigation, onCheckFindings?: () => void) {
+function renderHeader(inv: Investigation) {
   return render(
     <ToastProvider>
       <AppDataProvider><OpenAtLaunch />
         <CopyContextProvider>
-          <DetailHeader investigation={inv} onCheckFindings={onCheckFindings} />
+          <DetailHeader investigation={inv} />
         </CopyContextProvider>
       </AppDataProvider>
     </ToastProvider>,
@@ -46,93 +45,64 @@ describe('DetailHeader actions', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('orders the right cluster: the AI toggle, then More, with no Copy for your AI button', () => {
+  it('shows a plain marker while the AI is working on the question, and More is the only button', () => {
     const { container } = renderHeader(investigation)
     const right = container.querySelector('.detail-header-right') as HTMLElement
-    const names = within(right)
-      .getAllByRole('button')
-      .map((b) => b.getAttribute('aria-label') ?? b.textContent)
-    expect(names).toEqual([ACTIVE_ON_LABEL, 'More'])
-    expect(screen.queryByRole('button', { name: /Copy/ })).not.toBeInTheDocument()
+    expect(within(right).getByText('Your AI is working on this')).toBeInTheDocument()
+    // A marker, not a switch: nothing to click by accident.
+    expect(within(right).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['More'])
   })
 
-  it('sets an inactive investigation active', async () => {
+  it('shows no marker when the AI is not working on it, and never on an archived question', () => {
+    const { unmount } = renderHeader(inactive)
+    expect(screen.queryByText('Your AI is working on this')).toBeNull()
+    unmount()
+    renderHeader({ ...investigation, status: 'archived', archived: true, archived_at: '2026-11-04T11:00:00.000Z' })
+    expect(screen.queryByText('Your AI is working on this')).toBeNull()
+  })
+
+  it('has the AI work on a question from the More menu', async () => {
     const user = userEvent.setup()
     renderHeader(inactive)
-    const toggle = screen.getByRole('button', { name: ACTIVE_OFF_LABEL })
-    expect(toggle).toHaveAttribute('aria-pressed', 'false')
-    expect(toggle).toHaveAttribute('title', ACTIVE_TITLE_OFF)
-    await user.click(toggle)
+    const menu = await openMore(user)
+    expect(within(menu).queryByRole('menuitem', { name: AI_OFF_LABEL })).toBeNull()
+    await user.click(within(menu).getByRole('menuitem', { name: AI_ON_LABEL }))
     expect(mocks.api.setActiveInvestigation).toHaveBeenCalledWith('INV-0003')
-    expect(await screen.findByText(ACTIVE_SET_COPY)).toBeInTheDocument()
+    expect(await screen.findByText(AI_ON_COPY)).toBeInTheDocument()
   })
 
-  it('clears the active investigation', async () => {
+  it('stops the AI working on a question from the More menu', async () => {
     const user = userEvent.setup()
     renderHeader(investigation)
-    const toggle = screen.getByRole('button', { name: ACTIVE_ON_LABEL })
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
-    expect(toggle).toHaveAttribute('title', ACTIVE_TITLE_ON)
-    await user.click(toggle)
+    const menu = await openMore(user)
+    expect(within(menu).queryByRole('menuitem', { name: AI_ON_LABEL })).toBeNull()
+    await user.click(within(menu).getByRole('menuitem', { name: AI_OFF_LABEL }))
     expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledTimes(1)
     expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledWith(investigation.ref)
-    expect(await screen.findByText(ACTIVE_CLEARED_COPY)).toBeInTheDocument()
+    expect(await screen.findByText(AI_OFF_COPY)).toBeInTheDocument()
   })
 
   it('says the AI is no longer working here when it had already moved to another question', async () => {
     Object.assign(mocks.api, mockApi({ clearActiveInvestigation: async () => false }))
     const user = userEvent.setup()
     renderHeader(investigation)
-    await user.click(screen.getByRole('button', { name: ACTIVE_ON_LABEL }))
-    expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledWith(investigation.ref)
-    expect(await screen.findByText(ACTIVE_CLEARED_COPY)).toBeInTheDocument()
+    await user.click(within(await openMore(user)).getByRole('menuitem', { name: AI_OFF_LABEL }))
+    expect(await screen.findByText(AI_OFF_COPY)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('is busy while the call runs', async () => {
-    let resolve: () => void = () => {}
-    Object.assign(
-      mocks.api,
-      mockApi({ setActiveInvestigation: () => new Promise((r) => (resolve = () => r({ ...inactive, is_active: true }))) }),
-    )
+  it('lists the More menu in order, with one way to check and so no entry for it', async () => {
     const user = userEvent.setup()
     renderHeader(inactive)
-    const toggle = screen.getByRole('button', { name: ACTIVE_OFF_LABEL })
-    await user.click(toggle)
-    expect(toggle).toBeDisabled()
-    expect(toggle).toHaveAttribute('aria-busy', 'true')
-    resolve()
-    await waitFor(() => expect(toggle).not.toBeDisabled())
-  })
-
-  it('lists the More menu in order, with no Copy question as text', async () => {
-    const user = userEvent.setup()
-    renderHeader(investigation)
     const menu = await openMore(user)
     expect(within(menu).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
       'Edit question...',
+      AI_ON_LABEL,
       COPY_FOR_AI_LABEL,
       SAVE_COPY_LABEL,
       'Archive question',
     ])
-    expect(within(menu).queryByRole('menuitem', { name: 'Copy question as text' })).not.toBeInTheDocument()
-    expect(within(menu).queryByRole('menuitem', { name: CHECK_FINDINGS_LABEL })).not.toBeInTheDocument()
-  })
-
-  it('offers Check findings one by one only with onCheckFindings, and calls it', async () => {
-    const user = userEvent.setup()
-    const onCheckFindings = vi.fn()
-    renderHeader(investigation, onCheckFindings)
-    const menu = await openMore(user)
-    expect(within(menu).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
-      'Edit question...',
-      CHECK_FINDINGS_LABEL,
-      COPY_FOR_AI_LABEL,
-      SAVE_COPY_LABEL,
-      'Archive question',
-    ])
-    await user.click(within(menu).getByRole('menuitem', { name: CHECK_FINDINGS_LABEL }))
-    expect(onCheckFindings).toHaveBeenCalledTimes(1)
+    expect(within(menu).queryByRole('menuitem', { name: /check/i })).not.toBeInTheDocument()
   })
 
   it('lists Put back in the list and Delete question... for an archived question', async () => {
