@@ -141,7 +141,7 @@ if want F; then
   # 2. Add a source.
   check best "F2 open Add source" ui invoke -Text "Add source"
   check best "F2 type the name" ui type -Text "Name" -Value "Password reset tickets: 120 in September, 610 in October"
-  check best "F2 type what it shows" ui type -Text "What it shows" -Value "The help desk report by ticket type shows 120 password reset tickets in September and 610 in October."
+  check best "F2 type what it shows" ui type -Text "What it shows" -Value "The help desk's ticket list by type shows 120 password reset tickets in September and 610 in October."
   check best "F2 submit with Ctrl+Enter" ui keys -Text "^{ENTER}"
   check best "F2 the source shows" find_text "Password reset tickets: 120 in September, 610 in October" 5
   # 3. Add a finding.

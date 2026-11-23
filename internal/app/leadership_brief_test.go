@@ -129,7 +129,7 @@ func TestLeadershipBriefKeepsConclusionBasisAndMixedVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, "A person checked this", "  - Backed by: AI captured ledger (Not checked)\n", "- AI captured ledger (Not checked)\n  - Report or spreadsheet\n  - Where to find it: ledger.csv\n", "Expenses explain the drop.", "0 of 1 source checked by a person. 1 not checked.\n\nA person checked this answer.\n", "## Findings\n\n- " + c.Statement + " (0 of 1 source checked by a person)\n"} {
+	for _, want := range []string{c.Statement, "A person checked this", "  - Backs it: AI captured ledger (Not checked)\n", "- AI captured ledger (Not checked)\n  - Report or spreadsheet\n  - Where to find it: ledger.csv\n", "Expenses explain the drop.", "0 of 1 source checked by a person. 1 not checked.\n\nA person checked this answer.\n", "## Findings\n\n- " + c.Statement + " (0 of 1 source checked by a person)\n"} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
@@ -306,5 +306,40 @@ func TestLeadershipBriefSelectsOpenExplanations(t *testing.T) {
 		if _, err := a.SharePreview(ctx, inv.Ref, o); err == nil {
 			t.Errorf("selection outside its group accepted: %+v", o)
 		}
+	}
+}
+
+// The default short version keeps an answered thing to find out with its
+// answer and leaves out only open ones past the first two, and its notice
+// counts exactly those.
+func TestLeadershipBriefKeepsAnsweredFindOut(t *testing.T) {
+	a := apptest.Open(t)
+	ctx := context.Background()
+	inv, err := a.CreateInvestigation(ctx, apptest.Human, app.CreateInvestigationInput{Title: "Why did refunds double in August?"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var refs []string
+	for _, text := range []string{"Which supplier made the batch?", "Did other stores see it?", "Was it only kettles?", "Who handled returns?"} {
+		q, err := a.AddQuestion(ctx, apptest.Human, inv.Ref, app.QuestionInput{Question: text})
+		if err != nil {
+			t.Fatal(err)
+		}
+		refs = append(refs, q.Ref)
+	}
+	if _, err := a.ResolveQuestion(ctx, apptest.Human, inv.Ref, refs[0], "Kettle Co. made it."); err != nil {
+		t.Fatal(err)
+	}
+	p, err := a.SharePreview(ctx, inv.Ref, app.ShareOptions{Mode: "brief"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"- Which supplier made the batch? (answered)\n  - Answer: Kettle Co. made it.\n", "Did other stores see it?", "Was it only kettles?", "leaves out 1 thing still to find out and the history."} {
+		if !strings.Contains(p.Markdown, want) {
+			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
+		}
+	}
+	if strings.Contains(p.Markdown, "Who handled returns?") {
+		t.Errorf("third open one kept:\n%s", p.Markdown)
 	}
 }

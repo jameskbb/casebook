@@ -17,20 +17,20 @@ Why this answer:
 The change, the pricing page and the billing export agree; the remaining 29% is still open.
 
 Findings:
-C-001 (imported) [Not checked]
+C-001 (imported) [0 of 2 sources checked by a person]
 A shared platform default moved every service to debug logging on August 28; only payments asked for it.
 Why: The chart diff and the head of platform agree.
 Sources: E-001 [Not checked], E-004 [Not checked]
-C-002 (imported) [Not checked]
+C-002 (imported) [0 of 2 sources checked by a person]
 Log ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.
 Why: The pricing model and the billing export agree.
 Sources: E-002 [Not checked], E-003 [Not checked]
-C-004 [A person checked this]
+C-004 [1 of 1 source checked by a person]
 The payments values file was never changed.
 Sources: E-005 [A person checked this]
 
 Findings still being tested:
-H-001 (imported) [Not tested yet, Not checked]
+H-001 (imported) [Not tested yet, No source yet]
 The new tracing agent may also be shipping some services' logs twice.
 
 Still to find out:
@@ -40,7 +40,7 @@ Q-002
 Who owns the chart default now?
 
 Findings ruled out:
-H-002 (imported) Data transfer from the region move doubled the network line. [Not checked]
+H-002 (imported) Data transfer from the region move doubled the network line.
 Ruled out by: E-003 [Not checked]
 
 Sources:

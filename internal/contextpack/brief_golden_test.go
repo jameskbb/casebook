@@ -66,13 +66,14 @@ func TestGoldenBriefDemo(t *testing.T) {
 		"\nHow we know: The billing team's notice, the call log and the billing team lead agree.",
 		"- A billing mistake on October 3 charged some customers twice. (2 of 4 sources checked by a person)\n",
 		"## Where sources disagree\n\n- Callers waited too long and hung up before buying.\n",
-		"  - Goes against it: The average wait was 40 seconds in September and 40 seconds in October (Not checked)\n",
+		"  - Goes against it: Callers waited 40 seconds in September and 40 seconds in October (Not checked)\n",
 		"- Something went wrong with billing in early October. (0 of 1 source checked by a person)\n",
-		"## Still to find out\n\n- Customers who were charged twice are less likely to buy again. (not tested yet)\n- Have all 1,900 customers been paid back? (not answered yet)\n",
+		"## Still to find out\n\n- Customers who were charged twice are less likely to buy again. (not tested yet)\n- What were the extra calls about? (answered)\n  - Answer: They were about a bill",
+		"- Have all 1,900 customers been paid back? (not answered yet)\n",
 		"## Ruled out\n\n- A new ad brought in more callers.\n",
 		"- Should we expect fewer sales in November from the customers who were charged twice? (left for later)\n  - Why it can wait: ",
 		"(AI checked the source)",
-		"\nThis short version leaves out 2 things still to find out and the history. Ask the person who shared this for the version with everything.\n\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
+		"\nThis short version leaves out the history. Ask the person who shared this for the version with everything.\n\n_Made with Casebook. These are the saved findings and sources, word for word._\n",
 	} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("the short version lacks %q", want)
@@ -80,7 +81,7 @@ func TestGoldenBriefDemo(t *testing.T) {
 	}
 	// Every source line under a finding keeps its check label.
 	for _, line := range strings.Split(p.Markdown, "\n") {
-		if (strings.HasPrefix(line, "  - Backed by: ") || strings.HasPrefix(line, "  - Goes against it: ")) && !strings.HasSuffix(line, ")") {
+		if (strings.HasPrefix(line, "  - Backs it: ") || strings.HasPrefix(line, "  - Goes against it: ")) && !strings.HasSuffix(line, ")") {
 			t.Errorf("a source under a finding lacks its label: %q", line)
 		}
 	}

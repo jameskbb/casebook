@@ -134,7 +134,7 @@ func TestGoldenReport(t *testing.T) {
 		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by a person. 6 not checked.\n\nNobody has checked this answer yet.\n",
 		"How we know: The race detector reproduces it (E-006)",
 		"- TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (0 of 3 sources checked by a person)\n",
-		"  - Backed by: cartCache is a package-level map written under t.Parallel() (Not checked)\n",
+		"  - Backs it: cartCache is a package-level map written under t.Parallel() (Not checked)\n",
 		"- The two checkout tests share cartCache when the package runs in parallel on slow runners. (0 of 1 source checked by a person)\n",
 		"## Ruled out\n\n- The failure is a midnight boundary",
 		"  - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)\n",

@@ -36,8 +36,8 @@ func TestConclusionBasisAndCheckTime(t *testing.T) {
 		{Ref: "C-005", Status: domain.ClaimStatusSuperseded, Verification: domain.VerificationSuperseded},
 		{Ref: "C-009", Missing: true},
 	}, ContradictingClaims: []PackConclusionClaim{{Ref: "C-001", Status: domain.ClaimStatusDisputed, Verification: domain.VerificationDisputed}}}
-	got := strings.Join(conclusionAccountabilityLines(c), "\n")
-	for _, want := range []string{"Answer marked: A person checked this", "Findings behind the answer: C-002 [Not checked], C-004 [Replaced, A person checked this], C-005 [Replaced], C-009 [missing finding]", "Findings against the answer: C-001 [Sources disagree]", "Answer checked by a person: 2026-10-27 03:29 UTC"} {
+	got := strings.Join(Pack{}.conclusionAccountabilityLines(c), "\n")
+	for _, want := range []string{"Answer marked: A person checked this", "Findings behind the answer: C-002 [Not checked], C-004 [Replaced], C-005 [Replaced], C-009 [missing finding]", "Findings against the answer: C-001 [Sources disagree]", "Answer checked by a person: 2026-10-27 03:29 UTC"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q:\n%s", want, got)
 		}
@@ -86,9 +86,9 @@ A person checked this answer on November 1, 2026.
 ## Where sources disagree
 
 - kept
-  - Why: a reason
-  - Backed by: Call log (A person checked this)
-  - Backed by: a source that is not included here
+  - Why we think so: a reason
+  - Backs it: Call log (A person checked this)
+  - Backs it: a source that is not included here
   - Goes against it: Phone report (Not checked)
 - argued
 

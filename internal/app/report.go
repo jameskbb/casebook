@@ -210,8 +210,9 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 		}
 	}
 	for _, q := range s.Questions {
-		initial := questionCount < 2 && q.Status != domain.QuestionStatusResolved
-		if initial {
+		// An answered one is always kept with its answer; open ones up to two.
+		initial := q.Status == domain.QuestionStatusResolved || questionCount < 2
+		if initial && q.Status != domain.QuestionStatusResolved {
 			questionCount++
 		}
 		chosen := wants(q.Ref, o.QuestionRefs, initial)

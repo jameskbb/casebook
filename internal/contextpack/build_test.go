@@ -126,26 +126,26 @@ Why this answer:
 C-001 is supported by two sources.
 
 Findings:
-C-001 [A person checked this]
+C-001 [A person decided this holds]
 The export uses a midnight UTC cutoff.
 Why: Config and logs agree. Checked twice.
 Sources: E-001 [Not checked], E-002 [Not checked]
 Sources against: E-003 [Not checked]
-C-200 [Not checked]
+C-200 [0 of 1 source checked by a person]
 Two hundredth claim.
 Sources: E-004 [Not checked]
-C-1000 [AI checked the source]
+C-1000 [No source yet]
 Thousandth claim.
 
 Findings where sources disagree:
-C-002 [Not checked] The dashboard double counts returns.
+C-002 [Sources disagree] The dashboard double counts returns.
 
 Findings still being tested:
-H-001 [Not tested yet, Not checked]
+H-001 [Not tested yet, 0 of 1 source checked by a person]
 Time zones may shift counts.
 Why: Cutoffs differ by hours.
 Sources: E-004 [Not checked]
-H-004 [Looks right so far, A person checked this]
+H-004 [Looks right so far, A person decided this holds]
 Late arriving rows explain part of it.
 Sources against: E-001 [Not checked]
 
@@ -157,7 +157,7 @@ Still to find out, left for later:
 Q-002 Should returns be excluded? (note: Waiting on finance.)
 
 Findings ruled out:
-H-002 Duplicate rows cause the gap. [Not checked]
+H-002 Duplicate rows cause the gap.
 Ruled out by: E-006 [Not checked]
 
 Sources:
@@ -338,7 +338,7 @@ func TestRenderMarkdownOneLineForms(t *testing.T) {
 	s.Claims[1].Statement = "Multi\nline\n\ndisputed  claim."
 	s.Questions[1].DeferNote = ""
 	md := RenderMarkdown(Build(s, Options{}))
-	if !strings.Contains(md, "\nC-002 [Not checked] Multi line disputed claim.\n") {
+	if !strings.Contains(md, "\nC-002 [Sources disagree] Multi line disputed claim.\n") {
 		t.Fatalf("disputed claim not on one line:\n%s", md)
 	}
 	if !strings.Contains(md, "\nQ-002 Should returns be excluded?\n") {

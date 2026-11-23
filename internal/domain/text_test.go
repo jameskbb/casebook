@@ -175,3 +175,9 @@ func TestTextLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestTruncateLineCutsBetweenWords(t *testing.T) {
+	if got := TruncateLine("in August, all from one supplier", 20); got != "in August, all..." {
+		t.Fatalf("TruncateLine = %q", got)
+	}
+}

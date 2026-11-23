@@ -138,6 +138,9 @@ func detailPhrase(action, ref, sum string, name refNamer) string {
 		if strings.HasPrefix(sum, "Recorded a review of the answer") {
 			return "checked the answer"
 		}
+		if strings.HasPrefix(sum, "Undid the check of the answer") {
+			return "undid the check of the answer"
+		}
 		if strings.Contains(sum, "; verification reset to ") {
 			return "updated the answer. " + resetSentence
 		}

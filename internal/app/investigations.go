@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jameskbb/casebook/internal/domain"
@@ -441,6 +442,11 @@ func (a *App) conclusionTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 		summary = "Cleared the answer"
 	case c.review:
 		summary = "Recorded a review of the answer"
+	case inv.ConclusionReviewedAt != "" && next.ConclusionReviewedAt == "" && inv.Conclusion == c.conclusion &&
+		inv.ConclusionConfidence == c.confidence && inv.ConclusionRationale == c.rationale &&
+		slices.Equal(inv.ConclusionSupportingClaims, next.ConclusionSupportingClaims) &&
+		slices.Equal(inv.ConclusionContradictingClaims, next.ConclusionContradictingClaims):
+		summary = "Undid the check of the answer"
 	}
 	if err := a.recordActivity(ctx, tx, actor, inv.ID, "conclusion.update", inv.Ref, summary, "", now); err != nil {
 		return Investigation{}, false, err

@@ -115,7 +115,8 @@ func (a *App) prepareConclusionAccountability(ctx context.Context, q store.Queri
 	if err != nil {
 		return next, "", false, err
 	}
-	if substanceChanged {
+	// Lowering an answer to Not checked takes back a person's check of it too.
+	if substanceChanged || (c.verification == domain.VerificationAIGenerated && !c.review) {
 		next.ConclusionReviewedAt, next.ConclusionReviewBasis, snapshot = "", "", ""
 	}
 	if c.conclusion == "" {

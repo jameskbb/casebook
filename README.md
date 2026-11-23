@@ -48,7 +48,7 @@ Calls to the call center went from 2,400 in September to 3,120 in October. Sales
 
 The AI looked at the call log. Calls to buy barely moved: 2,000 in September, 2,050 in October. Calls about a bill went from 400 to 1,070. A notice from the billing team says 1,900 customers were charged twice on October 3.
 
-Two other ideas were ruled out. No new ads ran in October, and prices did not change. The sales manager said the team was two people short, but the phone system report shows the same 40 second wait in both months. Those two sources disagree, and Casebook says so.
+Two other ideas were ruled out. No new ads ran in October, and prices did not change. The sales manager said the team was two people short, but the phone system's waiting times show the same 40 second wait in both months. Those two sources disagree, and Casebook says so.
 
 You read the billing team's notice yourself and spoke to the billing team lead. You marked both as checked. The answer:
 
@@ -68,9 +68,10 @@ Open a question. The answer is at the top. Under it is each finding, with its so
 - Choose **Check the next source**. It shows one source at a time, with the finding it backs or goes against.
 - Read the source. Open the report or the email it points to and compare.
 - Choose **I checked this** when it holds up, or **Skip**. Casebook moves to the next source by itself.
-- When every source is checked, Casebook shows the answer. Choose **I checked this answer** when you are happy with it.
+- Then it shows each finding where sources disagree. Choose **It still holds** or **Rule this out**.
+- Last it shows the answer. Choose **I checked this answer** when you are happy with it.
 
-If something changes after you checked the answer, Casebook tells you to check it again.
+If something changes after you checked the answer, Casebook tells you to check it again. To take your check back, choose **Undo my check**.
 
 ## What the labels mean
 
@@ -161,7 +162,7 @@ Answer so far:
 The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
 Answer marked: A person checked this
-Findings behind the answer: C-002 [Not checked], C-003 [Not checked]
+Findings behind the answer: C-002 [0 of 2 sources checked by a person], C-003 [2 of 4 sources checked by a person]
 Findings against the answer: C-001 [Sources disagree]
 Answer checked by a person: 2026-11-05 14:55 UTC
 What was checked: Read the billing team's notice and the call log by reason, and spoke to the billing team lead. Sources disagree about waiting time. Whether those customers buy less later is not tested yet.
@@ -170,11 +171,11 @@ Why this answer:
 The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
 
 Findings:
-C-002 [Not checked]
+C-002 [0 of 2 sources checked by a person]
 About the same number of people called to buy.
-Why: The call log and the sales report agree.
+Why: The call log and the sales numbers agree.
 Sources: E-001 [AI checked the source], E-006 [Not checked]
-C-003 [Not checked]
+C-003 [2 of 4 sources checked by a person]
 A billing mistake on October 3 charged some customers twice.
 Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
 Sources: E-006 [Not checked], E-007 [A person checked this], E-008 [Not checked], E-009 [A person checked this]

@@ -132,7 +132,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		for _, group := range []struct {
 			label string
 			refs  []string
-		}{{"Backed by", backs}, {"Goes against it", against}} {
+		}{{"Backs it", backs}, {"Goes against it", against}} {
 			for _, ref := range group.refs {
 				line := "  - " + group.label + ": a source that is not included here"
 				for _, e := range evidence {
@@ -150,7 +150,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string) []string {
 		lines := []string{"- " + oneLine(statement) + stateWords(imported, label)}
 		if w := oneLine(why); w != "" {
-			lines = append(lines, "  - Why: "+w)
+			lines = append(lines, "  - Why we think so: "+w)
 		}
 		return append(lines, sources(links)...)
 	}
@@ -218,16 +218,16 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	var list []string
 	for _, e := range evidence {
 		list = append(list, "- "+oneLine(e.Title)+stateWords(e.Imported, verificationLabel(e.Verification)))
-		from := oneLine(e.SourceLabel)
+		from, dated := oneLine(e.SourceLabel), ", dated "
 		if from == "" {
 			from = e.SourceType.PlainLabel()
 			if e.SourceType == domain.SourceTypeManualObservation {
 				// The reader is not the person who saw it.
-				from = "Seen by the person who shared this"
+				from, dated = "Seen by the person who shared this", " on "
 			}
 		}
 		if on := longDate(e.CapturedAt); d.full && on != "" {
-			from += ", dated " + on
+			from += dated + on
 		}
 		list = append(list, "  - "+from)
 		if where := oneLine(e.SourceRef); where != "" {
@@ -365,7 +365,7 @@ func answerCheckLine(inv domain.Investigation) string {
 }
 
 // names returns the refNamer of a shared answer: a record is named by its
-// own text in quotes, cut to a readable length; a record that is not there
+// own text in quotes, in full (never cut mid-word); a record that is not there
 // (deleted since) is gone. The map is only looked up.
 func (s Snapshot) names() refNamer {
 	text := map[string]string{}
@@ -382,7 +382,7 @@ func (s Snapshot) names() refNamer {
 		text[q.Ref] = q.Question
 	}
 	return func(ref string) string {
-		if t := domain.TruncateLine(text[ref], 90); t != "" {
+		if t := oneLine(text[ref]); t != "" {
 			return `"` + t + `"`
 		}
 		if ref != "" {

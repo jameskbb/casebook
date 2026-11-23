@@ -4,7 +4,7 @@
 // calls go up 30% in October when sales stayed the same?": three sessions
 // over four days, Claude Code (Monday, Thursday) and Codex (Tuesday), and
 // one person who reads the billing team's notice, talks to the billing team
-// lead and checks the answer. INV-0001 is the March payroll question, answered
+// lead and checks the answer. INV-0001 is the March cancellations question, answered
 // last week (its answer is not checked yet); INV-0003 is the help desk
 // question, every source checked and still without an answer;
 // the others fill the list with an answered and an archived question.
@@ -164,7 +164,7 @@ func ThursdayCheckpoint() app.CheckpointInput {
 		Conclusion: &app.ConclusionInput{
 			Conclusion: Conclusion,
 			Confidence: app.ConfidenceMedium,
-			Rationale:  "The call log and the sales report agree that calls to buy stayed the same. The billing mistake explains the extra calls. Nobody has checked the billing team's notice yet.",
+			Rationale:  "The call log and the sales numbers agree that calls to buy stayed the same. The billing mistake explains the extra calls. Nobody has checked the billing team's notice yet.",
 		},
 	}
 }
@@ -215,12 +215,12 @@ const (
 )
 
 // run writes the scenes in time order (the clock never moves back). Refs
-// follow creation order: INV-0001 March payroll (last week, answered),
+// follow creation order: INV-0001 March cancellations (last week, answered),
 // INV-0002 the call center calls (Monday), INV-0003 help desk tickets (no
 // answer yet), INV-0004 customers who stopped ordering (answered), INV-0005
 // the office supplies order (archived).
 func (s *seeder) run(stage Stage) {
-	s.payroll()
+	s.cancellations()
 	s.callsMonday()
 	s.helpDesk()
 	s.callsTuesday()
@@ -238,45 +238,45 @@ func (s *seeder) run(stage Stage) {
 	s.person()
 }
 
-// payroll is INV-0001, a small question worked and answered last week:
-// H-001 (overtime) ruled out, every source checked by the person, the
-// answer rewritten by them and not checked yet.
-func (s *seeder) payroll() {
+// cancellations is INV-0001, a small question worked and answered last
+// week: H-001 (unhappy customers) ruled out, every source checked by the
+// person, the answer's why written by them and the answer not checked yet.
+func (s *seeder) cancellations() {
 	a, ctx := s.a, s.ctx
 	s.at(9 * day)
 	inv, err := a.CreateInvestigation(ctx, ClaudeCode, app.CreateInvestigationInput{
-		Title:            "Why was March payroll $18,000 over budget?",
-		ProblemStatement: "March payroll was $418,000. The budget was $400,000. Where did the extra $18,000 go?",
+		Title:            "Why did more customers cancel in March?",
+		ProblemStatement: "140 customers cancelled in February and 260 in March. Why did more cancel?",
 		Status:           app.InvestigationStatusInvestigating,
 	})
 	if !s.check("INV-0001", err) {
 		return
 	}
 	_, err = a.CheckpointBatch(ctx, ClaudeCode, inv.Ref, app.CheckpointInput{
-		Note: "March payroll was $418,000 against a budget of $400,000. " +
-			"Overtime was the same in February and March, so extra overtime is ruled out.",
+		Note: "140 customers cancelled in February and 260 in March. " +
+			"Complaints were about the same in both months, so unhappy customers are ruled out.",
 		Evidence: []app.CheckpointEvidence{
-			{Key: "payroll", Evidence: app.EvidenceInput{
-				Title:       "March payroll: $418,000 paid, $400,000 in the budget",
-				Summary:     "The March payroll report shows $418,000 paid. The budget for March was $400,000.",
+			{Key: "cancellations", Evidence: app.EvidenceInput{
+				Title:       "Cancellations: 140 in February, 260 in March",
+				Summary:     "The list of cancellations shows 140 customers cancelled in February and 260 in March.",
 				SourceType:  app.SourceTypeFile,
-				SourceRef:   "Payroll report, March",
-				SourceLabel: "Payroll report",
-				RawDetail: "February: $400,000 paid, $400,000 in the budget\n" +
-					"March: $418,000 paid, $400,000 in the budget",
+				SourceRef:   "List of cancellations, February and March",
+				SourceLabel: "List of cancellations",
+				RawDetail: "February: 140 cancellations\n" +
+					"March: 260 cancellations",
 			}},
-			{Key: "overtime", Evidence: app.EvidenceInput{
-				Title:       "Overtime pay: $6,000 in February, $6,000 in March",
-				Summary:     "The payroll report lists $6,000 of overtime pay in February and $6,000 in March.",
+			{Key: "complaints", Evidence: app.EvidenceInput{
+				Title:       "Complaints: 45 in February, 47 in March",
+				Summary:     "The customer service log has 45 complaints in February and 47 in March.",
 				SourceType:  app.SourceTypeFile,
-				SourceRef:   "Payroll report, February and March",
-				SourceLabel: "Payroll report",
+				SourceRef:   "Customer service log, February and March",
+				SourceLabel: "Customer service log",
 			}},
 		},
 		Hypotheses: []app.HypothesisInput{{
-			Statement:  "Extra overtime in March pushed payroll over budget.",
+			Statement:  "More customers were unhappy with the service in March.",
 			Confidence: app.ConfidenceMedium,
-			Links:      []app.EvidenceLinkInput{contradicts("#overtime")},
+			Links:      []app.EvidenceLinkInput{contradicts("#complaints")},
 		}},
 		HypothesisUpdates: []app.HypothesisUpdate{{
 			Ref:   "H-001",
@@ -288,26 +288,26 @@ func (s *seeder) payroll() {
 	}
 
 	s.at(8*day + 20*hour)
-	hires, err := a.AddEvidence(ctx, ClaudeCode, inv.Ref, app.EvidenceInput{
-		Title:       "Two new hires started on March 1. The budget had them starting on April 1",
-		Summary:     "The list of start dates shows two new hires who started on March 1. The budget planned for both to start on April 1. Together they are paid $18,000 a month.",
+	offer, err := a.AddEvidence(ctx, ClaudeCode, inv.Ref, app.EvidenceInput{
+		Title:       "130 of the 260 March cancellations joined with two free months in January",
+		Summary:     "The list of cancellations shows 130 of the customers who cancelled in March joined in January, when new customers got their first two months free. March was their first month to pay.",
 		SourceType:  app.SourceTypeFile,
-		SourceRef:   "New hire start dates, this year",
-		SourceLabel: "List of start dates",
+		SourceRef:   "List of cancellations, March, with the month each customer joined",
+		SourceLabel: "List of cancellations",
 	})
 	if !s.check("INV-0001 E-003", err) {
 		return
 	}
 	_, err = a.AddClaim(ctx, ClaudeCode, inv.Ref, app.ClaimInput{
-		Statement:           "Two new hires started a month earlier than the budget assumed.",
+		Statement:           "Customers who joined with two free months in January cancelled when they had to start paying in March.",
 		Confidence:          app.ConfidenceHigh,
-		ConfidenceRationale: "Their pay for March is $18,000, the same as the amount over budget.",
-		Links:               []app.EvidenceLinkInput{supports(hires.Ref)},
+		ConfidenceRationale: "130 of the March cancellations joined with the free months. Without them, March had about as many cancellations as February.",
+		Links:               []app.EvidenceLinkInput{supports("E-001"), supports(offer.Ref)},
 	})
 	if !s.check("INV-0001 C-001", err) {
 		return
 	}
-	const answer = "Two new hires started a month earlier than the budget assumed."
+	const answer = "Customers who joined with two free months in January cancelled when they had to start paying in March."
 	_, err = a.UpdateConclusion(ctx, ClaudeCode, inv.Ref, app.ConclusionInput{
 		Conclusion: answer,
 		Confidence: app.ConfidenceMedium,
@@ -326,7 +326,7 @@ func (s *seeder) payroll() {
 	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
 		Conclusion: answer,
 		Confidence: app.ConfidenceHigh,
-		Rationale:  "The two start dates explain the whole $18,000.",
+		Rationale:  "Without the customers who joined in January, 130 cancelled in March, about the same as the 140 in February.",
 	})
 	if !s.check("INV-0001 answer by the person", err) {
 		return
@@ -358,17 +358,17 @@ func (s *seeder) callsMonday() {
 	}
 	s.at(3*day + hour)
 	_, err = a.CheckpointBatch(ctx, ClaudeCode, inv.Ref, app.CheckpointInput{
-		Note: "Read the call log and the October sales report. Calls went from 2,400 to 3,120 while calls to buy and sales stayed about the same. " +
+		Note: "Read the call log and the sales numbers for October. Calls went from 2,400 to 3,120 while calls to buy and sales stayed about the same. " +
 			"The sales manager thinks callers waited too long and hung up. " +
 			"Two more ideas to test: a new ad and a price increase. " +
 			"Still to find out: what the extra calls were about.",
 		Evidence: []app.CheckpointEvidence{
 			{Key: "buying", Evidence: app.EvidenceInput{
 				Title:        "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October",
-				Summary:      "The call log counts 2,000 calls to buy in September and 2,050 in October. The October sales report shows $510,000 of sales in September and $512,000 in October.",
+				Summary:      "The call log counts 2,000 calls to buy in September and 2,050 in October. The sales numbers show $510,000 of sales in September and $512,000 in October.",
 				SourceType:   app.SourceTypeFile,
-				SourceRef:    "Call log, September and October; October sales report",
-				SourceLabel:  "Call log and October sales report",
+				SourceRef:    "Call log, September and October; sales numbers for October",
+				SourceLabel:  "Call log and sales numbers for October",
 				Verification: app.VerificationSourceVerified,
 				Metadata:     `{"calls_to_buy_september":2000,"calls_to_buy_october":2050,"sales_september_usd":510000,"sales_october_usd":512000}`,
 			}},
@@ -392,7 +392,7 @@ func (s *seeder) callsMonday() {
 		Claims: []app.ClaimInput{{
 			Statement:           "Callers waited too long and hung up before buying.",
 			Confidence:          app.ConfidenceLow,
-			ConfidenceRationale: "This is the sales manager's view. It has not been compared with the phone system report.",
+			ConfidenceRationale: "This is the sales manager's view. It has not been compared with the phone system's waiting times.",
 			Links:               []app.EvidenceLinkInput{supports("#manager")},
 		}},
 		Questions: []app.QuestionInput{{
@@ -403,7 +403,7 @@ func (s *seeder) callsMonday() {
 }
 
 // callsTuesday is Tuesday's Codex session on INV-0002: the phone system
-// report (E-003) contradicts C-001, the marketing calendar (E-004) and the
+// waiting times (E-003) contradict C-001, the marketing calendar (E-004) and the
 // price list (E-005) rule out H-001 and H-002, and the call log by reason
 // (E-006) answers Q-001; C-002 says calls to buy stayed the same, H-003
 // suspects billing and Q-002 asks what happened.
@@ -414,11 +414,11 @@ func (s *seeder) callsTuesday() {
 	}
 	s.at(2*day + 2*hour)
 	wait, err := a.AddEvidence(ctx, Codex, FeaturedRef, app.EvidenceInput{
-		Title:       "The average wait was 40 seconds in September and 40 seconds in October",
-		Summary:     "The phone system report shows callers waited 40 seconds on average in September and 40 seconds in October. 3% of callers hung up while waiting in both months.",
+		Title:       "Callers waited 40 seconds in September and 40 seconds in October",
+		Summary:     "The phone system shows callers waited 40 seconds in September and 40 seconds in October. 3% of callers hung up while waiting in both months.",
 		SourceType:  app.SourceTypeFile,
-		SourceRef:   "Phone system report, September and October",
-		SourceLabel: "Phone system report",
+		SourceRef:   "Phone system waiting times, September and October",
+		SourceLabel: "Phone system waiting times",
 	})
 	if !s.check(FeaturedRef+" E-003", err) {
 		return
@@ -463,7 +463,7 @@ func (s *seeder) callsTuesday() {
 	s.at(2*day + hour)
 	_, err = a.CheckpointBatch(ctx, Codex, FeaturedRef, app.CheckpointInput{
 		Note: "Ruled out a new ad and a price increase. " +
-			"The phone system report disagrees with the sales manager about waiting. " +
+			"The phone system's waiting times disagree with the sales manager about waiting. " +
 			"The call log by reason shows the extra calls were about a bill. " +
 			"Calls to buy stayed about the same. Something may have gone wrong with billing in early October. Still to find out: what happened.",
 		Evidence: []app.CheckpointEvidence{
@@ -483,7 +483,7 @@ func (s *seeder) callsTuesday() {
 		Claims: []app.ClaimInput{{
 			Statement:           "About the same number of people called to buy.",
 			Confidence:          app.ConfidenceHigh,
-			ConfidenceRationale: "The call log and the sales report agree.",
+			ConfidenceRationale: "The call log and the sales numbers agree.",
 			Links:               []app.EvidenceLinkInput{supports("E-001"), supports("#reasons")},
 		}},
 		Hypotheses: []app.HypothesisInput{{
@@ -526,7 +526,7 @@ func (s *seeder) person() {
 	if !s.check(FeaturedRef+" Q-004", err) {
 		return
 	}
-	_, err = a.DeferQuestion(ctx, Person, FeaturedRef, q4.Ref, "Waiting for the November sales report on December 1.")
+	_, err = a.DeferQuestion(ctx, Person, FeaturedRef, q4.Ref, "Waiting for the November sales numbers on December 1.")
 	if !s.check(FeaturedRef+" defer Q-004", err) {
 		return
 	}
@@ -590,20 +590,20 @@ func (s *seeder) helpDesk() {
 	s.at(3*day - 4*hour)
 	e1, err := a.AddEvidence(ctx, Codex, inv.Ref, app.EvidenceInput{
 		Title:       "Tickets took 2 days to close in September and 5 days in October",
-		Summary:     "The help desk report shows tickets took 2 days to close on average in September and 5 days in October. 900 tickets came in during September and 1,400 in October.",
+		Summary:     "The help desk's ticket list shows tickets took 2 days to close in September and 5 days in October. 900 tickets came in during September and 1,400 in October.",
 		SourceType:  app.SourceTypeFile,
-		SourceRef:   "Help desk report, September and October",
-		SourceLabel: "Help desk report",
+		SourceRef:   "Help desk ticket list, September and October",
+		SourceLabel: "Help desk ticket list",
 	})
 	if !s.check("INV-0003 E-001", err) {
 		return
 	}
 	e2, err := a.AddEvidence(ctx, Codex, inv.Ref, app.EvidenceInput{
 		Title:       "Password reset tickets: 120 in September, 610 in October",
-		Summary:     "The help desk report by ticket type shows 120 password reset tickets in September and 610 in October. Every other type stayed about the same.",
+		Summary:     "The help desk's ticket list by type shows 120 password reset tickets in September and 610 in October. Every other type stayed about the same.",
 		SourceType:  app.SourceTypeFile,
-		SourceRef:   "Help desk report, by ticket type",
-		SourceLabel: "Help desk report",
+		SourceRef:   "Help desk ticket list, by type",
+		SourceLabel: "Help desk ticket list",
 	})
 	if !s.check("INV-0003 E-002", err) {
 		return
@@ -611,7 +611,7 @@ func (s *seeder) helpDesk() {
 	_, err = a.AddClaim(ctx, Codex, inv.Ref, app.ClaimInput{
 		Statement:           "Almost all of the 500 extra tickets in October are password resets.",
 		Confidence:          app.ConfidenceMedium,
-		ConfidenceRationale: "The two help desk reports agree. Nobody has said why resets went up.",
+		ConfidenceRationale: "Both counts come from the help desk's ticket list. Nobody has said why resets went up.",
 		Links:               []app.EvidenceLinkInput{supports(e1.Ref), supports(e2.Ref)},
 	})
 	if !s.check("INV-0003 C-001", err) {
@@ -682,10 +682,10 @@ func (s *seeder) lostCustomers() {
 		},
 		{
 			Title:       "Those eleven customers were 2% of sales from January to June",
-			Summary:     "The sales report by customer shows the eleven customers bought $61,000 of the $3,050,000 sold from January to June.",
+			Summary:     "The sales numbers by customer show the eleven customers bought $61,000 of the $3,050,000 sold from January to June.",
 			SourceType:  app.SourceTypeFile,
-			SourceRef:   "Sales report by customer, January to June",
-			SourceLabel: "Sales report",
+			SourceRef:   "Sales numbers by customer, January to June",
+			SourceLabel: "Sales numbers by customer",
 		},
 		{
 			Title:       "Nine of the eleven ordered less than once a month before the change",
@@ -704,7 +704,7 @@ func (s *seeder) lostCustomers() {
 	_, err = a.AddClaim(ctx, Codex, inv.Ref, app.ClaimInput{
 		Statement:           "Eleven small customers stopped ordering after the price change. Together they were 2% of sales.",
 		Confidence:          app.ConfidenceHigh,
-		ConfidenceRationale: "The order list and the sales report agree.",
+		ConfidenceRationale: "The order list and the sales numbers agree.",
 		Links:               []app.EvidenceLinkInput{supports(refs[0]), supports(refs[1]), supports(refs[2])},
 	})
 	if !s.check("INV-0004 C-001", err) {
@@ -714,7 +714,7 @@ func (s *seeder) lostCustomers() {
 	_, err = a.UpdateConclusion(ctx, Person, inv.Ref, app.ConclusionInput{
 		Conclusion: "Eleven small customers, together 2% of sales.",
 		Confidence: app.ConfidenceHigh,
-		Rationale:  "The order list names the eleven customers and the sales report gives what they bought.",
+		Rationale:  "The order list names the eleven customers and the sales numbers give what they bought.",
 	})
 	if !s.check("INV-0004 answer", err) {
 		return

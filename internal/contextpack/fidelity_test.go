@@ -57,7 +57,7 @@ func TestEvidenceVerificationSurvivesEveryPackRendering(t *testing.T) {
 			md := RenderMarkdown(p)
 			for _, want := range []string{
 				"Findings:", "E-001 [Sources disagree]", "E-002 [Replaced]", "E-003 [AI checked the source]",
-				"H-001 Duplicate invoices caused the decline. [Not checked]",
+				"H-001 Duplicate invoices caused the decline.\n",
 				"Sources outside the included findings: 1 omitted.",
 			} {
 				if !strings.Contains(md, want) {
@@ -89,8 +89,8 @@ func TestReportLabelsInlineEvidenceAndRuledOutFindings(t *testing.T) {
 	md := RenderReport(fidelitySnapshot(), ReportOptions{})
 	for _, want := range []string{
 		"- Rebates explain the margin decline.",
-		"  - Backed by: Contested rebate estimate (Sources disagree)\n",
-		"  - Backed by: Prior margin extract (Replaced)\n",
+		"  - Backs it: Contested rebate estimate (Sources disagree)\n",
+		"  - Backs it: Prior margin extract (Replaced)\n",
 		"  - Goes against it: Regional ledger (AI checked the source)\n",
 		"## Where sources disagree\n\n- The old extract is complete.\n",
 		"## Ruled out\n\n- Exchange rates explain the gap.\n",
@@ -149,7 +149,25 @@ func TestMissingEvidenceNeverBorrowsFindingVerification(t *testing.T) {
 	if md := RenderMarkdown(p); !strings.Contains(md, "Sources: E-001 [Not checked], E-002 [Not checked]") {
 		t.Fatalf("missing evidence rendered as checked: %s", md)
 	}
-	if shared := RenderReport(s, ReportOptions{}); !strings.Contains(shared, "  - Backed by: a source that is not included here\n") || strings.Contains(shared, "Backed by: a source that is not included here (") {
+	if shared := RenderReport(s, ReportOptions{}); !strings.Contains(shared, "  - Backs it: a source that is not included here\n") || strings.Contains(shared, "Backs it: a source that is not included here (") {
 		t.Fatalf("missing evidence rendered with a label: %s", shared)
+	}
+}
+
+// Everything dates each source once; something a person saw reads "Seen by
+// the person who shared this on <date>".
+func TestReportDatesSourceOnce(t *testing.T) {
+	s := Snapshot{
+		Investigation: domain.Investigation{Ref: "INV-0001", Title: "Why did refunds double?"},
+		Evidence: []domain.Evidence{
+			{Ref: "E-001", Title: "Refund log", SourceType: domain.SourceTypeManualObservation, CapturedAt: "2026-11-23T08:00:00Z"},
+			{Ref: "E-002", Title: "Returns notes", SourceLabel: "Returns desk", CapturedAt: "2026-11-20T08:00:00Z"},
+		},
+	}
+	md := RenderReport(s, ReportOptions{})
+	for _, want := range []string{"  - Seen by the person who shared this on November 23, 2026\n", "  - Returns desk, dated November 20, 2026\n"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("report lacks %q:\n%s", want, md)
+		}
 	}
 }

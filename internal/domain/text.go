@@ -87,8 +87,8 @@ func collapseLine(s string) string {
 }
 
 // TruncateLine collapses s to one clean line and truncates it on a rune
-// boundary so the result is at most maxBytes, ending in "..." when cut. It
-// never fails; use it for activity summaries.
+// boundary (between words when it can) so the result is at most maxBytes,
+// ending in "..." when cut. It never fails; use it for activity summaries.
 func TruncateLine(s string, maxBytes int) string {
 	s = strings.ToValidUTF8(s, "")
 	s = stripControls(collapseLine(s))
@@ -103,6 +103,12 @@ func TruncateLine(s string, maxBytes int) string {
 	cut := maxBytes - len(ell)
 	for cut > 0 && !utf8.RuneStart(s[cut]) {
 		cut--
+	}
+	// Cut between words when there is a space in the last half, never mid-word.
+	if s[cut] != ' ' {
+		if i := strings.LastIndexByte(s[:cut], ' '); i > cut/2 {
+			cut = i
+		}
 	}
 	// The cut can split a flag tag sequence; strip again so no stray tag
 	// characters survive.

@@ -581,3 +581,23 @@ func TestUnlinkEvidenceFromClaim(t *testing.T) {
 		t.Fatal("failed unlinks wrote activity")
 	}
 }
+
+// A person who adds a finding may say it is not checked yet: the engine keeps
+// an explicit ai_generated from a person instead of its human default.
+func TestPersonAddsFindingNotChecked(t *testing.T) {
+	ctx := context.Background()
+	a := apptest.Open(t)
+	inv := newInv(t, a, "Why did refunds double in August?")
+	c, err := a.AddClaim(ctx, apptest.Human, inv.Ref, app.ClaimInput{Statement: "A faulty batch came back.", Verification: app.VerificationAIGenerated})
+	if err != nil || c.Verification != app.VerificationAIGenerated || c.Status != app.ClaimStatusActive {
+		t.Fatalf("claim = %+v, %v", c, err)
+	}
+	h, err := a.AddHypothesis(ctx, apptest.Human, inv.Ref, app.HypothesisInput{Statement: "Other stores saw it too.", Verification: app.VerificationAIGenerated})
+	if err != nil || h.Verification != app.VerificationAIGenerated {
+		t.Fatalf("hypothesis = %+v, %v", h, err)
+	}
+	d, err := a.AddClaim(ctx, apptest.Human, inv.Ref, app.ClaimInput{Statement: "Default for a person."})
+	if err != nil || d.Verification != app.VerificationHumanVerified {
+		t.Fatalf("default = %+v, %v", d, err)
+	}
+}

@@ -14,23 +14,23 @@ Findings against the answer: none selected.
 Answer checked by a person: not yet.
 
 Findings:
-C-001 [A person checked this]
-A shared platform default moved every service to debug lo...
+C-001 [1 of 2 sources checked by a person]
+A shared platform default moved every service to debug...
 Sources: E-001 [Not checked], E-004 [A person checked this]
-C-002 [Not checked]
+C-002 [0 of 2 sources checked by a person]
 Log ingestion, billed per GB, is $96,400 of the $135,800...
 Sources: E-002 [Not checked], E-003 [Not checked]
 
 Findings still being tested:
-H-001 [Not tested yet, Not checked]
+H-001 [Not tested yet, No source yet]
 The new tracing agent may also be shipping some services'...
 
 Still to find out:
 Q-001
-Can every service except payments go back to info level t...
+Can every service except payments go back to info level...
 
 Findings ruled out:
-H-002 Data transfer from the region move doubled the network line. [Not checked]
+H-002 Data transfer from the region move doubled the network line.
 Ruled out by: E-003 [Not checked]
 
 (Trimmed to fit 1200 bytes; omitted: recent_changes, statement_rationales, evidence_index, rationale)

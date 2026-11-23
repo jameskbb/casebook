@@ -2,6 +2,7 @@ package contextpack
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ func RenderMarkdown(p Pack) string {
 	add("The question:", orNotSet(oneLine(p.Investigation.PrimaryQuestion)))
 	add("Answer so far:", orNotSet(oneLine(p.Conclusion.Text)))
 	if p.Conclusion.Text != "" {
-		add(conclusionAccountabilityLines(p.Conclusion)...)
+		add(p.conclusionAccountabilityLines(p.Conclusion)...)
 	}
 	if rationale := oneLine(p.Conclusion.Rationale); rationale != "" {
 		add("Why this answer:", rationale)
@@ -42,7 +43,7 @@ func RenderMarkdown(p Pack) string {
 
 	lines := []string{"Findings:"}
 	for _, c := range p.EstablishedClaims {
-		lines = append(lines, fmt.Sprintf("%s [%s]", refTag(c.Ref, c.Imported), verificationLabel(c.Verification)), oneLine(c.Statement))
+		lines = append(lines, fmt.Sprintf("%s [%s]", refTag(c.Ref, c.Imported), p.findingLabel(c.Verification, c.SupportingEvidence, c.ContradictingEvidence)), oneLine(c.Statement))
 		lines = append(lines, whyLine(c.Rationale)...)
 		lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 	}
@@ -51,7 +52,7 @@ func RenderMarkdown(p Pack) string {
 	if len(p.DisputedClaims) > 0 || p.Omitted.DisputedClaims > 0 {
 		lines := []string{"Findings where sources disagree:"}
 		for _, c := range p.DisputedClaims {
-			lines = append(lines, fmt.Sprintf("%s [%s] %s", refTag(c.Ref, c.Imported), verificationLabel(c.Verification), oneLine(c.Statement)))
+			lines = append(lines, fmt.Sprintf("%s [Sources disagree] %s", refTag(c.Ref, c.Imported), oneLine(c.Statement)))
 			lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 		}
 		add(listTail(lines, len(p.DisputedClaims), p.Omitted.DisputedClaims,
@@ -60,7 +61,7 @@ func RenderMarkdown(p Pack) string {
 
 	lines = []string{"Findings still being tested:"}
 	for _, h := range p.Hypotheses {
-		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(h.Ref, h.Imported), h.Status.PlainLabel(), verificationLabel(h.Verification)),
+		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(h.Ref, h.Imported), h.Status.PlainLabel(), p.findingLabel(h.Verification, h.SupportingEvidence, h.ContradictingEvidence)),
 			oneLine(h.Statement))
 		lines = append(lines, whyLine(h.Rationale)...)
 		lines = append(lines, p.evidenceLines(h.SupportingEvidence, h.ContradictingEvidence)...)
@@ -89,7 +90,7 @@ func RenderMarkdown(p Pack) string {
 	if len(p.DisprovenHypotheses) > 0 || p.Omitted.DisprovenHypotheses > 0 {
 		lines := []string{"Findings ruled out:"}
 		for _, h := range p.DisprovenHypotheses {
-			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text)+" ["+verificationLabel(h.Verification)+"]")
+			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text))
 			if len(h.ContradictingEvidence) > 0 {
 				lines = append(lines, "Ruled out by: "+p.evidenceRefs(h.ContradictingEvidence))
 			}
@@ -241,21 +242,50 @@ func verificationLabel(v domain.Verification) string {
 	return v.PlainLabel()
 }
 
-// claimBasisLabel names a basis finding's state without repeating a word: a
-// current finding shows only its check label, a finding whose status and
-// check agree (Sources disagree, Replaced) shows the words once, and any
-// other finding shows its status, then its check label, joined by a
-// comma.
-func claimBasisLabel(claim PackConclusionClaim) string {
+// claimBasisLabel names a basis finding's state as the app shows it: a
+// current finding in the pack has the label its sources give it
+// (findingLabel), any other finding its status ("Ruled out", "Replaced",
+// "Sources disagree"). A current finding the budget left out keeps its
+// stored check label, so a label is never lost.
+func (p Pack) claimBasisLabel(claim PackConclusionClaim) string {
 	if claim.Missing {
 		return "missing finding"
 	}
-	verification := verificationLabel(claim.Verification)
-	status := claim.Status.PlainLabel()
-	if claim.Status == domain.ClaimStatusActive || claim.Status == "" || status == verification {
-		return verification
+	if claim.Status != domain.ClaimStatusActive && claim.Status != "" {
+		return claim.Status.PlainLabel()
 	}
-	return status + ", " + verification
+	for _, c := range append(slices.Clone(p.EstablishedClaims), p.DisputedClaims...) {
+		if c.Ref == claim.Ref {
+			return p.findingLabel(c.Verification, c.SupportingEvidence, c.ContradictingEvidence)
+		}
+	}
+	return verificationLabel(claim.Verification)
+}
+
+// findingLabel is a finding's label worked out from its sources, the same
+// rule as the shared answer and the app: "Sources disagree" when its stored
+// check says so or a source goes against it and no person decided it holds,
+// otherwise "2 of 3 sources checked by a person", "No source yet" or "A
+// person decided this holds".
+func (p Pack) findingLabel(v domain.Verification, supporting, contradicting []string) string {
+	links := make([]domain.EvidenceLink, 0, len(supporting)+len(contradicting))
+	for _, ref := range supporting {
+		links = append(links, domain.EvidenceLink{EvidenceRef: ref, Relation: domain.RelationSupports})
+	}
+	for _, ref := range contradicting {
+		links = append(links, domain.EvidenceLink{EvidenceRef: ref, Relation: domain.RelationContradicts})
+	}
+	verification := map[string]domain.Verification{}
+	for _, e := range p.EvidenceIndex {
+		verification[e.Ref] = e.Verification
+	}
+	for _, e := range p.EvidenceVerification {
+		verification[e.Ref] = e.Verification
+	}
+	if sourcesDisagree(v, links, verification) {
+		return "Sources disagree"
+	}
+	return findingLabel(v, links, verification)
 }
 
 // readableTime renders an RFC 3339 timestamp as "YYYY-MM-DD HH:MM UTC" for
@@ -271,7 +301,7 @@ func readableTime(ts string) string {
 // These labels are mandatory: a budget may shorten prose, never a check
 // label or the fact that the findings behind the answer need a person's
 // check.
-func conclusionAccountabilityLines(c PackConclusion) []string {
+func (p Pack) conclusionAccountabilityLines(c PackConclusion) []string {
 	verification := c.Verification
 	if verification == "" {
 		verification = domain.VerificationAIGenerated
@@ -283,7 +313,7 @@ func conclusionAccountabilityLines(c PackConclusion) []string {
 	}{{"Findings behind the answer", c.SupportingClaims}, {"Findings against the answer", c.ContradictingClaims}} {
 		refs := []string{}
 		for _, claim := range group.claims {
-			refs = append(refs, oneLine(claim.Ref)+" ["+claimBasisLabel(claim)+"]")
+			refs = append(refs, oneLine(claim.Ref)+" ["+p.claimBasisLabel(claim)+"]")
 		}
 		if len(refs) > 0 {
 			lines = append(lines, group.label+": "+strings.Join(refs, ", "))

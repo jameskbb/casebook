@@ -225,3 +225,27 @@ func TestConclusionBackupRestoresReview(t *testing.T) {
 		t.Fatalf("backup lost review: %+v", got)
 	}
 }
+
+// A person takes back their check of the answer by setting it to Not checked
+// with the same text; the answer, why and selection stay.
+func TestConclusionUndoCheck(t *testing.T) {
+	ctx := context.Background()
+	a, inv := conclusionFixture(t)
+	inv = reviewConclusion(t, a, inv)
+	got, err := a.UpdateConclusion(ctx, apptest.Human, inv.Ref, app.ConclusionInput{Conclusion: inv.Conclusion, Confidence: inv.ConclusionConfidence, Rationale: inv.ConclusionRationale, Verification: app.VerificationAIGenerated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ConclusionReviewedAt != "" || got.ConclusionReviewBasis != "" || !got.ConclusionNeedsReview || got.ConclusionVerification != app.VerificationAIGenerated ||
+		got.Conclusion != inv.Conclusion || !reflect.DeepEqual(got.ConclusionSupportingClaims, []string{"C-001"}) {
+		t.Fatalf("after undo: %+v", got)
+	}
+	rows, err := a.ListActivity(ctx, app.ActivityFilter{Limit: 1})
+	if err != nil || len(rows) != 1 || rows[0].Summary != "Undid the check of the answer" {
+		t.Fatalf("activity = %+v, %v", rows, err)
+	}
+	// The answer can be checked again.
+	if again := reviewConclusion(t, a, got); again.ConclusionNeedsReview {
+		t.Fatal("check after undo did not count")
+	}
+}

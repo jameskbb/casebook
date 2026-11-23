@@ -19,12 +19,12 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 ## Findings
 
 - TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (0 of 3 sources checked by a person)
-  - Why: Reproduced 50 of 50 times with -race; the map is written under t.Parallel().
-  - Backed by: All 23 failures ran on the 4-core runner pool (Not checked)
-  - Backed by: cartCache is a package-level map written under t.Parallel() (Not checked)
-  - Backed by: go test -race reproduces a data race on cartCache, 50 of 50 runs (Not checked)
+  - Why we think so: Reproduced 50 of 50 times with -race; the map is written under t.Parallel().
+  - Backs it: All 23 failures ran on the 4-core runner pool (Not checked)
+  - Backs it: cartCache is a package-level map written under t.Parallel() (Not checked)
+  - Backs it: go test -race reproduces a data race on cartCache, 50 of 50 runs (Not checked)
 - The two checkout tests share cartCache when the package runs in parallel on slow runners. (0 of 1 source checked by a person)
-  - Backed by: All 23 failures ran on the 4-core runner pool (Not checked)
+  - Backs it: All 23 failures ran on the 4-core runner pool (Not checked)
 
 ## Still to find out
 
@@ -35,8 +35,8 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 ## Ruled out
 
 - The failure is a midnight boundary: the fixture's date flips between seeding and assertion.
-  - Why: No failure is near midnight (E-003).
-  - Backed by: Fixture seeds order dates from time.Now() truncated to the day (Not checked)
+  - Why we think so: No failure is near midnight (E-003).
+  - Backs it: Fixture seeds order dates from time.Now() truncated to the day (Not checked)
   - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)
 
 ## Sources
@@ -70,27 +70,27 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 - Claude Code created this question
 - Claude Code added the source "23 of the last 400 CI runs fail on the totals assertion"
 - Claude Code added the source "Fixture seeds order dates from time.Now() truncated to the day"
-- Claude Code added the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert..." with 1 source
+- Claude Code added the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assertion." with 1 source
 - Claude Code added something to find out: "Do the failure timestamps cluster around 00:00 UTC?"
 - Codex added the source "Failure times are spread across the day; none within 30 min of 00:00 UTC"
 
 ### October 6, 2026
 
 - Codex added the source "All 23 failures ran on the 4-core runner pool"
-- Codex added the source "Failure times are spread across the day; none within 30 min of 00:00 UTC" to the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert...", which it goes against
-- Codex ruled out the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assert..."
+- Codex added the source "Failure times are spread across the day; none within 30 min of 00:00 UTC" to the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assertion.", which it goes against
+- Codex ruled out the finding "The failure is a midnight boundary: the fixture's date flips between seeding and assertion."
 - Codex answered "Do the failure timestamps cluster around 00:00 UTC?": No: failures are spread evenly across the day (E-003).
 - Codex added the finding "The two checkout tests share cartCache when the package runs in parallel on slow runners." with 1 source
 - Claude Code added the source "cartCache is a package-level map written under t.Parallel()"
 - Claude Code added the source "go test -race reproduces a data race on cartCache, 50 of 50 runs"
-- Claude Code added the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites th..." with 3 sources
+- Claude Code added the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map." with 3 sources
 - Claude Code said the finding "The two checkout tests share cartCache when the package runs in parallel on slow runners." turned out right
 - Claude Code added something to find out: "Do other packages keep test state in package-level maps?"
 - Claude Code updated the answer
 
 ### October 7, 2026
 
-- A person decided the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites th..." holds
+- A person decided the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map." holds
 - A person updated the answer
 
 _Made with Casebook. These are the saved findings and sources, word for word._

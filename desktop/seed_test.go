@@ -38,8 +38,8 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	for _, s := range list {
 		byRef[s.Ref] = s
 	}
-	if s := byRef["INV-0001"]; s.Title != "Why was March payroll $18,000 over budget?" || s.Status != app.InvestigationStatusResolved ||
-		s.Conclusion != "Two new hires started a month earlier than the budget assumed." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 || s.AnswerCheckedByYou {
+	if s := byRef["INV-0001"]; s.Title != "Why did more customers cancel in March?" || s.Status != app.InvestigationStatusResolved ||
+		s.Conclusion != "Customers who joined with two free months in January cancelled when they had to start paying in March." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 || s.AnswerCheckedByYou {
 		t.Fatalf("INV-0001 = %+v", s)
 	}
 	// The list carries what the sidebar and Home show: the answer, the
@@ -158,7 +158,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 	wantEvidence := map[string]string{
 		"E-001": "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510,000 in September, $512,000 in October",
 		"E-002": "Sales manager: we were two people short in October",
-		"E-003": "The average wait was 40 seconds in September and 40 seconds in October",
+		"E-003": "Callers waited 40 seconds in September and 40 seconds in October",
 		"E-004": "No new ads ran in October",
 		"E-005": "Prices were the same in September and October",
 		"E-006": "Calls about a bill: 400 in September, 1,070 in October",

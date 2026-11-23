@@ -104,7 +104,7 @@ func TestGoldenImported(t *testing.T) {
 	for _, want := range []string{
 		"C-001 (imported) [", "C-002 (imported) [", "H-001 (imported) [Not tested yet",
 		"H-002 (imported) Data transfer", "Q-001 (imported)\n", "E-001 (imported) ",
-		"\nC-004 [A person checked this]", "\nQ-002\nWho owns the chart default now?", "\nE-005 Local check",
+		"\nC-004 [1 of 1 source checked by a person]", "\nQ-002\nWho owns the chart default now?", "\nE-005 Local check",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("markdown lacks %q:\n%s", want, md)
@@ -175,11 +175,11 @@ func TestGoldenCloudSpend(t *testing.T) {
 		"Title: September cloud bill up 38%\n",
 		"The question:\nWhy did the cloud bill rise 38% in September when traffic was flat?\n",
 		"Answer so far:\nDebug logging requested for payments only reached every service and drove most of the increase.\n",
-		"C-001 [A person checked this]",
+		"C-001 [1 of 2 sources checked by a person]",
 		"Sources: E-001 [Not checked], E-004 [A person checked this]",
-		"C-002 [Not checked]",
+		"C-002 [0 of 2 sources checked by a person]",
 		"Sources: E-002 [Not checked], E-003 [Not checked]",
-		"H-001 [Not tested yet, Not checked]",
+		"H-001 [Not tested yet, No source yet]",
 		"Q-001",
 		"Can every service except payments go back to info level today?",
 		"Findings:",
@@ -203,7 +203,7 @@ func TestGoldenCloudSpend(t *testing.T) {
 		t.Fatalf("hypotheses section:\n%s", hyps)
 	}
 	disproven := section(md, "Findings ruled out:")
-	if disproven != "Findings ruled out:\nH-002 Data transfer from the region move doubled the network line. [Not checked]\nRuled out by: E-003 [Not checked]" {
+	if disproven != "Findings ruled out:\nH-002 Data transfer from the region move doubled the network line.\nRuled out by: E-003 [Not checked]" {
 		t.Fatalf("disproven section:\n%s", disproven)
 	}
 	if !strings.Contains(section(md, "Still to find out:"), "Q-001\nCan every service except payments") {
