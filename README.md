@@ -125,102 +125,13 @@ Casebook does not connect to your notes or document app. You paste or attach the
 
 ## For people setting it up
 
-This part is for whoever connects the AI tool, uses a terminal or builds Casebook from source.
+This part is for whoever connects the AI tool, uses a terminal or builds Casebook from source. Casebook is a desktop app and a command line tool named `casebook`. Both open the same questions. The command line tool also runs the MCP server your AI uses to read and save questions.
 
-Casebook is a desktop app and a command line tool named `casebook`. Both open the same questions. The command line tool also runs an MCP server (Model Context Protocol, the usual way AI tools connect to other apps). That server is how your AI reads and saves questions.
-
-Commands, tool names and file formats keep the names the engine stores. An investigation is a question, a conclusion is the answer, a claim or a hypothesis is a finding, and evidence is a source. Codes such as `INV-0002`, `C-003` and `E-007` name a question, a finding and a source. The app hides them unless you turn on **Show the codes your AI uses** under **Settings**, **Technical...**.
-
-### Connect an AI tool
-
-**Settings**, **Connect your AI...** in the app connects Claude Code, Codex or the Claude desktop app for you, shows whether each is connected, and keeps the line to run under **Technical details**. The same lines, from a terminal:
-
-```sh
-casebook setup claude --hooks --skill   # Claude Code: MCP server, session hooks, the /casebook command
-casebook setup codex --skill            # Codex: MCP server and the Casebook skill
-casebook setup mcp --client cursor      # any other tool: prints its settings (--list shows them all)
-```
-
-Setup for Claude Code and Codex backs up the settings file and changes only Casebook's entries. `--print` shows what would be written and changes nothing.
-
-- [Claude Code guide](docs/claude-code.md) and [Codex guide](docs/codex.md): every option, and how to undo it.
-- [MCP guide](docs/mcp.md): Claude Desktop, Cursor, VS Code, Windsurf, Gemini CLI and other tools, and every tool Casebook gives your AI.
-
-### What your AI reads
-
-A new AI session does not get your old chat. It gets a briefing built from what is saved. This is the start of the briefing for the call center example, as `casebook context --format compact` prints it:
-
-```text
-Question: INV-0002
-Title: Why did calls go up 30% in October when sales stayed the same?
-Status: Answered
-
-The question:
-Calls to the call center went from 2,400 in September to 3,120 in October. Sales stayed the same. Why?
-
-Answer so far:
-The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
-
-Answer marked: Not checked
-Findings behind the answer: C-002 [0 of 2 sources checked by a person], C-003 [2 of 4 sources checked by a person]
-Findings against the answer: C-001 [Sources disagree]
-Answer checked by a person: not yet.
-
-Why this answer:
-The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
-
-Findings:
-C-002 [0 of 2 sources checked by a person]
-About the same number of people called to buy.
-Why: The call log and the sales numbers agree.
-Sources: E-001 [AI checked the source], E-006 [Not checked]
-C-003 [2 of 4 sources checked by a person]
-A billing mistake on October 3 charged some customers twice.
-Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
-Sources: E-006 [Not checked], E-007 [A person checked this], E-008 [Not checked], E-009 [A person checked this]
-
-Findings where sources disagree:
-C-001 [Sources disagree] Callers waited too long and hung up before buying.
-Sources: E-002 [Not checked]
-Sources against: E-003 [Not checked]
-```
-
-The briefing goes on to list the findings still being tested, what is still to find out, the findings that were ruled out, every source and the recent changes. `go run ./scripts/readme-example` prints all of it from the built-in example, and the block above is copied from that output.
-
-### Command line
-
-Install the command line tool on its own:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/jameskbb/casebook/main/scripts/install.sh | sh   # Linux and macOS
-go install github.com/jameskbb/casebook/cmd/casebook@latest                                   # any system with Go 1.27 or later
-```
-
-On Windows it comes with the app, or as its own zip on the Releases page ([Installing Casebook](docs/install.md#command-line-tool)).
-
-```sh
-casebook inv create --activate --title "Why did calls go up 30% in October when sales stayed the same?"
-casebook inv list                                        # every question, with how many sources you checked
-casebook context --format compact                        # the briefing a new AI session reads
-casebook report INV-0002                                 # the answer with everything, as Markdown
-casebook report INV-0002 --brief -o answer.md            # the short version, saved to a file
-casebook export INV-0002 --out .casebook/INV-0002.json   # the whole question as one file
-casebook import .casebook/INV-0002.json                  # a separate copy, with every check cleared
-```
-
-`casebook inv conclude --review` records that you checked the answer. Checking individual findings and sources is done in the app.
-
-### Build from source
-
-[Development](docs/development.md) covers building and testing a checkout. It needs Go 1.27 or later and Node 24.
-
-```sh
-go build ./cmd/casebook
-go test ./...
-npm --prefix desktop/frontend ci && npm --prefix desktop/frontend test -- --run
-```
-
-More for developers: [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md), which measures how often an AI uses Casebook without being asked, in engineering tasks.
+- [Claude Code guide](docs/claude-code.md) and [Codex guide](docs/codex.md): connect from a terminal, every option, and how to undo it.
+- [MCP guide](docs/mcp.md): Claude Desktop, Cursor, VS Code and other tools, every tool Casebook gives your AI, and [what a new AI session reads](docs/mcp.md#what-a-new-ai-session-reads).
+- [Installing Casebook](docs/install.md#command-line-tool): the command line tool on its own, and [the commands you use most](docs/install.md#everyday-commands).
+- [Development](docs/development.md): building and testing from source.
+- [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md), which measures how often an AI uses Casebook without being asked, in engineering tasks.
 
 ## License
 

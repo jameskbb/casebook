@@ -1,6 +1,6 @@
 // Command readme-example builds the demo questions in a throwaway database
 // and prints the context pack of the featured one (the call center question,
-// demo.FeaturedRef), so the example in the README is real engine output
+// demo.FeaturedRef), so the briefing example in docs/mcp.md is real engine output
 // rather than hand-written text.
 //
 // Usage (from the repository root):

@@ -124,7 +124,7 @@ To disconnect AI clients, choose **Disconnect** for the tool under **Settings**,
 Restart Claude Code to unload Casebook.
 ```
 
-Backups are named `<file>.casebook-backup-<UTC timestamp>` next to the original (with `-2`, `-3` and so on when one already exists for that second) and are readable only by you. A file that would not change is not touched and gets no backup. These backups are full copies of the client's settings file (`~/.claude.json` holds account details and per-project state), so Casebook keeps only the newest 5 for each file: after a successful change it removes older regular files named exactly `<file>.casebook-backup-<UTC timestamp>[-N]` in the same folder and never touches any other file. The [README](../README.md#connect-your-ai) links the guides with the manual steps.
+Backups are named `<file>.casebook-backup-<UTC timestamp>` next to the original (with `-2`, `-3` and so on when one already exists for that second) and are readable only by you. A file that would not change is not touched and gets no backup. These backups are full copies of the client's settings file (`~/.claude.json` holds account details and per-project state), so Casebook keeps only the newest 5 for each file: after a successful change it removes older regular files named exactly `<file>.casebook-backup-<UTC timestamp>[-N]` in the same folder and never touches any other file. The [README](../README.md#for-people-setting-it-up) links the guides with the manual steps.
 
 ## Hooks and transcripts
 

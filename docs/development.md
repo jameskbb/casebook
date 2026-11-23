@@ -207,14 +207,14 @@ Only the CLI: `scripts/build-cli.sh --os linux --arch amd64` (or `arm64`). There
 
 ## The README example
 
-The compact pack in the README is real engine output. `scripts/readme-example` builds the demo questions (`internal/demo`) through `internal/app` (Claude Code, Codex and a person in the desktop app, on a fixed clock) in a temporary database and prints the pack of the call center question:
+The briefing in the [MCP guide](mcp.md#what-a-new-ai-session-reads) is real engine output. `scripts/readme-example` builds the demo questions (`internal/demo`) through `internal/app` (Claude Code, Codex and a person in the desktop app, on a fixed clock) in a temporary database and prints the pack of the call center question:
 
 ```sh
 go run ./scripts/readme-example                 # as casebook context --format compact
 go run ./scripts/readme-example -format md      # or json; -db <new file> keeps the database
 ```
 
-When the pack format changes, rerun it and paste the output (shortened the same way) into the README.
+When the pack format changes, rerun it and paste the output (shortened the same way) into that section of the MCP guide.
 
 ## Continuous integration
 

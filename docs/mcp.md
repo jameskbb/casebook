@@ -10,6 +10,8 @@ Casebook includes a Model Context Protocol (MCP) server, so any AI client that s
 - It uses the same database as the desktop app and the CLI, so changes appear everywhere within a few seconds.
 - The MCP server sends nothing over the network and opens no network connection; the one request Casebook makes, the check for updates a person starts, lives outside it. The AI client sends what it reads from Casebook to its own model provider, and carries data between Casebook and any other app or MCP server it is connected to (for example when you ask it to save a question summary in a notes app, as [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) describes); see [Privacy and local data](privacy.md#what-leaves-your-machine).
 
+Commands, tool names and file formats keep the names the engine stores. An investigation is a question, a conclusion is the answer, a claim or a hypothesis is a finding, and evidence is a source. Codes such as `INV-0002`, `C-003` and `E-007` name a question, a finding and a source. The app hides them unless you turn on **Show the codes your AI uses** under **Settings**, **Technical...**.
+
 ## Server command
 
 The command is the absolute path of the `casebook` CLI followed by `mcp`:
@@ -196,6 +198,47 @@ The active question is the one the desktop app marks as your AI's current questi
 ### Saving the answer in another app
 
 Casebook connects to no other app. When a person asks their AI client to save the answer to a question in a notes or document app, the client fetches the text with `casebook_get_report` (with `mode` set to `brief` for the short version) and writes it with the tools that app provides in the same session, under the client's own permission prompts. Casebook records nothing about the destination and never reports that a note was created or updated; the client reports the actual result of the app's tool. [Using a shared answer in other apps](sharing.md#using-a-shared-answer-in-other-apps) explains the flow for people.
+
+## What a new AI session reads
+
+A new AI session does not get your old chat. It gets a briefing built from what is saved. This is the start of the briefing for the call center example, as `casebook context --format compact` prints it:
+
+```text
+Question: INV-0002
+Title: Why did calls go up 30% in October when sales stayed the same?
+Status: Answered
+
+The question:
+Calls to the call center went from 2,400 in September to 3,120 in October. Sales stayed the same. Why?
+
+Answer so far:
+The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
+
+Answer marked: Not checked
+Findings behind the answer: C-002 [0 of 2 sources checked by a person], C-003 [2 of 4 sources checked by a person]
+Findings against the answer: C-001 [Sources disagree]
+Answer checked by a person: not yet.
+
+Why this answer:
+The billing team's notice, the call log and the billing team lead agree. Whether those customers buy less later is not tested yet.
+
+Findings:
+C-002 [0 of 2 sources checked by a person]
+About the same number of people called to buy.
+Why: The call log and the sales numbers agree.
+Sources: E-001 [AI checked the source], E-006 [Not checked]
+C-003 [2 of 4 sources checked by a person]
+A billing mistake on October 3 charged some customers twice.
+Why: The billing team's notice and the call notes say the same thing. The extra calls start on October 3.
+Sources: E-006 [Not checked], E-007 [A person checked this], E-008 [Not checked], E-009 [A person checked this]
+
+Findings where sources disagree:
+C-001 [Sources disagree] Callers waited too long and hung up before buying.
+Sources: E-002 [Not checked]
+Sources against: E-003 [Not checked]
+```
+
+The briefing goes on to list the findings still being tested, what is still to find out, the findings that were ruled out, every source and the recent changes. `go run ./scripts/readme-example` prints all of it from the built-in example, and the block above is copied from that output ([The README example](development.md#the-readme-example)).
 
 ## How the tools behave
 

@@ -10,7 +10,7 @@ import (
 )
 
 // TestReadmeExample: the demo story builds through internal/app and the
-// compact pack of the featured question keeps the lines the README quotes.
+// compact pack of the featured question keeps the lines docs/mcp.md quotes.
 func TestReadmeExample(t *testing.T) {
 	var a, b bytes.Buffer
 	if err := run(filepath.Join(t.TempDir(), "a.db"), "compact", 0, &a); err != nil {

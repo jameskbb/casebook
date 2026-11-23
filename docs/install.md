@@ -31,6 +31,22 @@ The install script puts `casebook` in `~/.local/bin` after checking the download
 
 On Linux the command line tool is the whole product: AI clients work through `casebook mcp`, and you read questions with `casebook context`, `casebook report` and `casebook search`. Checking individual sources and findings, and choosing which findings go into the short version of a shared answer, need the desktop app today; export the question or a backup to a Mac or Windows machine for those. The CLI can record that you checked the answer.
 
+### Everyday commands
+
+```sh
+casebook inv create --activate --title "Why did calls go up 30% in October when sales stayed the same?"
+casebook inv list                                        # every question, with how many sources you checked
+casebook context --format compact                        # the briefing a new AI session reads
+casebook report INV-0002                                 # the answer with everything, as Markdown
+casebook report INV-0002 --brief -o answer.md            # the short version, saved to a file
+casebook export INV-0002 --out .casebook/INV-0002.json   # the whole question as one file
+casebook import .casebook/INV-0002.json                  # a separate copy, with every check cleared
+```
+
+`casebook inv conclude --review` records that you checked the answer. Checking individual findings and sources is done in the app.
+
+To connect an AI tool from a terminal, `casebook setup claude --hooks --skill` sets up Claude Code, `casebook setup codex --skill` sets up Codex, and `casebook setup mcp --client cursor` prints the settings for another tool (`--list` shows them all). Setup for Claude Code and Codex backs up the settings file and changes only Casebook's entries. `--print` shows what would be written and changes nothing.
+
 ## Desktop app
 
 Download the file for your system from the [Releases page](https://github.com/jameskbb/casebook/releases), together with `SHA256SUMS.txt`, and [check the download](#check-your-download) before you run it. Each release lists its files under [Which file do I need?](#which-file-do-i-need) at the top of its notes.
