@@ -473,10 +473,9 @@ func (s *seeder) callsTuesday() {
 				SourceType:  app.SourceTypeFile,
 				SourceRef:   "Call log, September and October, by reason",
 				SourceLabel: "Call log",
-				RawDetail: "reason,september,october\n" +
-					"To buy,2000,2050\n" +
-					"About a bill,400,1070\n" +
-					"All calls,2400,3120",
+				RawDetail: "Calls to buy: 2,000 in September, 2,050 in October. " +
+					"Calls about a bill: 400 in September, 1,070 in October. " +
+					"All calls: 2,400 in September, 3,120 in October.",
 				Metadata: `{"calls_about_a_bill_september":400,"calls_about_a_bill_october":1070,"all_calls_september":2400,"all_calls_october":3120}`,
 			}},
 		},

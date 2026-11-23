@@ -40,23 +40,19 @@ How we know: The billing team's notice, the call log and the billing team lead a
   - Backs it: Sales manager: we were two people short in October (Not checked)
   - Goes against it: Callers waited 40 seconds in September and 40 seconds in October (Not checked)
 
+## Found out
+
+- What were the extra calls about?
+  - Answer: They were about a bill: 400 calls in September, 1,070 in October.
+- What happened with billing in early October?
+  - Answer: A mistake in the bills sent on October 3 charged 1,900 customers twice.
+
 ## Still to find out
 
 - Customers who were charged twice are less likely to buy again. (not tested yet)
-- What were the extra calls about? (answered)
-  - Answer: They were about a bill: 400 calls in September, 1,070 in October.
-- What happened with billing in early October? (answered)
-  - Answer: A mistake in the bills sent on October 3 charged 1,900 customers twice.
 - Have all 1,900 customers been paid back? (not answered yet)
 - Should we expect fewer sales in November from the customers who were charged twice? (left for later)
   - Why it can wait: Waiting for the November sales numbers on December 1.
-
-## Ruled out
-
-- A new ad brought in more callers.
-  - Goes against it: No new ads ran in October (Not checked)
-- We raised prices, so callers did not buy.
-  - Goes against it: Prices were the same in September and October (Not checked)
 
 ## Sources
 
@@ -71,14 +67,6 @@ How we know: The billing team's notice, the call log and the billing team lead a
   - Phone system waiting times
   - Where to find it: Phone system waiting times, September and October
   - The phone system shows callers waited 40 seconds in September and 40 seconds in October. 3% of callers hung up while waiting in both months.
-- No new ads ran in October (Not checked)
-  - Marketing calendar
-  - Where to find it: Marketing calendar, September and October
-  - The marketing calendar lists the same two ads in September and October. Nothing new started in October.
-- Prices were the same in September and October (Not checked)
-  - Price list
-  - Where to find it: Price list, last changed July 1
-  - The price list has not changed since July 1.
 - Calls about a bill: 400 in September, 1,070 in October (Not checked)
   - Call log
   - Where to find it: Call log, September and October, by reason
@@ -95,6 +83,6 @@ How we know: The billing team's notice, the call log and the billing team lead a
   - Billing team lead, in person
   - The billing team lead said in person that the bills sent on October 3 charged 1,900 customers twice, and that the mistake was fixed on October 5.
 
-This short version leaves out the history. Ask the person who shared this for the version with everything.
+This short version leaves out 2 findings, 2 sources and the history. Ask the person who shared this for the version with everything.
 
 _Made with Casebook. These are the saved findings and sources, word for word._

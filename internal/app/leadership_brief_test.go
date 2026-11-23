@@ -47,13 +47,13 @@ func TestLeadershipBriefRetainsCaveatsAndCountsOmissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{disputed.Statement, contra.Statement, hyp.Statement, "Goes against it: " + ev.Title + " (Not checked)", "## Where sources disagree\n\n- " + disputed.Statement + "\n", "No answer yet.", "This short version leaves out 1 finding, 1 thing still to find out and the history. Ask the person who shared this for the version with everything."} {
+	for _, want := range []string{disputed.Statement, contra.Statement, "Goes against it: " + ev.Title + " (Not checked)", "## Where sources disagree\n\n- " + disputed.Statement + "\n", "No answer yet.", "This short version leaves out 2 findings, 1 thing still to find out and the history. Ask the person who shared this for the version with everything."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
 	}
-	if strings.Contains(p.Markdown, ignored.Statement) || strings.Contains(p.Markdown, q.Question) {
-		t.Fatal("unselected nonmaterial records included")
+	if strings.Contains(p.Markdown, ignored.Statement) || strings.Contains(p.Markdown, q.Question) || strings.Contains(p.Markdown, hyp.Statement) {
+		t.Fatal("unselected nonmaterial or ruled out records included")
 	}
 	if p.HTML != contextpack.ReportHTML(p.Markdown) || !strings.Contains(p.HTML, "Margin &lt;gap&gt;") {
 		t.Fatal("HTML did not derive from same escaped Markdown")
@@ -174,7 +174,7 @@ func TestLeadershipBriefRetainsDisputedSourcesOutsideSelection(t *testing.T) {
 	}
 }
 
-func TestLeadershipBriefBoundsRetiredFindings(t *testing.T) {
+func TestLeadershipBriefLeavesOutRetiredFindings(t *testing.T) {
 	a := apptest.Open(t)
 	ctx := context.Background()
 	inv, err := a.CreateInvestigation(ctx, apptest.Human, app.CreateInvestigationInput{Title: "Many retired explanations"})
@@ -195,7 +195,7 @@ func TestLeadershipBriefBoundsRetiredFindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Count(p.Markdown, "Retired explanation"); got != 2 || p.Omitted.Hypotheses != 6 {
+	if got := strings.Count(p.Markdown, "Retired explanation"); got != 0 || p.Omitted.Hypotheses != 8 || !strings.Contains(p.Markdown, "leaves out 8 findings") {
 		t.Fatalf("default brief has %d retired findings, omissions %+v", got, p.Omitted)
 	}
 	none, err := a.SharePreview(ctx, inv.Ref, app.ShareOptions{RuledOutRefs: []string{}})
@@ -292,8 +292,8 @@ func TestLeadershipBriefSelectsOpenExplanations(t *testing.T) {
 	if !strings.Contains(p.Markdown, "## Findings\n\n- Live explanation 0 (No source yet)\n") || !strings.Contains(p.Markdown, "## Still to find out\n\n- Live explanation 1 (not tested yet)\n") || strings.Contains(p.Markdown, "Live explanation 2") {
 		t.Fatalf("brief does not show the default explanations:\n%s", p.Markdown)
 	}
-	if got := strings.Join(p.Omitted.HypothesisRefs, ","); got != refs[2] || p.Omitted.Hypotheses != 1 {
-		t.Fatalf("omitted hypotheses = %v (%d), want %s", p.Omitted.HypothesisRefs, p.Omitted.Hypotheses, refs[2])
+	if got := strings.Join(p.Omitted.HypothesisRefs, ","); got != refs[2]+","+dead.Ref || p.Omitted.Hypotheses != 2 {
+		t.Fatalf("omitted hypotheses = %v (%d), want %s and %s", p.Omitted.HypothesisRefs, p.Omitted.Hypotheses, refs[2], dead.Ref)
 	}
 	chosen, err := a.SharePreview(ctx, inv.Ref, app.ShareOptions{HypothesisRefs: []string{refs[2]}, RuledOutRefs: []string{}})
 	if err != nil {
@@ -334,7 +334,7 @@ func TestLeadershipBriefKeepsAnsweredFindOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"- Which supplier made the batch? (answered)\n  - Answer: Kettle Co. made it.\n", "Did other stores see it?", "Was it only kettles?", "leaves out 1 thing still to find out and the history."} {
+	for _, want := range []string{"## Found out\n\n- Which supplier made the batch?\n  - Answer: Kettle Co. made it.\n\n## Still to find out\n","Did other stores see it?", "Was it only kettles?", "leaves out 1 thing still to find out and the history."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}

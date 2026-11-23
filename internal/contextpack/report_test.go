@@ -138,7 +138,7 @@ func TestGoldenReport(t *testing.T) {
 		"- The two checkout tests share cartCache when the package runs in parallel on slow runners. (0 of 1 source checked by a person)\n",
 		"## Ruled out\n\n- The failure is a midnight boundary",
 		"  - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)\n",
-		"## Still to find out\n\n- Do the failure timestamps cluster around 00:00 UTC? (answered)\n  - Answer: No: failures are spread evenly across the day (E-003).\n- Do other packages keep test state in package-level maps? (not answered yet)\n",
+		"## Found out\n\n- Do the failure timestamps cluster around 00:00 UTC?\n  - Answer: No: failures are spread evenly across the day (E-003).\n\n## Still to find out\n\n- Do other packages keep test state in package-level maps? (not answered yet)\n",
 		"  - Something your AI read, dated October 6, 2026\n  - Where to find it: internal/checkout/cache.go:18\n",
 		"## How we got here\n\n### October 5, 2026\n\n- Claude Code created this question\n",
 		"- Codex ruled out the finding \"The failure is a midnight boundary",

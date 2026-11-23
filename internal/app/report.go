@@ -76,8 +76,9 @@ func newestActivity(rows []domain.Activity, n int) []domain.Activity {
 
 // ShareOptions selects existing records for a leadership brief. Nil selections
 // choose a small initial set; an empty slice explicitly selects none. Material
-// caveats and the conclusion's claim basis are always retained. Ruled-out
-// findings remain selectable rather than expanding the brief into a history.
+// caveats and the conclusion's claim basis are always retained. Ruled out
+// and replaced findings are never in the short version: RuledOutRefs is still
+// checked against the ruled_out group but selects nothing.
 // HypothesisRefs selects open or supported hypotheses (group "hypotheses").
 type ShareOptions struct {
 	Mode           string   `json:"mode"`
@@ -165,22 +166,21 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 	slices.SortFunc(s.Claims, func(a, b domain.Claim) int { return briefRefOrder(a.Ref, b.Ref, domain.RecordClaim) })
 	slices.SortFunc(s.Hypotheses, func(a, b domain.Hypothesis) int { return briefRefOrder(a.Ref, b.Ref, domain.RecordHypothesis) })
 	slices.SortFunc(s.Questions, func(a, b domain.Question) int { return briefRefOrder(a.Ref, b.Ref, domain.RecordQuestion) })
-	claimCount, hypothesisCount, ruledCount, questionCount := 0, 0, 0, 0
+	claimCount, hypothesisCount, questionCount := 0, 0, 0
+	// The short version never prints a ruled out or replaced finding; its last
+	// sentence counts them with the rest it leaves out.
 	for _, c := range s.Claims {
 		current := c.Status != domain.ClaimStatusRejected && c.Status != domain.ClaimStatusSuperseded && c.Verification != domain.VerificationSuperseded
-		required := (current && (c.Status == domain.ClaimStatusDisputed || c.Verification == domain.VerificationDisputed || materialSourceCaveat(c.Links))) || slices.Contains(s.Investigation.ConclusionSupportingClaims, c.Ref) || slices.Contains(s.Investigation.ConclusionContradictingClaims, c.Ref)
+		required := current && (c.Status == domain.ClaimStatusDisputed || c.Verification == domain.VerificationDisputed || materialSourceCaveat(c.Links) || slices.Contains(s.Investigation.ConclusionSupportingClaims, c.Ref) || slices.Contains(s.Investigation.ConclusionContradictingClaims, c.Ref))
 		group := "claims"
 		refs := o.ClaimRefs
 		initial := claimCount < 3 && c.Status == domain.ClaimStatusActive && c.Verification != domain.VerificationSuperseded
 		if c.Status == domain.ClaimStatusRejected {
 			group = "ruled_out"
-			refs = o.RuledOutRefs
-			initial = ruledCount < 2
-			ruledCount++
 		} else if initial {
 			claimCount++
 		}
-		chosen := required || wants(c.Ref, refs, initial)
+		chosen := current && (required || wants(c.Ref, refs, initial))
 		out.Candidates = append(out.Candidates, ShareCandidate{Ref: c.Ref, Text: c.Statement, Group: group, Label: contextpack.BriefStateLabel(c.Status.PlainLabel(), c.Verification), Required: required, Selected: chosen})
 		if chosen {
 			selected.Claims = append(selected.Claims, c)
@@ -193,8 +193,6 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 		chosen := required
 		switch h.Status {
 		case domain.HypothesisStatusDisproven:
-			chosen = required || wants(h.Ref, o.RuledOutRefs, ruledCount < 2)
-			ruledCount++
 			out.Candidates = append(out.Candidates, ShareCandidate{Ref: h.Ref, Text: h.Statement, Group: "ruled_out", Label: contextpack.BriefStateLabel(h.Status.PlainLabel(), h.Verification), Required: required, Selected: chosen})
 		case domain.HypothesisStatusOpen, domain.HypothesisStatusSupported:
 			initial := hypothesisCount < 2 && h.Verification != domain.VerificationSuperseded

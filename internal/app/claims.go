@@ -114,7 +114,8 @@ func (a *App) SetClaimVerification(ctx context.Context, actor Actor, invRef, cla
 // records claim.supersede ("C-003 superseded by C-002"). The replacement must
 // be another claim in the same investigation that is not itself superseded
 // (ErrConflict otherwise; a missing replacement is ErrNotFound). Superseding
-// again by the same replacement is a no-op.
+// again by the same replacement is a no-op. A conclusion that selects claimRef
+// selects the replacement instead (swapConclusionClaim).
 func (a *App) SupersedeClaim(ctx context.Context, actor Actor, invRef, claimRef, replacementRef string) (Claim, error) {
 	row, _, err := a.updateStatement(ctx, actor, invRef, claimRef, claimKind, stmtPatch{SupersededBy: &replacementRef},
 		"claim.supersede", "replacement_ref")

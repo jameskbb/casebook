@@ -100,11 +100,11 @@ func (d *answerDoc) section(heading string, lines []string) {
 // desktop uses and with no record codes: the question as the title, when it
 // was asked, the background, the answer with the count of sources checked
 // and who checked it, then the findings by state (each with why and the
-// sources that back it up or go against it), what is still to find out and
-// the sources. A section with nothing in it is left out. Confidence is never
-// printed, and neither is the stored check label of a finding: a finding's
-// label is worked out from its sources (findingLabel). allEvidence is every
-// source of the question, for the counts.
+// sources that back it up or go against it), what was found out, what is
+// still to find out and the sources. A section with nothing in it is left
+// out. Confidence is never printed, and neither is the stored check label of
+// a finding: a finding's label is worked out from its sources (findingLabel).
+// allEvidence is every source of the question, for the counts.
 func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	inv := s.Investigation
 	d.para("# " + oneLine(inv.Title))
@@ -200,17 +200,23 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	}
 	questions := slices.Clone(s.Questions)
 	sortByRef(questions, domain.RecordQuestion, func(q domain.Question) string { return q.Ref })
+	var foundOut []string
 	for _, q := range questions {
-		toFindOut = append(toFindOut, "- "+oneLine(q.Question)+stateWords(q.Imported, toFindOutLabel(q.Status)))
-		if answer := oneLine(q.Resolution); answer != "" {
-			toFindOut = append(toFindOut, "  - Answer: "+answer)
+		if q.Status == domain.QuestionStatusResolved {
+			foundOut = append(foundOut, "- "+oneLine(q.Question)+stateWords(q.Imported, ""))
+			if answer := oneLine(q.Resolution); answer != "" {
+				foundOut = append(foundOut, "  - Answer: "+answer)
+			}
+			continue
 		}
+		toFindOut = append(toFindOut, "- "+oneLine(q.Question)+stateWords(q.Imported, toFindOutLabel(q.Status)))
 		if note := oneLine(q.DeferNote); note != "" {
 			toFindOut = append(toFindOut, "  - Why it can wait: "+note)
 		}
 	}
 	d.section("Findings", found)
 	d.section("Where sources disagree", disagree)
+	d.section("Found out", foundOut)
 	d.section("Still to find out", toFindOut)
 	d.section("Ruled out", ruledOut)
 	d.section("Replaced", replaced)
@@ -486,12 +492,10 @@ func mdText(s string) string {
 	return s
 }
 
-// toFindOutLabel is the state of a thing to find out, as it follows the text
-// in the "Still to find out" list.
+// toFindOutLabel is the state of a thing still to find out, as it follows
+// the text in the "Still to find out" list. Answered ones go under "Found out".
 func toFindOutLabel(s domain.QuestionStatus) string {
 	switch s {
-	case domain.QuestionStatusResolved:
-		return "answered"
 	case domain.QuestionStatusDeferred:
 		return "left for later"
 	}

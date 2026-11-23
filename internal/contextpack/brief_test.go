@@ -92,11 +92,14 @@ A person checked this answer on November 1, 2026.
   - Goes against it: Phone report (Not checked)
 - argued
 
+## Found out
+
+- done?
+  - Answer: yes
+
 ## Still to find out
 
 - live (not tested yet)
-- done? (answered)
-  - Answer: yes
 - wait? (left for later)
   - Why it can wait: next month
 

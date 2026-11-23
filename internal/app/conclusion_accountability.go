@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 
 	"github.com/jameskbb/casebook/internal/domain"
@@ -140,6 +141,45 @@ func (a *App) prepareConclusionAccountability(ctx context.Context, q store.Queri
 	}
 	changed := substanceChanged || inv.ConclusionVerification != next.ConclusionVerification || inv.ConclusionReviewedAt != next.ConclusionReviewedAt || inv.ConclusionReviewBasis != next.ConclusionReviewBasis || (c.review && inv.ConclusionNeedsReview)
 	return next, snapshot, changed, nil
+}
+
+// swapConclusionClaim puts the newer finding in the replaced one's place in
+// the answer's selected findings, in the same write. The stored review
+// snapshot is kept, so the answer's check goes stale only through the swap.
+// A newer finding already selected keeps its place and the old ref is dropped.
+func swapConclusionClaim(ctx context.Context, tx *sql.Tx, inv domain.Investigation, old, newer string) error {
+	drop := slices.Contains(inv.ConclusionSupportingClaims, newer) || slices.Contains(inv.ConclusionContradictingClaims, newer)
+	swap := func(refs []string) ([]string, bool) {
+		out, hit := []string{}, false
+		for _, r := range refs {
+			if r != old {
+				out = append(out, r)
+				continue
+			}
+			hit = true
+			if !drop {
+				out = append(out, newer)
+			}
+		}
+		return out, hit
+	}
+	sup, inSup := swap(inv.ConclusionSupportingClaims)
+	con, inCon := swap(inv.ConclusionContradictingClaims)
+	if !inSup && !inCon {
+		return nil
+	}
+	var err error
+	if inv.ConclusionSupportingClaims, err = canonicalConclusionRefs(inv, "supporting_claims", sup); err != nil {
+		return err
+	}
+	if inv.ConclusionContradictingClaims, err = canonicalConclusionRefs(inv, "contradicting_claims", con); err != nil {
+		return err
+	}
+	snapshot, err := store.ConclusionReviewSnapshot(ctx, tx, inv.ID)
+	if err != nil {
+		return err
+	}
+	return store.SetConclusionAccountability(ctx, tx, inv, snapshot)
 }
 
 func conclusionBasisSnapshot(ctx context.Context, q store.Querier, inv domain.Investigation) (string, error) {

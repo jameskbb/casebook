@@ -26,10 +26,13 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 - The two checkout tests share cartCache when the package runs in parallel on slow runners. (0 of 1 source checked by a person)
   - Backs it: All 23 failures ran on the 4-core runner pool (Not checked)
 
+## Found out
+
+- Do the failure timestamps cluster around 00:00 UTC?
+  - Answer: No: failures are spread evenly across the day (E-003).
+
 ## Still to find out
 
-- Do the failure timestamps cluster around 00:00 UTC? (answered)
-  - Answer: No: failures are spread evenly across the day (E-003).
 - Do other packages keep test state in package-level maps? (not answered yet)
 
 ## Ruled out

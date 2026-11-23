@@ -705,6 +705,11 @@ func (a *App) updateStatementTxOutcome(ctx context.Context, tx *sql.Tx, actor do
 		if err != nil {
 			return err
 		}
+		if supersededTo != "" && k.target == store.LinkClaim {
+			if err := swapConclusionClaim(ctx, tx, t.Inv, cur.Ref, supersededTo); err != nil {
+				return err
+			}
+		}
 		out = row
 		changedAny = true
 		if reset {

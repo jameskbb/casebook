@@ -249,3 +249,43 @@ func TestConclusionUndoCheck(t *testing.T) {
 		t.Fatal("check after undo did not count")
 	}
 }
+
+func TestReplacingASelectedFindingPointsTheAnswerAtTheNewerOne(t *testing.T) {
+	ctx := context.Background()
+	a, inv := conclusionFixture(t)
+	for _, s := range []string{"Costs went against the decline.", "Supplier costs drove the decline."} {
+		if _, err := a.AddClaim(ctx, apptest.AI, inv.Ref, app.ClaimInput{Statement: s}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	inv, err := a.UpdateConclusion(ctx, apptest.Human, inv.Ref, app.ConclusionInput{Conclusion: inv.Conclusion, Confidence: inv.ConclusionConfidence, Rationale: inv.ConclusionRationale, SupportingClaims: []string{"C-001"}, ContradictingClaims: []string{"C-002"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv = reviewConclusion(t, a, inv)
+	if _, err := a.SupersedeClaim(ctx, apptest.Human, inv.Ref, "C-001", "C-003"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := a.GetInvestigation(ctx, inv.Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.ConclusionSupportingClaims, []string{"C-003"}) || !reflect.DeepEqual(got.ConclusionContradictingClaims, []string{"C-002"}) {
+		t.Fatalf("after replace: supporting %v contradicting %v", got.ConclusionSupportingClaims, got.ConclusionContradictingClaims)
+	}
+	// The check stays on record and asks to be redone, as any change to a selected finding does.
+	if !got.ConclusionNeedsReview || got.ConclusionReviewedAt != inv.ConclusionReviewedAt || got.ConclusionReviewBasis != inv.ConclusionReviewBasis {
+		t.Fatalf("review after replace: %+v", got)
+	}
+	// A newer finding already selected keeps its place; the replaced one is dropped.
+	if _, err := a.UpdateClaim(ctx, apptest.Human, inv.Ref, "C-002", app.ClaimPatch{SupersededBy: ptr("C-003")}); err != nil {
+		t.Fatal(err)
+	}
+	got, err = a.GetInvestigation(ctx, inv.Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.ConclusionSupportingClaims, []string{"C-003"}) || len(got.ConclusionContradictingClaims) != 0 {
+		t.Fatalf("after second replace: supporting %v contradicting %v", got.ConclusionSupportingClaims, got.ConclusionContradictingClaims)
+	}
+}

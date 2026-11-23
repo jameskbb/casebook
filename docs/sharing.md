@@ -6,7 +6,7 @@ There are two ways to share a question. **Share the answer** writes the answer u
 
 Open a question that has an answer and choose **Share the answer**. Under **How much to share**, pick **Short version** for the answer and the findings behind it, or **Everything** for all of the question, including its history. The same text comes from `casebook report` (everything) and from the `casebook_get_report` tool your AI can call; `casebook report --brief` and `casebook_get_report` with `mode` `brief` give the short version.
 
-The short version always carries the findings where sources disagree, the sources that go against a finding and the findings behind the answer, and a few of the rest.
+The short version always carries the findings where sources disagree, the sources that go against a finding and the findings behind the answer, and a few of the rest. It never carries findings that were ruled out or replaced; Everything does.
 
 The reader of a shared answer is not you, so it never says "You". A finding is labelled from its sources: `2 of 2 sources checked by a person`, `No source yet`, or `A person decided this holds` when a source goes against it and you decided it still holds. A source you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
 
@@ -17,13 +17,14 @@ A shared answer has no record codes: the title is the question, and findings and
 - `## Answer`: the answer, the count of sources a person checked, who checked the answer and what they checked, and `How we know:`. `No answer yet.` when there is none.
 - `## Findings`: each finding with its label, `Why we think so:`, and its sources by name: `Backs it: ...` and `Goes against it: ...`, each with its own label.
 - `## Where sources disagree`: findings a source goes against, until someone decides, and findings your AI marked that way.
-- `## Still to find out`: findings not tested yet, then each thing to find out marked `not answered yet`, `answered` or `left for later`, with the answer or why it can wait.
-- `## Ruled out`: findings that were ruled out, with the sources that go against them.
-- `## Replaced`: findings a newer finding took the place of.
+- `## Found out`: each thing to find out that has an answer, with its answer.
+- `## Still to find out`: findings not tested yet, then each thing to find out marked `not answered yet` or `left for later`, with why it can wait.
+- `## Ruled out` (Everything only): findings that were ruled out, with the sources that go against them.
+- `## Replaced` (Everything only): findings a newer finding took the place of.
 - `## Sources`: each source once, with its label, its name, where to find it and what it shows. Something you saw yourself reads `Seen by the person who shared this`. Everything also gives the date of each source, once.
 - `## How we got here` (Everything only): the history of changes, oldest first, one heading per day.
 
-The short version ends by saying what it leaves out, for example `This short version leaves out 1 finding, 2 things still to find out and the history. Ask the person who shared this for the version with everything.` It keeps every thing to find out that has an answer, with the answer. Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question gives the same text.
+The short version ends by saying what it leaves out, counting ruled out and replaced findings with the rest, for example `This short version leaves out 1 finding, 2 things still to find out and the history. Ask the person who shared this for the version with everything.` It keeps every thing to find out that has an answer, with the answer. Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question gives the same text.
 
 **Copy** and **Save** use what you see in the window. **Copy** puts the answer on the clipboard twice over: as formatted text, so an email or a document shows the headings and lists, and as plain text with no `#` or `_` marks, for a chat box or any plain field. **Save** writes a web page (`.html`) that opens in any browser when the reader double-clicks it. The file is named after the question, for example `Why did calls go up 30 percent in October when sales stayed the same.html`, with ` (everything)` added for the full version.
 
