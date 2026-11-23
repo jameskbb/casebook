@@ -104,7 +104,7 @@ func TestImport(t *testing.T) {
 
 	r := runCLI(t, "", "--db", db, "import", path)
 	wantCode(t, r, 0)
-	wantContains(t, r.Stdout, "Imported INV-0001 as INV-0002", "4 evidence", "3 claims", "2 hypotheses", "1 questions")
+	wantContains(t, r.Stdout, "Imported INV-0001 as INV-0002", "4 sources", "3 findings", "2 findings being tested", "1 follow-up questions")
 
 	refs := func(ref string) []string {
 		t.Helper()
@@ -315,7 +315,7 @@ func TestShareThroughRepo(t *testing.T) {
 	r = runCLI(t, "", "--db", teammate, "import", path)
 	wantCode(t, r, 0)
 	wantContains(t, r.Stdout, "Imported INV-0001 as INV-0002")
-	wantContains(t, r.Stdout, "The same case is already here as INV-0001; INV-0002 is a separate copy.")
+	wantContains(t, r.Stdout, "The same question is already here as INV-0001; INV-0002 is a separate copy.")
 	r = runCLI(t, "", "--db", teammate, "--json", "import", path)
 	wantCode(t, r, 0)
 	var res app.ImportResult

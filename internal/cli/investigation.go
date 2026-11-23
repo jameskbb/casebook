@@ -16,14 +16,15 @@ func newInvestigationCommand(env *Env) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "investigation",
 		Aliases: []string{"case", "inv"},
-		Short:   "List, show, create and activate cases",
-		Long: `List, show, create and activate cases.
+		Short:   "List, show, create and activate questions (an investigation is a question and what was found about it)",
+		Long: `List, show, create and activate questions.
 
-A case is one question and everything learned about it; the app and the
-guides call it a case, and its ref starts with INV. The active case (the app
-calls it your AI's current case) is shared by the desktop app, this CLI and
-every MCP client: commands that take an optional case ref use it when the ref
-is omitted. A project directory can have its own active case (activate
+An investigation is one question and everything learned about it: the answer,
+the findings behind it and the source for each. The app calls it a question,
+and its ref starts with INV. The active question (the app
+calls it your AI's current question) is shared by the desktop app, this CLI and
+every MCP client: commands that take an optional ref use it when the ref
+is omitted. A project directory can have its own active question (activate
 --here), which wins inside that directory.`,
 		Args: usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -54,7 +55,7 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 	var o app.ListOptions
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List cases, newest updated first (archived hidden unless --archived)",
+		Short: "List questions, newest updated first (archived hidden unless --archived)",
 		Args:  usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, err := env.App()
@@ -72,25 +73,25 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 				return writeJSON(env.Stdout, sums)
 			}
 			if len(sums) == 0 {
-				_, err := fmt.Fprintln(env.Stdout, `No cases. Create one with: casebook case create --title "..."`)
+				_, err := fmt.Fprintln(env.Stdout, `No questions yet. Create one with: casebook inv create --title "..."`)
 				return err
 			}
 			tw := newTabWriter(env.Stdout)
-			fmt.Fprintln(tw, "REF\tSTATUS\tCONFIDENCE\tUPDATED\tACTIVE\tTITLE")
+			fmt.Fprintln(tw, "REF\tSTATUS\tUPDATED\tACTIVE\tQUESTION")
 			for _, s := range sums {
 				active := ""
 				if s.IsActive {
 					active = "*"
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", s.Ref, s.Status.Label(), confidenceLabel(s.ConclusionConfidence),
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", s.Ref, s.Status.Label(),
 					s.UpdatedAt, active, app.TruncateLine(s.Title, listTitleBytes))
 			}
 			return tw.Flush()
 		},
 	}
-	cmd.Flags().BoolVar(&o.IncludeArchived, "archived", false, "include archived cases")
-	cmd.Flags().StringVar(&o.Status, "status", "", "only cases with this status (new, investigating, blocked, resolved, archived)")
-	cmd.Flags().IntVar(&o.Limit, "limit", 0, "maximum number of cases (0 means 100, maximum 1000)")
+	cmd.Flags().BoolVar(&o.IncludeArchived, "archived", false, "include archived questions")
+	cmd.Flags().StringVar(&o.Status, "status", "", "only questions with this status (new, investigating, blocked, resolved, archived)")
+	cmd.Flags().IntVar(&o.Limit, "limit", 0, "maximum number of questions (0 means 100, maximum 1000)")
 	return cmd
 }
 
@@ -99,7 +100,7 @@ func newInvestigationListCommand(env *Env) *cobra.Command {
 func newInvestigationShowCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show [ref]",
-		Short: "Show a case with its evidence, claims, hypotheses, questions and recent activity",
+		Short: "Show a question with its answer, findings, sources, follow-up questions and recent activity",
 		Args:  usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref := ""
@@ -133,45 +134,46 @@ func writeDetail(w io.Writer, d app.InvestigationDetail) error {
 	fmt.Fprintf(tw, "Active:\t%s\n", yesNo(inv.IsActive))
 	fmt.Fprintf(tw, "Question:\t%s\n", orNone(line(inv.ProblemStatement)))
 	if inv.Conclusion == "" {
-		fmt.Fprintf(tw, "Conclusion:\t%s\n", "(none)")
+		fmt.Fprintf(tw, "Answer:\t%s\n", "No answer yet")
 	} else {
-		fmt.Fprintf(tw, "Conclusion:\t%s (%s)\n", line(inv.Conclusion), confidenceLabel(inv.ConclusionConfidence)+", "+inv.ConclusionVerification.Label())
+		fmt.Fprintf(tw, "Answer:\t%s (%s)\n", line(inv.Conclusion), checkLabel(inv.ConclusionVerification))
 	}
+	fmt.Fprintf(tw, "Sources:\t%s\n", sourcesChecked(d.Evidence))
 	if inv.Conclusion != "" {
-		fmt.Fprintf(tw, "Conclusion review:\t%s; needs review: %t\n", orNone(inv.ConclusionReviewedAt), inv.ConclusionNeedsReview)
-		fmt.Fprintf(tw, "Review basis:\t%s\n", orNone(line(inv.ConclusionReviewBasis)))
-		fmt.Fprintf(tw, "Supporting claims:\t%s\n", orNone(strings.Join(inv.ConclusionSupportingClaims, ", ")))
-		fmt.Fprintf(tw, "Contradicting claims:\t%s\n", orNone(strings.Join(inv.ConclusionContradictingClaims, ", ")))
+		fmt.Fprintf(tw, "Answer checked:\t%s; needs checking again: %t\n", orNone(inv.ConclusionReviewedAt), inv.ConclusionNeedsReview)
+		fmt.Fprintf(tw, "What was checked:\t%s\n", orNone(line(inv.ConclusionReviewBasis)))
+		fmt.Fprintf(tw, "Findings for:\t%s\n", orNone(strings.Join(inv.ConclusionSupportingClaims, ", ")))
+		fmt.Fprintf(tw, "Findings against:\t%s\n", orNone(strings.Join(inv.ConclusionContradictingClaims, ", ")))
 	}
 	if inv.ConclusionRationale != "" {
-		fmt.Fprintf(tw, "Rationale:\t%s\n", line(inv.ConclusionRationale))
+		fmt.Fprintf(tw, "Why:\t%s\n", line(inv.ConclusionRationale))
 	}
 	fmt.Fprintf(tw, "Updated:\t%s\n", inv.UpdatedAt)
 
-	fmt.Fprintf(tw, "\nEvidence (%d)\n", len(d.Evidence))
+	fmt.Fprintf(tw, "\nSources (%d)\n", len(d.Evidence))
 	for _, e := range d.Evidence {
 		src := ""
 		if e.SourceLabel != "" {
-			src = "source: " + line(e.SourceLabel)
+			src = "from: " + line(e.SourceLabel)
 		}
-		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.Label(), e.Verification.Label()+importedNote(e.Imported), line(e.Title), cell(src))
+		fmt.Fprintf(tw, "  %s\t[%s, %s]\t%s%s\n", e.Ref, e.SourceType.Label(), checkLabel(e.Verification)+importedNote(e.Imported), line(e.Title), cell(src))
 	}
-	fmt.Fprintf(tw, "\nClaims (%d)\n", len(d.Claims))
+	fmt.Fprintf(tw, "\nFindings (%d)\n", len(d.Claims))
 	for _, c := range d.Claims {
-		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", c.Ref, statementState(c.Status.Label(), c.Confidence, c.Verification.Label(), c.Imported),
+		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", c.Ref, statementState(claimLabel(c.Status), checkLabel(c.Verification), c.Imported),
 			line(c.Statement), cell(linkText(c.Links, c.SupersededBy)))
 	}
-	fmt.Fprintf(tw, "\nHypotheses (%d)\n", len(d.Hypotheses))
+	fmt.Fprintf(tw, "\nFindings being tested (%d)\n", len(d.Hypotheses))
 	for _, h := range d.Hypotheses {
-		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", h.Ref, statementState(h.Status.Label(), h.Confidence, h.Verification.Label(), h.Imported),
+		fmt.Fprintf(tw, "  %s\t[%s]\t%s%s\n", h.Ref, statementState(hypothesisLabel(h.Status), checkLabel(h.Verification), h.Imported),
 			line(h.Statement), cell(linkText(h.Links, h.SupersededBy)))
 	}
-	fmt.Fprintf(tw, "\nQuestions (%d)\n", len(d.Questions))
+	fmt.Fprintf(tw, "\nFollow-up questions (%d)\n", len(d.Questions))
 	for _, q := range d.Questions {
 		extra := ""
 		switch {
 		case q.Resolution != "":
-			extra = "resolution: " + line(q.Resolution)
+			extra = "answer: " + line(q.Resolution)
 		case q.DeferNote != "":
 			extra = "note: " + line(q.DeferNote)
 		}
@@ -213,7 +215,7 @@ func linkText(links []app.EvidenceLink, supersededBy string) string {
 		parts = append(parts, "contradicts: "+strings.Join(con, ", "))
 	}
 	if supersededBy != "" {
-		parts = append(parts, "superseded by "+supersededBy)
+		parts = append(parts, "replaced by "+supersededBy)
 	}
 	return strings.Join(parts, "; ")
 }
@@ -245,7 +247,7 @@ func orNone(s string) string {
 func newInvestigationActiveCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "active",
-		Short: "Show the active case",
+		Short: "Show the active question (the one your AI is working on)",
 		Args:  usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, err := env.App()
@@ -282,8 +284,8 @@ func newInvestigationCreateCommand(env *Env) *cobra.Command {
 	var in app.CreateInvestigationInput
 	cmd := &cobra.Command{
 		Use:     "create --title T [--problem P] [--activate]",
-		Short:   "Create a case",
-		Example: `  casebook case create --title "Refund spike" --problem "Why did refunds double?" --activate`,
+		Short:   "Create a question",
+		Example: `  casebook inv create --title "Why did calls go up 30% in October when sales stayed the same?" --activate`,
 		Args:    usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if in.Title == "" {
@@ -308,9 +310,9 @@ func newInvestigationCreateCommand(env *Env) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVar(&in.Title, "title", "", "title (required, at most 200 bytes)")
-	cmd.Flags().StringVar(&in.ProblemStatement, "problem", "", "the primary question the case answers")
-	cmd.Flags().BoolVar(&in.MakeActive, "activate", false, "make the new case the active one")
+	cmd.Flags().StringVar(&in.Title, "title", "", "the question, in plain words (required, at most 200 bytes)")
+	cmd.Flags().StringVar(&in.ProblemStatement, "problem", "", "more about the question, when one line is not enough")
+	cmd.Flags().BoolVar(&in.MakeActive, "activate", false, "make the new question the active one")
 	return cmd
 }
 
@@ -320,27 +322,27 @@ func newInvestigationActivateCommand(env *Env) *cobra.Command {
 	var clearActive, here, global bool
 	cmd := &cobra.Command{
 		Use:   "activate [ref]",
-		Short: "Set the active case, or clear it with --clear",
-		Long: `Set the active case, or clear it with --clear.
+		Short: "Set the active question, or clear it with --clear",
+		Long: `Set the active question, or clear it with --clear.
 
---here makes it the active case for this project only: the git repository
+--here makes it the active question for this project only: the git repository
 root holding the current directory (or the current directory outside a
 repository). The CLI, the hooks and the MCP server working in that
-directory or below it then use it instead of the global active case, so
+directory or below it then use it instead of the global active question, so
 Claude Code and Codex sessions in different repositories each pick up
-their own case. --clear --here removes that binding.
+their own question. --clear --here removes that binding.
 
 Without --here, inside a directory that already has a binding the binding
-is changed; elsewhere the global active case is set. --global always sets
+is changed; elsewhere the global active question is set. --global always sets
 the global one (a binding still wins where it applies).`,
-		Example: `  casebook case activate INV-0001
-  casebook case activate INV-0002 --here
+		Example: `  casebook inv activate INV-0001
+  casebook inv activate INV-0002 --here
   casebook inv activate --clear --here
   casebook inv activate --clear`,
 		Args: usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if (len(args) == 1) == clearActive {
-				return newUsageError("pass a case ref or --clear")
+				return newUsageError("pass a ref or --clear")
 			}
 			if here && global {
 				return newUsageError("--here cannot be combined with --global")
@@ -360,7 +362,7 @@ the global one (a binding still wins where it applies).`,
 				if env.JSON {
 					return writeJSON(env.Stdout, map[string]string{"active_investigation_ref": ""})
 				}
-				if _, err := fmt.Fprintln(env.Stdout, "Cleared the active case."); err != nil {
+				if _, err := fmt.Fprintln(env.Stdout, "Cleared the active question."); err != nil {
 					return err
 				}
 				return noteBindingWins(cmd, env, a)
@@ -372,7 +374,7 @@ the global one (a binding still wins where it applies).`,
 				if env.JSON {
 					return writeJSON(env.Stdout, b)
 				}
-				_, err = fmt.Fprintf(env.Stdout, "Active case for %s: %s %s\n", b.Dir, b.InvestigationRef, b.Title)
+				_, err = fmt.Fprintf(env.Stdout, "Active question for %s: %s %s\n", b.Dir, b.InvestigationRef, b.Title)
 				return err
 			}
 			set := a.SetActiveInvestigation
@@ -391,18 +393,18 @@ the global one (a binding still wins where it applies).`,
 				return err
 			}
 			if !global && info.Scope == app.ActiveScopeDirectory {
-				_, err = fmt.Fprintf(env.Stdout, "Active case for %s: %s %s\n", info.Dir, inv.Ref, inv.Title)
+				_, err = fmt.Fprintf(env.Stdout, "Active question for %s: %s %s\n", info.Dir, inv.Ref, inv.Title)
 				return err
 			}
-			if _, err := fmt.Fprintf(env.Stdout, "Active case: %s %s\n", inv.Ref, inv.Title); err != nil {
+			if _, err := fmt.Fprintf(env.Stdout, "Active question: %s %s\n", inv.Ref, inv.Title); err != nil {
 				return err
 			}
 			return noteBindingWins(cmd, env, a)
 		},
 	}
-	cmd.Flags().BoolVar(&clearActive, "clear", false, "clear the active case")
-	cmd.Flags().BoolVar(&here, "here", false, "set or clear the active case for this project directory only")
-	cmd.Flags().BoolVar(&global, "global", false, "set the global active case even inside a bound directory")
+	cmd.Flags().BoolVar(&clearActive, "clear", false, "clear the active question")
+	cmd.Flags().BoolVar(&here, "here", false, "set or clear the active question for this project directory only")
+	cmd.Flags().BoolVar(&global, "global", false, "set the global active question even inside a bound directory")
 	return cmd
 }
 
@@ -417,10 +419,10 @@ func runUnbindHere(cmd *cobra.Command, env *Env, a *app.App) error {
 		return writeJSON(env.Stdout, map[string]string{"dir": dir})
 	}
 	if dir == "" {
-		_, err := fmt.Fprintln(env.Stdout, "No active case is set for this directory.")
+		_, err := fmt.Fprintln(env.Stdout, "No active question is set for this directory.")
 		return err
 	}
-	_, err = fmt.Fprintf(env.Stdout, "Removed the active case for %s.\n", dir)
+	_, err = fmt.Fprintf(env.Stdout, "Removed the active question for %s.\n", dir)
 	return err
 }
 
@@ -433,7 +435,7 @@ func noteBindingWins(cmd *cobra.Command, env *Env, a *app.App) error {
 		return err
 	}
 	if info.Scope == app.ActiveScopeDirectory {
-		fmt.Fprintf(env.Stderr, "casebook: note: %s is the active case for %s; change it with --here\n",
+		fmt.Fprintf(env.Stderr, "casebook: note: %s is the active question for %s; change it with --here\n",
 			info.Investigation.Ref, info.Dir)
 	}
 	return nil
@@ -443,7 +445,7 @@ func noteBindingWins(cmd *cobra.Command, env *Env, a *app.App) error {
 func newInvestigationDirsCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "dirs",
-		Short: "List directories with their own active case (set with activate --here)",
+		Short: "List directories with their own active question (set with activate --here)",
 		Args:  usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, err := env.App()
@@ -458,11 +460,11 @@ func newInvestigationDirsCommand(env *Env) *cobra.Command {
 				return writeJSON(env.Stdout, list)
 			}
 			if len(list) == 0 {
-				_, err := fmt.Fprintln(env.Stdout, "No directories have their own active case. Set one with: casebook case activate <ref> --here")
+				_, err := fmt.Fprintln(env.Stdout, "No directories have their own active question. Set one with: casebook inv activate <ref> --here")
 				return err
 			}
 			tw := newTabWriter(env.Stdout)
-			fmt.Fprintln(tw, "REF\tDIRECTORY\tTITLE")
+			fmt.Fprintln(tw, "REF\tDIRECTORY\tQUESTION")
 			for _, b := range list {
 				fmt.Fprintf(tw, "%s\t%s\t%s\n", b.InvestigationRef, b.Dir, app.TruncateLine(b.Title, listTitleBytes))
 			}
@@ -471,23 +473,12 @@ func newInvestigationDirsCommand(env *Env) *cobra.Command {
 	}
 }
 
-// statementState is the bracket in a case show row: status, confidence, then
-// the verification label only when it differs from the status, so a disputed
-// claim reads "Disputed, Low" rather than "Disputed, Low, Disputed".
-func statementState(status string, c app.Confidence, verification string, imported bool) string {
-	parts := []string{status, confidenceLabel(c)}
-	if verification != status {
-		parts = append(parts, verification)
+// statementState is the bracket in a show row: the status, then who checked
+// it only when that says something else, so a finding whose sources disagree
+// reads "Sources disagree" once. Confidence is stored but not printed.
+func statementState(status, check string, imported bool) string {
+	if check != status {
+		status += ", " + check
 	}
-	return strings.Join(parts, ", ") + importedNote(imported)
-}
-
-// confidenceLabel is the confidence word the CLI tables print: the app's
-// "Not assessed" where no confidence is recorded (Confidence.Label says
-// Unknown, which context packs and other formats keep).
-func confidenceLabel(c app.Confidence) string {
-	if c == app.ConfidenceUnknown {
-		return "Not assessed"
-	}
-	return c.Label()
+	return status + importedNote(imported)
 }

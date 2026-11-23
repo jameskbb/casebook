@@ -11,21 +11,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const rootLong = `Keep the evidence and findings for a question in one case. Return to
+const rootLong = `Keep how an answer was reached with AI: the question, the answer, the
+findings behind it and the source for each finding. Return to
 them in a later session, review them in the desktop app, or print a summary
 to share.
 
-A case holds evidence, claims, hypotheses, questions and a conclusion.
-This CLI, the desktop app and connected AI clients use the same local cases.
+Commands keep the stored names: an investigation is a question, its conclusion
+is the answer, a claim or a hypothesis is a finding, and evidence is a source.
+This CLI, the desktop app and connected AI clients use the same local questions.
 Run casebook setup --help for AI client setup.
 
-Exit codes: 0 success; 1 runtime failure; 2 usage or invalid input; 3 not found or no active case.`
+Exit codes: 0 success; 1 runtime failure; 2 usage or invalid input; 3 not found or no active question.`
 
 // NewRootCommand builds the casebook command tree bound to env.
 func NewRootCommand(env *Env) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "casebook",
-		Short:         "Keep evidence and findings for each question in a case",
+		Short:         "Keep how each answer was reached with AI: the findings, their sources and what you checked",
 		Long:          rootLong,
 		SilenceUsage:  true,
 		SilenceErrors: true,

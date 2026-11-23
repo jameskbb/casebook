@@ -35,7 +35,7 @@ path with "mcp" (plus "--db <path>" when --db is given).
 
 --hooks also merges Casebook hook groups into the "hooks" object of
 ~/.claude/settings.json ($CLAUDE_CONFIG_DIR/settings.json): SessionStart runs
-"casebook hook session-start" to add the active case's context to new
+"casebook hook session-start" to add the active question's context to new
 sessions, and Stop and PreCompact run "casebook hook checkpoint": at Stop it
 reminds the model to checkpoint findings, before compaction it warns you
 (Claude Code shows PreCompact output to the user only). Groups holding your own hooks are never edited;
@@ -45,20 +45,20 @@ arguments in "args", run with no shell; Claude Code 2.1.139 or later), so
 it works whether Claude Code runs hooks through Git Bash or PowerShell.
 
 --scope all (the default) leaves the hooks speaking in every Claude Code
-session while a case is active. --scope marked writes
+session while a question is active. --scope marked writes
 "--scope marked" into each hook command, so the hooks speak only in
 projects that hold a .casebook file, with no environment variable to set.
 Rerun with --scope all to undo it. CASEBOOK_HOOK_SCOPE=marked still
 narrows hooks installed with --scope all.
 
-When no case is active, the session-start hook gives Claude one
-line: offer a Casebook case if the session turns into an investigation.
+When no question is active, the session-start hook gives Claude one
+line: offer to keep the question in Casebook if the session turns into working something out.
 --quiet-when-inactive writes that flag into the hook command so the
 session gets nothing instead; rerun without it to restore the hint.
 
 --skill also writes the Casebook skill to skills/casebook/SKILL.md in
 ~/.claude ($CLAUDE_CONFIG_DIR): Claude Code offers it as /casebook to start
-or resume a case, and lists it to Claude so it can pick up a case when you
+or resume a question, and lists it to Claude so it can pick up a question when you
 agree to one. The file carries a casebook-managed line; a SKILL.md without
 it is yours and is never changed. "casebook setup instructions" prints a
 short CLAUDE.md or AGENTS.md section to paste yourself.
@@ -156,7 +156,7 @@ the configuration (with --hooks, the hooks too) and changes nothing.`,
 	cmd.Flags().StringVar(&scope, "scope", integrations.ScopeAll,
 		`with --hooks: "all" (the default) lets the hooks speak in every session; "marked" writes --scope marked into the hook commands so they speak only in projects marked with a .casebook file`)
 	cmd.Flags().BoolVar(&quiet, "quiet-when-inactive", false,
-		"with --hooks: write --quiet-when-inactive into the session-start hook, so a session with no active case gets no hint to offer one")
+		"with --hooks: write --quiet-when-inactive into the session-start hook, so a session with no active question gets no hint to offer one")
 	return cmd
 }
 

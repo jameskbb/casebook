@@ -20,7 +20,7 @@ func init() {
 	registerTool("casebook_get_active_investigation", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_get_active_investigation",
-			Title:       "Get the active investigation",
+			Title:       "Get the active question",
 			Description: getActiveDescription,
 			Annotations: readOnlyTool(),
 		}, h.getActiveInvestigation)
@@ -28,7 +28,7 @@ func init() {
 	registerTool("casebook_get_investigation", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_get_investigation",
-			Title:       "Get an investigation",
+			Title:       "Read a question",
 			Description: getInvestigationDescription,
 			Annotations: readOnlyTool(),
 		}, h.getInvestigation)
@@ -36,7 +36,7 @@ func init() {
 	registerTool("casebook_create_investigation", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_create_investigation",
-			Title:       "Create an investigation",
+			Title:       "Start a question",
 			Description: createInvestigationDescription,
 			Annotations: mutatingTool(false),
 		}, h.createInvestigation)
@@ -44,7 +44,7 @@ func init() {
 	registerTool("casebook_set_active_investigation", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_set_active_investigation",
-			Title:       "Set the active investigation",
+			Title:       "Set the active question",
 			Description: setActiveDescription,
 			Annotations: mutatingTool(true),
 		}, h.setActiveInvestigation)
@@ -52,7 +52,7 @@ func init() {
 	registerTool("casebook_list_investigations", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_list_investigations",
-			Title:       "List investigations",
+			Title:       "List questions",
 			Description: listInvestigationsDescription,
 			Annotations: readOnlyTool(),
 		}, h.listInvestigations)
@@ -60,7 +60,7 @@ func init() {
 	registerTool("casebook_search_investigations", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_search_investigations",
-			Title:       "Search investigations",
+			Title:       "Search questions",
 			Description: searchInvestigationsDescription,
 			Annotations: readOnlyTool(),
 		}, h.searchInvestigations)
@@ -68,7 +68,7 @@ func init() {
 	registerTool("casebook_update_investigation", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_update_investigation",
-			Title:       "Update an investigation",
+			Title:       "Update a question",
 			Description: updateInvestigationDescription,
 			Annotations: mutatingTool(true),
 		}, h.updateInvestigation)
@@ -76,7 +76,7 @@ func init() {
 	registerTool("casebook_update_conclusion", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_update_conclusion",
-			Title:       "Update the conclusion",
+			Title:       "Update the answer",
 			Description: updateConclusionDescription,
 			Annotations: mutatingTool(true),
 		}, h.updateConclusion)
@@ -101,9 +101,9 @@ func countsOf(d app.InvestigationDetail) app.RecordCounts {
 
 // casebook_get_active_investigation
 
-const getActiveDescription = `Report which case (an investigation record) is active: the shared default that every tool uses when investigation_ref is omitted or empty, set from any Casebook client. ` +
+const getActiveDescription = `Report which investigation is active: the shared default that every tool uses when investigation_ref is omitted or empty, set from any Casebook client. ` +
 	`Call it at the start of a session to see what you are working on. ` +
-	`A project directory can have its own active case, which wins over the global one for servers started there; active_dir then names that directory. ` +
+	`A project directory can have its own active investigation, which wins over the global one for servers started there; active_dir then names that directory. ` +
 	`When none is set it returns active false with a message (not an error); pick one with casebook_list_investigations and casebook_set_active_investigation, or pass investigation_ref to other tools. ` +
 	`Otherwise it returns the header (ref, title, problem statement, status, conclusion and its confidence) and record counts; long texts are cut only to stay under 64 KiB, and truncated_fields names them. ` +
 	`For the full working context call casebook_get_context.`
@@ -225,7 +225,7 @@ func cutHeader(inv app.Investigation, n int) investigationHeader {
 
 // casebook_get_investigation
 
-const getInvestigationDescription = `Read one case (an investigation record) in compact form: header fields, conclusion, record counts, claims and hypotheses (status, confidence, verification, supporting and contradicting evidence refs, one-line text), questions, an evidence index (ref, title, source, verification, link counts) and up to 10 recent activity rows. ` +
+const getInvestigationDescription = `Read one investigation in compact form: header fields, conclusion, record counts, claims and hypotheses (status, confidence, verification, supporting and contradicting evidence refs, one-line text), questions, an evidence index (ref, title, source, verification, link counts) and up to 10 recent activity rows. ` +
 	`Use it to review records before updating them; for a resume briefing use casebook_get_context. ` +
 	`` +
 	`sections picks lists (claims, hypotheses, questions, evidence, activity; empty means all). limit caps each list (default 50, max 200); cut lists say truncated with a total. ` +
@@ -495,15 +495,15 @@ func renderInvestigationView(v investigationView) string {
 
 // casebook_create_investigation
 
-const createInvestigationDescription = `Start a new case (an investigation record): one problem or line of inquiry that evidence, claims, hypotheses, questions and a conclusion will hang off. ` +
-	`Use it when the person asks for a case, or agrees when you offer one because a task turned into an investigation (do not open one unasked). Search first (casebook_search_investigations) so you continue an existing case instead of opening a duplicate. ` +
-	`title is a short one-line name (at most 200 bytes); problem_statement is the primary question. ` +
+const createInvestigationDescription = `Start a new investigation (the app calls it a question): one thing the person wants answered, that evidence, claims, hypotheses, questions and a conclusion hang off. ` +
+	`Use it when the person asks to keep a question in Casebook, or agrees when you offer (do not open one unasked). Search first (casebook_search_investigations) so you continue an existing one instead of opening a duplicate. ` +
+	`title is the question the person asked, in their own plain words (one line, at most 200 bytes), such as "Why did calls go up 30% in October when sales stayed the same?"; problem_statement is the fuller question, if needed. ` +
 	`status defaults to new and cannot be archived. ` +
-	`make_active true also makes it the active case, shared by the desktop app, the CLI and every MCP client, so later calls that omit investigation_ref write here. ` +
+	`make_active true also makes it the active investigation, shared by the desktop app, the CLI and every MCP client, so later calls that omit investigation_ref write here. ` +
 	`Returns the new ref (INV-0001 style) and a compact record.`
 
 type createInvestigationInput struct {
-	Title            string                  `json:"title" jsonschema:"short one-line name of the investigation (at most 200 bytes)"`
+	Title            string                  `json:"title" jsonschema:"the question the person asked, in their own plain words, on one line (at most 200 bytes)"`
 	ProblemStatement string                  `json:"problem_statement,omitempty" jsonschema:"the primary question the investigation answers"`
 	Status           app.InvestigationStatus `json:"status,omitempty" jsonschema:"initial status; defaults to new; archived is not allowed"`
 	MakeActive       bool                    `json:"make_active,omitempty" jsonschema:"also make it the active investigation used when investigation_ref is omitted"`
@@ -535,8 +535,8 @@ func (h *handlers) createInvestigation(ctx context.Context, c call, in createInv
 
 // casebook_set_active_investigation
 
-const setActiveDescription = `Make a case (an investigation record) the active one. The active case is shared by the desktop app, the CLI and every MCP client, and every tool that omits investigation_ref (or passes it empty) uses it, so switch here before working on another case. ` +
-	`When this server's project directory has its own active case, that per-directory setting changes instead of the global one. ` +
+const setActiveDescription = `Make an investigation the active one. The active investigation is shared by the desktop app, the CLI and every MCP client, and every tool that omits investigation_ref (or passes it empty) uses it, so switch here before working on another one. ` +
+	`When this server's project directory has its own active investigation, that per-directory setting changes instead of the global one. ` +
 	`investigation_ref is required. ` +
 	`Find refs with casebook_list_investigations or casebook_search_investigations. ` +
 	`Returns action activated, or unchanged when it already was active, with a compact record.`
@@ -571,11 +571,11 @@ func (h *handlers) setActiveInvestigation(ctx context.Context, c call, in setAct
 
 // casebook_list_investigations
 
-const listInvestigationsDescription = `List cases (investigation records) in compact form, newest updated first: ref (INV-0001 style), title, status, conclusion confidence, updated time, whether it is the active one, and record counts. ` +
-	`Use it to find a case to continue or to pick one for casebook_set_active_investigation. ` +
-	`Archived cases are hidden unless include_archived is true or status is archived; status filters to one status. ` +
-	`limit defaults to 20 (max 100); a cut list says truncated with the total. Beyond 1000 matches total is 1000 and total_is_lower_bound is true. active_ref names the active case ("" when none). ` +
-	`For one case's records call casebook_get_investigation; to find text inside records call casebook_search_investigations.`
+const listInvestigationsDescription = `List investigations in compact form, newest updated first: ref (INV-0001 style), title, status, conclusion confidence, updated time, whether it is the active one, and record counts. ` +
+	`Use it to find an investigation to continue or to pick one for casebook_set_active_investigation. ` +
+	`Archived investigations are hidden unless include_archived is true or status is archived; status filters to one status. ` +
+	`limit defaults to 20 (max 100); a cut list says truncated with the total. Beyond 1000 matches total is 1000 and total_is_lower_bound is true. active_ref names the active investigation ("" when none). ` +
+	`For one investigation's records call casebook_get_investigation; to find text inside records call casebook_search_investigations.`
 
 // listScanLimit is how many summaries the list tool reads (the app maximum),
 // so total is exact below that many investigations and a lower bound at it.
@@ -693,11 +693,11 @@ func renderInvestigationList(out listInvestigationsOut, filtered bool) string {
 
 // casebook_search_investigations
 
-const searchInvestigationsDescription = `Full-text search over titles, problem statements and conclusions of cases (investigation records), evidence titles and summaries (not raw detail), claim and hypothesis statements, and questions. ` +
+const searchInvestigationsDescription = `Full-text search over titles, problem statements and conclusions of investigations, evidence titles and summaries (not raw detail), claim and hypothesis statements, and questions. ` +
 	`Use it to find earlier work or a record to read or link. ` +
 	`query is plain words, not query syntax: every word must match; the last also matches as a prefix. ` +
-	`Unlike other tools, investigation_ref omitted or empty searches ALL cases, not the active one; pass a ref such as INV-0001 to search one. ` +
-	`Archived cases are skipped unless include_archived is true or the ref names one. ` +
+	`Unlike other tools, investigation_ref omitted or empty searches ALL investigations, not the active one; pass a ref such as INV-0001 to search one. ` +
+	`Archived ones are skipped unless include_archived is true or the ref names one. ` +
 	`limit defaults to 20 (max 100); best hits first. At most 100 hits are counted; total_is_lower_bound true means maybe more. ` +
 	`Each hit gives investigation_ref, record_type, record_ref (E-001, C-001, H-001, Q-001 or the INV ref) and a snippet with matches in **; read records with casebook_get_investigation or casebook_get_evidence.`
 
@@ -798,15 +798,15 @@ func renderSearchOut(out searchOut) string {
 
 // casebook_update_investigation
 
-const updateInvestigationDescription = `Change the title, problem statement or status of a case (an investigation record). ` +
+const updateInvestigationDescription = `Change the title, problem statement or status of an investigation. ` +
 	`Patch semantics: pass only the fields to change; an omitted or null field stays unchanged; at least one is required. ` +
-	`status archived archives it (it stays readable and stays active if it was); a non-archived status on an archived case unarchives it to that status. Use resolved when the work is done. ` +
+	`status archived archives it (it stays readable and stays active if it was); a non-archived status on an archived investigation unarchives it to that status. Use resolved when the work is done. ` +
 	`To record the answer itself call casebook_update_conclusion. ` +
 	`Returns action updated with the changed field names, or unchanged when nothing differed, and a compact record.`
 
 type updateInvestigationInput struct {
 	InvestigationRef string                   `json:"investigation_ref,omitempty" jsonschema:"investigation ref such as INV-0001; omit to use the active investigation"`
-	Title            *string                  `json:"title,omitempty" jsonschema:"new one-line title (at most 200 bytes)"`
+	Title            *string                  `json:"title,omitempty" jsonschema:"new one-line title: the question in the person's own plain words (at most 200 bytes)"`
 	ProblemStatement *string                  `json:"problem_statement,omitempty" jsonschema:"new problem statement"`
 	Status           *app.InvestigationStatus `json:"status,omitempty" jsonschema:"new status; archived archives"`
 }
@@ -859,14 +859,14 @@ func (h *handlers) updateInvestigation(ctx context.Context, c call, in updateInv
 
 // casebook_update_conclusion
 
-const updateConclusionDescription = `Record the conclusion, confidence and rationale together; empty conclusion clears them. Omitted confidence means unknown. ` +
+const updateConclusionDescription = `Record the conclusion (the app calls it the answer; write it in plain words with the numbers), confidence and rationale together; empty conclusion clears them. Omitted confidence means unknown; it is stored but never shown, so do not quote it to the person. ` +
 	`Select supporting_claims and contradicting_claims by ref; omitted arrays preserve selection, [] clears one. ` +
 	`Only a person can human-verify or record a review. AI text edits reset checked verification; edits clear review. Changed selected claims or evidence flag review needed while preserving the historical statement label. ` +
 	`Returns updated with changed fields, or unchanged.`
 
 type updateConclusionInput struct {
 	InvestigationRef    string                `json:"investigation_ref,omitempty" jsonschema:"investigation ref such as INV-0001; omit to use the active investigation"`
-	Conclusion          string                `json:"conclusion" jsonschema:"the conclusion; an empty string clears it"`
+	Conclusion          string                `json:"conclusion" jsonschema:"the answer in plain words with the numbers; an empty string clears it"`
 	Confidence          app.Confidence        `json:"confidence,omitempty" jsonschema:"confidence in the conclusion; omit for unknown"`
 	Rationale           string                `json:"rationale,omitempty" jsonschema:"why the conclusion holds, naming the supporting evidence and claims"`
 	Verification        statementVerification `json:"verification,omitempty" jsonschema:"ai_generated, source_verified or disputed; only a person can human-verify a conclusion"`

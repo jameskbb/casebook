@@ -139,7 +139,7 @@ func TestEvernoteCommandRemoved(t *testing.T) {
 		wantCode(t, r, 1)
 		if r.Stdout != "" || !strings.HasPrefix(r.Stderr, "casebook: the Evernote commands were removed") ||
 			!strings.Contains(r.Stderr, "casebook report") || !strings.Contains(r.Stderr, "--brief") ||
-			!strings.Contains(r.Stderr, "Share summary") || !strings.Contains(r.Stderr, "save the brief or report into an app it is connected to") || !strings.Contains(r.Stderr, "docs/sharing.md") ||
+			!strings.Contains(r.Stderr, "Share the answer") || !strings.Contains(r.Stderr, "save the brief or report into an app it is connected to") || !strings.Contains(r.Stderr, "docs/sharing.md") ||
 			strings.Count(r.Stderr, "\n") != 1 {
 			t.Errorf("%v: stdout %q stderr %q", args, r.Stdout, r.Stderr)
 		}

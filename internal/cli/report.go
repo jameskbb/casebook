@@ -23,14 +23,14 @@ func newReportCommand(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "report [ref]",
-		Short: "Print a Markdown write-up of a case (default: the active one)",
-		Long: `Print a case report for people to read or share. It includes the conclusion
-with its confidence and verification, findings and their evidence, what was
+		Short: "Print a Markdown write-up of a question and its answer (default: the active one)",
+		Long: `Print a write-up of a question for people to read or share. It includes the answer
+and who checked it, the findings and their sources, what was
 ruled out, answered and open questions, and a dated history of changes (UTC).
-With no ref, use the active case.
+With no ref, use the active question.
 
 --brief prints the leadership brief instead: the short summary the app's
-Share summary starts with, including its note of what it leaves out. A brief
+Share the answer starts with, including its note of what it leaves out. A brief
 has no timeline, so --timeline cannot be combined with --brief.
 
 The output is deterministic: the same records always give the same bytes.

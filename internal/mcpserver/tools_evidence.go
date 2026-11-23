@@ -16,7 +16,7 @@ import (
 // evidenceFields are the evidence input fields, shared by
 // casebook_add_evidence and the checkpoint evidence batch.
 type evidenceFields struct {
-	Title        string               `json:"title" jsonschema:"short one-line title of the observation (at most 200 bytes)"`
+	Title        string               `json:"title" jsonschema:"short one-line title in plain words (at most 200 bytes)"`
 	Summary      string               `json:"summary" jsonschema:"what was observed and why it matters, concise (at most 4000 bytes)"`
 	SourceType   app.SourceType       `json:"source_type" jsonschema:"kind of source the observation came from (evernote_note is kept for existing records)"`
 	SourceRef    string               `json:"source_ref,omitempty" jsonschema:"exact source a reader can check: path:line, the command run, URL, ticket key or query name"`
@@ -99,9 +99,9 @@ type addEvidenceInput struct {
 	evidenceFields
 }
 
-const addEvidenceDescription = `Record one concrete observation as evidence, with its source. Use it whenever you find a fact worth keeping: a query result, a code path, a documentation passage, something the user said. ` +
+const addEvidenceDescription = `Record one concrete observation as evidence (the app calls it a source), with where it came from. Use it whenever you find a fact worth keeping: a query result, a code path, a documentation passage, something the user said. ` +
 	`source_type says where it came from; source_ref lets a reader check it (path:line, the exact command, the query or URL). ` +
-	`Keep summary to the finding itself (counts, the failing value), not a log dump. ` +
+	`title names it in plain words; keep summary to the finding itself in plain words with the numbers ("400 calls in September, 520 in October"), not a log dump. ` +
 	`raw_detail holds long source text (at most 64 KiB) and is not echoed back. ` +
 	`Returns the new E ref and a compact record; then link it to claims with casebook_add_claim or casebook_link_evidence_to_claim.`
 
@@ -109,7 +109,7 @@ func init() {
 	registerTool("casebook_add_evidence", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_add_evidence",
-			Title:       "Add evidence",
+			Title:       "Add a source",
 			Description: addEvidenceDescription,
 			Annotations: mutatingTool(false),
 		}, h.addEvidence)
@@ -310,7 +310,7 @@ func init() {
 	registerTool("casebook_get_evidence", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_get_evidence",
-			Title:       "Get evidence",
+			Title:       "Read a source",
 			Description: getEvidenceDescription,
 			Annotations: readOnlyTool(),
 		}, h.getEvidence)

@@ -41,7 +41,7 @@ they cannot be carried over safely, setup changes nothing and says so. An
 block for you to merge by hand and exits 1.
 
 --skill also writes the Casebook skill to skills/casebook/SKILL.md in
-~/.codex ($CODEX_HOME), so Codex can start or resume a case when you agree
+~/.codex ($CODEX_HOME), so Codex can start or resume a question when you agree
 to one. Codex loads MCP tools on demand and does not show the model the
 Casebook server's instructions, so the skill, or the section that
 "casebook setup instructions" prints for your AGENTS.md, is how Codex

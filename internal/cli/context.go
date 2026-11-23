@@ -23,10 +23,12 @@ func newContextCommand(env *Env) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "context [ref]",
-		Short: "Print a case briefing for an AI session (default: the active case)",
-		Long: `Print a case briefing for an AI session: the conclusion, current and
-disputed claims, explanations still being tested, what was ruled out, open
-questions, an evidence index and recent changes. With no ref, use the active case.
+		Short: "Print the briefing an AI session reads for a question (default: the active one)",
+		Long: `Print the briefing an AI session reads for a question: the answer, the
+findings it rests on and where sources disagree, findings still being tested,
+what was ruled out, follow-up questions, a list of sources and recent changes.
+It uses the stored record names (conclusion, claim, hypothesis, evidence),
+because an AI reads it. With no ref, use the active question.
 
 Formats: md (or markdown), compact (Markdown sized for session hooks, 6000
 bytes unless --max-bytes is set) and json. --json is the same as --format json.

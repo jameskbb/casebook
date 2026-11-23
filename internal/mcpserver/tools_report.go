@@ -14,14 +14,14 @@ func init() {
 	registerTool("casebook_get_report", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_get_report",
-			Title:       "Get the investigation report",
+			Title:       "Get the answer to share",
 			Description: getReportDescription,
 			Annotations: readOnlyTool(),
 		}, h.getReport)
 	})
 }
 
-const getReportDescription = `Get a case (an investigation record) as Markdown to share, for a review, a status note or a postmortem. ` +
+const getReportDescription = `Get an investigation as Markdown to share, for a review, a status note or a postmortem. ` +
 	`mode report (default): the complete report with the conclusion, claims with verification and evidence, what was ruled out, questions, evidence and a dated UTC timeline; same as casebook report. ` +
 	`mode brief: the leadership brief, with its notice of what it leaves out; same as casebook report --brief. ` +
 	`Deterministic. To resume work use casebook_get_context. ` +

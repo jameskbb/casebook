@@ -18,14 +18,14 @@ func writeStatus(w io.Writer, info app.StatusInfo, active *app.Investigation) er
 	fmt.Fprintf(tw, "Data dir:\t%s\n", info.DataDir)
 	fmt.Fprintf(tw, "Schema:\t%d\n", info.SchemaVersion)
 	if active != nil && info.ActiveDir != "" {
-		fmt.Fprintf(tw, "Active:\t%s %s (your AI's current case, for %s)\n", active.Ref, active.Title, info.ActiveDir)
+		fmt.Fprintf(tw, "Active:\t%s %s (your AI's current question, for %s)\n", active.Ref, active.Title, info.ActiveDir)
 	} else if active != nil {
-		fmt.Fprintf(tw, "Active:\t%s %s (your AI's current case)\n", active.Ref, active.Title)
+		fmt.Fprintf(tw, "Active:\t%s %s (your AI's current question)\n", active.Ref, active.Title)
 	} else {
-		fmt.Fprintf(tw, "Active:\t%s\n", `none (your AI has no current case; run "casebook case activate <ref>")`)
+		fmt.Fprintf(tw, "Active:\t%s\n", `none (your AI has no current question; run "casebook inv activate <ref>")`)
 	}
 	c := info.Counts
-	fmt.Fprintf(tw, "Records:\t%d cases, %d evidence, %d claims, %d hypotheses, %d questions\n",
+	fmt.Fprintf(tw, "Records:\t%d questions, %d sources, %d findings, %d findings being tested, %d follow-up questions\n",
 		c.Investigations, c.Evidence, c.Claims, c.Hypotheses, c.Questions)
 	return tw.Flush()
 }
@@ -79,9 +79,9 @@ func loadStatus(ctx context.Context, env *Env) (app.StatusInfo, *app.Investigati
 func newStatusCommand(env *Env) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Show the database location, schema version, active case and record counts",
+		Short: "Show the database location, schema version, active question and record counts",
 		Long: `Show the database location, data directory, schema version, active
-case and record counts.
+question and record counts.
 
 Status never creates the database. When no database exists yet it says so
 (with --json: the path, data directory, schema_version 0 and zero counts)

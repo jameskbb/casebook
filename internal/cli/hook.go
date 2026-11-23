@@ -47,8 +47,8 @@ func newHookCommand(env *Env) *cobra.Command {
 Each handler reads the hook JSON from stdin and uses only the session id,
 event name, source, stop flag and working directory (for the scope set by
 --scope and CASEBOOK_HOOK_SCOPE, see "casebook hook session-start --help",
-and to pick the case made active for that directory with
-"casebook case activate <ref> --here", else the global one). It
+and to pick the question made active for that directory with
+"casebook inv activate <ref> --here", else the global one). It
 never reads transcripts, never writes Casebook data, prints at most one
 JSON object on stdout and always exits 0: an error is one
 "casebook hook: <message>" line on stderr.`,
@@ -69,11 +69,11 @@ func newHookSessionStartCommand(env *Env, scope *string) *cobra.Command {
 	var hint, quiet bool
 	cmd := &cobra.Command{
 		Use:   "session-start",
-		Short: "Print the active case's compact context as SessionStart hook output",
-		Long: `Print the SessionStart hook output that adds the active case's compact
-context pack to a new Claude Code session. With no active case it prints a
-one-line hint instead: if the session turns into an investigation, offer the
-person a Casebook case, and find an earlier one with the search tools. The
+		Short: "Print the active question's compact briefing as SessionStart hook output",
+		Long: `Print the SessionStart hook output that adds the active question's compact
+context pack to a new Claude Code session. With no active question it prints a
+one-line hint instead: if the session turns into working something out, offer the
+person to keep the question in Casebook, and find an earlier one with the search tools. The
 hint asks for nothing in sessions that stay unrelated; --quiet-when-inactive
 prints nothing instead. With a session id in the payload it records when the
 session started in hook-state.json next to the database, so the checkpoint
@@ -82,7 +82,7 @@ database.
 
 The pack is fenced and introduced as stored data written by people and AI
 clients, not instructions, and is preceded by a line naming who made the
-case active and when.
+question active and when.
 
 Scope: by default (no --scope flag, CASEBOOK_HOOK_SCOPE unset, or either
 set to "all") the hooks speak in every Claude Code session. With --scope
@@ -130,9 +130,9 @@ in); when that fails the hooks print nothing.`,
 	// person wanted to come back to; the hint is conditional, so it asks
 	// nothing of unrelated sessions. --hint-when-inactive stays accepted so
 	// hook commands written for the old default keep working.
-	cmd.Flags().BoolVar(&hint, "hint-when-inactive", true, "print a one-line hint when no case is active (the default)")
+	cmd.Flags().BoolVar(&hint, "hint-when-inactive", true, "print a one-line hint when no question is active (the default)")
 	_ = cmd.Flags().MarkHidden("hint-when-inactive")
-	cmd.Flags().BoolVar(&quiet, "quiet-when-inactive", false, "print nothing when no case is active")
+	cmd.Flags().BoolVar(&quiet, "quiet-when-inactive", false, "print nothing when no question is active")
 	return cmd
 }
 
@@ -265,20 +265,20 @@ func newHookCheckpointCommand(env *Env, scope *string) *cobra.Command {
 		Use:   "checkpoint",
 		Short: "Remind to checkpoint findings (Stop and PreCompact hook)",
 		Long: `Remind about persisting findings with one casebook_checkpoint call while a
-case is active.
+question is active.
 
-At Stop it reminds the model, once per session per case, when the session
+At Stop it reminds the model, once per session per question, when the session
 has run for at least 10 minutes since it started (its first hook run) or
-since its own latest checkpoint of the case, whichever is later. Before
-compaction (PreCompact) it warns the user, once per session per case,
-unless the session checkpointed the case in the last 10 minutes; Claude Code shows PreCompact output to the user only.
+since its own latest checkpoint of the question, whichever is later. Before
+compaction (PreCompact) it warns the user, once per session per question,
+unless the session checkpointed the question in the last 10 minutes; Claude Code shows PreCompact output to the user only.
 Only the session's own checkpoints count: the casebook MCP server records
 each casebook_checkpoint call in hook-state.json under the session id that
 Claude Code passes it (CLAUDE_CODE_SESSION_ID), so checkpoints written by
 other sessions, clients or the desktop app do not hold the reminder back.
 
 It stays silent when no hook payload with a session id arrives on stdin (a
-manual run, an empty or invalid payload, or a timeout), when no case is
+manual run, an empty or invalid payload, or a timeout), when no question is
 active, when Claude Code reports the Stop hook is
 already active, and outside the scope set by --scope and
 CASEBOOK_HOOK_SCOPE (see "casebook hook session-start --help"). It writes

@@ -16,11 +16,16 @@ func TestInstructions(t *testing.T) {
 	for _, want := range []string{"INV-0001", "investigation_ref", "casebook_get_context", "casebook_checkpoint", "64 KiB",
 		// When to use Casebook, not only how (scripts/agent-eval).
 		"casebook_create_investigation", "only after they say yes", "disproven", "source_ref", "human_verified",
-		// Handing a case to a note-taking or document app through the
+		// Handing an answer to a note-taking or document app through the
 		// client's own tools.
 		"casebook_get_report (mode brief or report)", "tools this session actually has", "never sends it anywhere",
 		"verification labels", "omission notices exactly", "read the intended note first", "truncated is true",
-		"offer the text to copy or save", "reported success", "casebook_add_evidence"} {
+		"offer the text to copy or save", "reported success", "casebook_add_evidence",
+		// The words the app shows, so what the AI says matches the screen.
+		"question (investigation)", "answer (conclusion)", "finding (claim, hypothesis)", "source (evidence)",
+		`"Not checked"`, `"AI checked the source"`, `"You checked this"`, `"Sources disagree"`, `"Replaced"`,
+		`"Ruled out"`, `"Not tested yet"`, "Never tell the person a confidence level", "sources checked by you",
+		"the question the person asked"} {
 		if !strings.Contains(instructions, want) {
 			t.Errorf("instructions do not mention %q", want)
 		}
@@ -38,9 +43,11 @@ func TestInstructions(t *testing.T) {
 	// Every MCP session pays for these bytes. 2 KiB kept them near 500
 	// tokens; the handoff to a note-taking or document app adds about 700
 	// bytes, because an agent must know the rules before it touches a
-	// person's note, and the tool descriptions load only on demand.
-	if len(instructions) > 2700 {
-		t.Errorf("instructions are %d bytes, want at most 2700", len(instructions))
+	// person's note, and the tool descriptions load only on demand. The
+	// word list adds about 850 more: it is the only place an agent learns
+	// what the app calls each record before it talks to the person.
+	if len(instructions) > 3550 {
+		t.Errorf("instructions are %d bytes, want at most 3550", len(instructions))
 	}
 }
 

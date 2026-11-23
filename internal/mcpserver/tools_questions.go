@@ -123,7 +123,7 @@ type addQuestionInput struct {
 	Question         string `json:"question" jsonschema:"the open question, one sentence (at most 2000 bytes)"`
 }
 
-const addQuestionDescription = `Record an open question the case (an investigation record) still has to answer, so it survives this session and any client can pick it up: something to check, a missing fact, a decision to ask the user about. ` +
+const addQuestionDescription = `Record an open question the investigation still has to answer, so it survives this session and any client can pick it up: something to check, a missing fact, a decision to ask the user about. ` +
 	`Open questions appear in the context pack until resolved or deferred with casebook_resolve_question. ` +
 	`Returns the new Q ref (Q-001 style) and a compact record with its status; the question text is not echoed.`
 
@@ -144,7 +144,7 @@ func init() {
 	registerTool("casebook_add_question", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_add_question",
-			Title:       "Add question",
+			Title:       "Add a follow-up question",
 			Description: addQuestionDescription,
 			Annotations: mutatingTool(false),
 		}, h.addQuestion)
@@ -152,7 +152,7 @@ func init() {
 	registerTool("casebook_resolve_question", func(s *mcp.Server, h *handlers) {
 		addTool(s, h, &mcp.Tool{
 			Name:        "casebook_resolve_question",
-			Title:       "Resolve, defer or reopen question",
+			Title:       "Resolve, defer or reopen a follow-up question",
 			Description: resolveQuestionDescription,
 			Annotations: mutatingTool(true),
 		}, h.resolveQuestion)

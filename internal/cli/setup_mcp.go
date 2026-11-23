@@ -36,8 +36,8 @@ claude" and "casebook setup codex" can write it for you.
 client running inside WSL that starts this casebook.exe through its
 /mnt/<drive> path.
 
-The server uses the active case of the folder the client starts it in
-(casebook case activate <ref> --here), else the global one.`,
+The server uses the active question of the folder the client starts it in
+(casebook inv activate <ref> --here), else the global one.`,
 		Example: `  casebook setup mcp
   casebook setup mcp --client cursor
   casebook setup mcp --client vscode > .vscode/mcp.json

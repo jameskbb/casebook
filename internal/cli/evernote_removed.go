@@ -9,7 +9,7 @@ import (
 // evernoteRemovedMessage is what casebook evernote prints, on stderr as the
 // command's one-line error, now that the Evernote integration is gone.
 const evernoteRemovedMessage = "the Evernote commands were removed from Casebook. " +
-	"To share a case, run casebook report (add --brief for the leadership brief) or use Share summary in the app, " +
+	"To share an answer, run casebook report (add --brief for the leadership brief) or use Share the answer in the app, " +
 	"then copy or save the text; or ask your AI client to save the brief or report into an app it is connected to. " +
 	"See docs/sharing.md."
 
