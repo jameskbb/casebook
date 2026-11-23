@@ -7,12 +7,12 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_CHECKED_BODY, Home, needYouHeading, NO_SOURCES_YET } from './Home'
+import { ALL_CHECKED_BODY, answeredLine, Home, needYouHeading, NO_SOURCES_YET, NOTHING_NEEDS_YOU } from './Home'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
 
-const [calls, helpDesk, payroll] = summaries
+const [calls, helpDesk, cancels] = summaries
 
 function Probe() {
   const { selectedRef, listStatus, pendingOpen } = useAppData()
@@ -38,7 +38,7 @@ describe('Home', () => {
   })
 
   it('words the heading for none, one and many', () => {
-    expect(needYouHeading(0)).toBe('Everything is checked')
+    expect(needYouHeading(0)).toBe('Nothing needs you right now.')
     expect(needYouHeading(1)).toBe('1 question needs you')
     expect(needYouHeading(2)).toBe('2 questions need you')
   })
@@ -84,27 +84,35 @@ describe('Home', () => {
     expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0012 write-answer')
   })
 
-  it('says everything is checked, and lists answers with their text and checked count', async () => {
+  it('says nothing needs you, and lists answers with their text and checked count', async () => {
     const user = userEvent.setup()
-    const done = { ...payroll, archived: false, archived_at: '' }
+    const done = { ...cancels, archived: false, archived_at: '' }
     await renderHome([done])
-    expect(screen.getByRole('heading', { level: 1, name: 'Everything is checked' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: NOTHING_NEEDS_YOU })).toBeInTheDocument()
     expect(screen.getByText(ALL_CHECKED_BODY)).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Questions that need you' })).toBeNull()
     const answered = screen.getByRole('region', { name: 'Answered' })
-    expect(answered).toHaveTextContent('Two new hires started a month earlier than the budget assumed.')
+    expect(answered).toHaveTextContent('Customers who joined with two free months in January cancelled when they had to start paying in March.')
     expect(answered).toHaveTextContent('1 of 1 source checked by you')
-    await user.click(within(answered).getByRole('button', { name: 'Why was March payroll $18,000 over budget?' }))
+    await user.click(within(answered).getByRole('button', { name: 'Why did more customers cancel in March?' }))
     expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0003')
+  })
+
+  it('never lets things still to find out make a question need you, and says how many are open on its line', async () => {
+    const done = { ...cancels, archived: false, archived_at: '', counts: { ...cancels.counts, questions: 3, open_questions: 2 } }
+    await renderHome([done])
+    expect(screen.getByRole('heading', { level: 1, name: NOTHING_NEEDS_YOU })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Answered' })).toHaveTextContent('Everything is checked. 2 things are still to find out.')
+    expect(answeredLine({ ...done, counts: { ...done.counts, open_questions: 1 } })).toBe('Everything is checked. 1 thing is still to find out.')
   })
 
   it('keeps a question with no answer and nothing to check in view, and leaves archived ones out', async () => {
     const fresh = { ...helpDesk, ref: 'INV-0007', title: 'Why did returns double in May?', sources_total: 0, sources_checked_by_you: 0 }
-    await renderHome([fresh, payroll])
+    await renderHome([fresh, cancels])
     const waiting = screen.getByRole('region', { name: 'No answer yet' })
     expect(within(waiting).getByRole('button', { name: 'Why did returns double in May?' })).toBeInTheDocument()
     expect(waiting).toHaveTextContent(NO_SOURCES_YET)
-    expect(screen.queryByText('Why was March payroll $18,000 over budget?')).toBeNull()
+    expect(screen.queryByText('Why did more customers cancel in March?')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Answered' })).toBeNull()
   })
 

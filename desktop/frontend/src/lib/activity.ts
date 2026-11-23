@@ -205,6 +205,7 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
   if (action === 'conclusion.update') {
     if (reset) return NEEDS_CHECKING_AGAIN
     if (/^Cleared /.test(sum)) return 'Cleared the answer.'
+    if (/^Undid the check/.test(sum)) return 'Undid the check of the answer.'
     const checked = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
     return checked ? 'Checked the answer.' : ''
   }

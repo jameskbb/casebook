@@ -170,6 +170,7 @@ describe('activitySummary', () => {
     ['import', 'Imported question INV-0001 as INV-0004 (4 sources, 3 findings, 1 follow-up question)', ''],
     ['conclusion.update', 'Updated conclusion of INV-0001 (confidence high); verification reset to ai_generated after AI edit', NEEDS_CHECKING_AGAIN],
     ['conclusion.update', 'Cleared the answer', 'Cleared the answer.'],
+    ['conclusion.update', 'Undid the check of the answer', 'Undid the check of the answer.'],
     ['claim.update', 'Updated claim C-002: confidence_rationale', 'Changed why.'],
     ['claim.update', 'Updated claim C-002: statement, confidence high', 'Changed the wording.'],
     ['claim.update', 'Updated claim C-002: verification human_verified', 'Decided this still holds.'],

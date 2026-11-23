@@ -231,7 +231,7 @@ export function StatementDrawer(props: StatementDrawerProps) {
           onClose={() => setDialog((d) => (d === 'addEvidence' ? 'link' : d))}
         />
       )}
-      {dialog === 'replace' && <ReplaceFindingDialog finding={finding} invRef={invRef} onClose={() => setDialog(null)} />}
+      {dialog === 'replace' && <ReplaceFindingDialog finding={finding} invRef={invRef} onClose={() => setDialog(null)} onReplaced={onOpenRef} />}
     </>
   )
 }
@@ -490,7 +490,7 @@ function DecideGroup({
           </>
         )}
       </div>
-      {confirming && disagree && !retired && <Banner tone="warning" action={<>
+      {confirming && disagree && !retired && <Banner tone="warning" className="banner-stacked" action={<div className="banner-actions">
         <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
         <Button
           variant="secondary"
@@ -505,7 +505,7 @@ function DecideGroup({
         >
           {SETTLE_ACTION}
         </Button>
-      </>}>{SETTLE_COPY}</Banner>}
+      </div>}>{SETTLE_COPY}</Banner>}
       {summary && (
         <p className="drawer-summary" role="alert">
           {summary}

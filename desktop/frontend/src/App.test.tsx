@@ -127,9 +127,9 @@ describe('App main pane states', () => {
     Object.assign(
       mocks.api,
       mockApi({
-        listInvestigations: async () => {
+        listInvestigations: async (opts) => {
           if (fail) throw new Error('database is locked')
-          return summaries.filter((s) => !s.archived)
+          return opts?.include_archived ? summaries : summaries.filter((s) => !s.archived)
         },
       }),
     )

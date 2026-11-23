@@ -101,7 +101,7 @@
 }
 
 .search-hit-hypothesis .search-hit-icon {
-  color: var(--hypothesis);
+  color: var(--claim);
 }
 
 .search-hit-question .search-hit-icon {

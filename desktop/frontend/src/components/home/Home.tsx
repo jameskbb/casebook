@@ -2,8 +2,9 @@
 // least one exists. One list of the questions that need a person, each with
 // the one thing it needs next and a button that opens the question on it
 // (lib/questions needOf); then the answers already in hand; then questions
-// with no sources yet. Everything comes from the question list; nothing is
-// stored for this view.
+// with no sources yet. Things still to find out never make a question need
+// a person; an answered one with some open says so on its line. Everything
+// comes from the question list; nothing is stored for this view.
 import type { InvestigationSummary } from '../../api/types'
 import { useNow } from '../../hooks/useNow'
 import { plural } from '../../lib/plural'
@@ -15,13 +16,20 @@ import './Home.css'
 
 const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
-export const ALL_CHECKED_HEADING = 'Everything is checked'
+export const NOTHING_NEEDS_YOU = 'Nothing needs you right now.'
 export const ALL_CHECKED_BODY = 'You have checked every source and every answer, and no sources disagree.'
 export const NO_SOURCES_YET = 'No sources yet. Ask your AI to work on it, or add one.'
 
+/** An answered question's line: what is still open, else how many sources a person checked. */
+export function answeredLine(q: InvestigationSummary): string {
+  const open = Math.max(0, q.counts?.open_questions ?? 0)
+  if (open > 0) return `Everything is checked. ${open} ${plural(open, 'thing is', 'things are')} still to find out.`
+  return checkedLine(q) || 'No sources'
+}
+
 /** "2 questions need you", "1 question needs you". */
 export function needYouHeading(n: number): string {
-  return n === 0 ? ALL_CHECKED_HEADING : `${n} ${plural(n, 'question needs you', 'questions need you')}`
+  return n === 0 ? NOTHING_NEEDS_YOU : `${n} ${plural(n, 'question needs you', 'questions need you')}`
 }
 
 export function Home() {
@@ -58,7 +66,7 @@ export function Home() {
                   </button>
                 </h3>
                 <p className="home-answer">{questionChecks(q).answer}</p>
-                <p className="home-checked">{checkedLine(q) || 'No sources'}</p>
+                <p className="home-checked">{answeredLine(q)}</p>
               </li>
             ))}
           </ul>

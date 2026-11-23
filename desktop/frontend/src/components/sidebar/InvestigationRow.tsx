@@ -8,6 +8,7 @@ import type { RovingItemProps } from '../../hooks/useRovingFocus'
 import { AI_WORKING } from '../../lib/labels'
 import { checkedLine } from '../../lib/questions'
 import { formatAbsolute, formatRelative } from '../../lib/relativeTime'
+import { useAppData } from '../../state/appData'
 import { ArchivedTag } from '../record/StatusLabel'
 import './InvestigationRow.css'
 
@@ -47,8 +48,12 @@ export function InvestigationRow({ investigation: inv, selected, onSelect, now, 
   )
 }
 
-/** The question your AI saves its findings under: an 8px accent dot and the words. A marker, never a control. */
+/**
+ * The question your AI saves its findings under: an 8px accent dot and the
+ * words. A marker, never a control. Never shown while no AI tool is connected.
+ */
 export function ActiveMarker({ className }: { className?: string }) {
+  if (!useAppData().aiConnected) return null
   return (
     <span
       className={['active-marker', className ?? ''].filter(Boolean).join(' ')}

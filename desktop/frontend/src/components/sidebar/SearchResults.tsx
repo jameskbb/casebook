@@ -7,7 +7,7 @@
 // Activating a hit opens its investigation and, for evidence, claims,
 // hypotheses and questions, that record (select with openRecord).
 import { Fragment, useId, useImperativeHandle, type Ref } from 'react'
-import { CircleQuestionMark, FileText, Folder, Lightbulb, Quote, SearchX, type LucideIcon } from 'lucide-react'
+import { CircleQuestionMark, FileText, Folder, Quote, SearchX, type LucideIcon } from 'lucide-react'
 import type { RecordType, SearchHit } from '../../api/types'
 import { useRovingFocus } from '../../hooks/useRovingFocus'
 import { hitSegments } from '../../lib/snippet'
@@ -20,7 +20,7 @@ const KIND: Record<RecordType, { icon: LucideIcon; label: string }> = {
   investigation: { icon: Folder, label: 'Question' },
   evidence: { icon: FileText, label: 'Source' },
   claim: { icon: Quote, label: 'Finding' },
-  hypothesis: { icon: Lightbulb, label: 'Finding' },
+  hypothesis: { icon: Quote, label: 'Finding' },
   question: { icon: CircleQuestionMark, label: 'Still to find out' },
 }
 

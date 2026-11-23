@@ -13,11 +13,12 @@ import './RestoreConfirmDialog.css'
 import './DeleteDialog.css'
 
 export const IRREVERSIBLE = 'This cannot be undone.'
+export const CANNOT_BRING_BACK = 'It cannot be brought back.'
 
 export interface DeleteDialogProps {
   title: string
-  /** What is removed, one or two sentences. */
-  body: string
+  /** What is removed, one or two sentences. Without it the dialog is one line: the title and `It cannot be brought back.` */
+  body?: string
   /** Set when the record cannot be deleted yet: what to do first. */
   blocker?: string | null
   confirmLabel: string
@@ -74,6 +75,8 @@ export function DeleteDialog({ title, body, blocker, blockerTitle, confirmLabel,
     >
       {blocker ? (
         <p className="dialog-text dialog-text-wrap">{blocker}</p>
+      ) : body === undefined ? (
+        <p className="dialog-text dialog-text-wrap">{CANNOT_BRING_BACK}</p>
       ) : (
         <>
           <p className="dialog-text dialog-text-wrap">{body}</p>

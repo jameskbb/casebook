@@ -3,7 +3,7 @@ import type { InvestigationSummary } from '../api/types'
 import { summaries } from '../test/fixtures'
 import { checkedLine, groupQuestions, homeLists, needOf, needsYou, questionChecks } from './questions'
 
-const [calls, helpDesk, payroll] = summaries
+const [calls, helpDesk, cancels] = summaries
 const q = (partial: Partial<InvestigationSummary>): InvestigationSummary => ({ ...calls, archived: false, ...partial })
 
 describe('questions', () => {
@@ -58,7 +58,7 @@ describe('questions', () => {
 
   it('words the checked count with the right plural', () => {
     expect(checkedLine(calls)).toBe('1 of 4 sources checked by you')
-    expect(checkedLine(payroll)).toBe('1 of 1 source checked by you')
+    expect(checkedLine(cancels)).toBe('1 of 1 source checked by you')
     // A count above the total cannot be shown as more than all of them.
     expect(checkedLine(q({ sources_total: 2, sources_checked_by_you: 5 }))).toBe('2 of 2 sources checked by you')
   })

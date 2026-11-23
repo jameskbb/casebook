@@ -8,7 +8,7 @@ import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
 import { DataOpsProvider } from './DataOps'
-import { HOME_LABEL, LIST_CAPPED_COPY, needYouCount, Sidebar } from './Sidebar'
+import { HOME_LABEL, LIST_CAPPED_COPY, needYouCount, SHOW_ARCHIVED, Sidebar } from './Sidebar'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -74,7 +74,8 @@ describe('Sidebar', () => {
     const noAnswer = await within(nav).findByRole('list', { name: 'No answer yet' })
     const answered = within(nav).getByRole('list', { name: 'Answered' })
     expect(within(noAnswer).getAllByRole('button').map((b) => b.dataset.ref)).toEqual(['INV-0002'])
-    expect(within(answered).getAllByRole('button').map((b) => b.dataset.ref)).toEqual(['INV-0001', 'INV-0003'])
+    // Newest asked first, so a row never moves while the person works on it.
+    expect(within(answered).getAllByRole('button').map((b) => b.dataset.ref)).toEqual(['INV-0003', 'INV-0001'])
     // Nothing is open at launch: Home is the current item, and it counts what needs a person.
     const home = within(nav).getByRole('button', { current: true })
     expect(home).toHaveTextContent(HOME_LABEL)
@@ -112,7 +113,7 @@ describe('Sidebar', () => {
     expect(within(first).queryByRole('img')).toBeNull()
     expect(first).not.toHaveTextContent(/Investigating|Resolved|High/)
 
-    const archived = within(nav).getByText('Why was March payroll $18,000 over budget?').closest('button')!
+    const archived = within(nav).getByText('Why did more customers cancel in March?').closest('button')!
     expect(archived).toHaveTextContent('Archived')
     expect(archived).not.toHaveAttribute('aria-current')
     expect(archived).not.toHaveTextContent('Your AI is working on this')
@@ -147,5 +148,41 @@ describe('Sidebar', () => {
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => [] }))
     renderSidebar()
     expect(await screen.findByText('No questions yet.')).toBeInTheDocument()
+  })
+})
+
+describe('Sidebar round 4', () => {
+  const live = summaries.filter((s) => !s.archived)
+
+  it('offers Show archived questions only when some question is archived', async () => {
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => live }))
+    const { unmount } = renderSidebar()
+    await screen.findByText('Why are help desk tickets taking longer to close this month?')
+    await act(async () => {})
+    expect(screen.queryByRole('button', { name: SHOW_ARCHIVED })).toBeNull()
+    unmount()
+    Object.assign(mocks.api, mockApi({ listInvestigations: async (o) => (o?.include_archived ? summaries : live) }))
+    renderSidebar()
+    expect(await screen.findByRole('button', { name: SHOW_ARCHIVED })).toBeInTheDocument()
+  })
+
+  it('puts the empty line below Home', async () => {
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [] }))
+    renderSidebar()
+    const empty = await screen.findByText('No questions yet.')
+    const home = screen.getByRole('button', { name: /^Home/ })
+    expect(home.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('keeps the rows in the order the questions were asked while the person works', async () => {
+    const a = { ...live[1], ref: 'INV-0011', title: 'Asked first', created_at: '2026-11-01T09:00:00.000Z', updated_at: '2026-11-01T09:00:00.000Z' }
+    const b = { ...live[1], ref: 'INV-0012', title: 'Asked second', created_at: '2026-11-02T09:00:00.000Z', updated_at: '2026-11-02T09:00:00.000Z' }
+    // Working on the older one moved it to the top of the list as stored (most recently updated first).
+    Object.assign(mocks.api, mockApi({ listInvestigations: async () => [{ ...a, updated_at: '2026-11-03T09:00:00.000Z' }, b] }))
+    renderSidebar()
+    const nav = await screen.findByRole('navigation', { name: 'Questions' })
+    await within(nav).findByText('Asked first')
+    // The sidebar keeps the order they were asked in, newest first, so the row does not jump.
+    expect(within(within(nav).getByRole('list', { name: 'No answer yet' })).getAllByRole('button').map((r) => r.dataset.ref)).toEqual(['INV-0012', 'INV-0011'])
   })
 })

@@ -61,8 +61,10 @@ export function StatementDialog({ invRef, evidence, onClose, onCreated }: Statem
     setRowErrors({})
     setSummary(undefined)
     try {
-      // Confidence is stored but never shown: a new finding carries none.
-      const saved = await write(() => api.addClaim(invRef, { statement, confidence: 'unknown', confidence_rationale: rationale, links: sent }), {
+      // Confidence is stored but never shown: a new finding carries none. It
+      // is saved as Not checked: its label comes from its sources, and only It
+      // still holds records that the person decided it holds.
+      const saved = await write(() => api.addClaim(invRef, { statement, confidence: 'unknown', confidence_rationale: rationale, verification: 'ai_generated', links: sent }), {
         onRetry: () => void submitRef.current(),
       })
       if (saved) {

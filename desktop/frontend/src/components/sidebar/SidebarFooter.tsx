@@ -4,11 +4,13 @@
 // holds what a person does: Connect your AI..., Open a question someone sent
 // you..., Save a backup..., Bring back a backup... and Look for updates...
 // The last entry, Technical..., opens a small window with what only a
-// technical helper needs: the codes switch, where the questions are kept and
-// the version.
+// technical helper needs: the codes switch, saving the open question as a
+// file to move it to another computer, where the questions are kept and the
+// version. Saving runs the native save window in Go; a cancelled one shows
+// nothing.
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDownToLine, Cable, ChevronDown, Copy, DatabaseBackup, RotateCcw, Settings, Upload, Wrench } from 'lucide-react'
-import { CLIPBOARD_COPY } from '../../api/errors'
+import { ArrowDownToLine, Cable, ChevronDown, Copy, DatabaseBackup, Download, RotateCcw, Settings, Upload, Wrench } from 'lucide-react'
+import { CLIPBOARD_COPY, errorCopy, toApiError } from '../../api/errors'
 import { api } from '../../api/api'
 import { getShowIds, setShowIds } from '../../lib/showIds'
 import { useAppData } from '../../state/appData'
@@ -28,6 +30,8 @@ export const SETTINGS_LABEL = 'Settings'
 export const OPEN_SENT_QUESTION_LABEL = 'Open a question someone sent you...'
 export const SHOW_IDS_LABEL = 'Show the codes your AI uses'
 export const SHOW_IDS_HINT = 'Like C-001 and E-004.'
+export const SAVE_QUESTION_LABEL = 'Save a question as a file to move it'
+export const SAVE_QUESTION_NONE = 'Open the question first, then come back here.'
 
 export function SidebarFooter() {
   const ops = useDataOps()
@@ -65,7 +69,8 @@ export function SidebarFooter() {
 
 /** What only a technical helper needs: the codes switch, where the questions are kept, the version. */
 function TechnicalDialog({ onClose }: { onClose: () => void }) {
-  const { dataLocation } = useAppData()
+  const { dataLocation, selectedRef, detail } = useAppData()
+  const open = selectedRef && detail?.investigation.ref === selectedRef ? detail.investigation : null
   const toast = useToast()
   const doneRef = useRef<HTMLButtonElement>(null)
   const [version, setVersion] = useState('')
@@ -93,6 +98,15 @@ function TechnicalDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const exportQuestion = async (ref: string) => {
+    try {
+      const res = await api.exportInvestigation(ref)
+      if (!res.cancelled) toast.success(`Saved a copy as ${res.file_name}.`)
+    } catch (e) {
+      toast.error(errorCopy(toApiError(e)).message)
+    }
+  }
+
   return (
     <Dialog title="Technical" size="confirm" onClose={onClose} initialFocus={doneRef} footer={<Button variant="primary" ref={doneRef} onClick={onClose}>Done</Button>}>
       <div className="technical-rows">
@@ -106,6 +120,11 @@ function TechnicalDialog({ onClose }: { onClose: () => void }) {
             }}
           />
           <p className="technical-hint">{SHOW_IDS_HINT}</p>
+        </div>
+        <div>
+          <p className="technical-label">{SAVE_QUESTION_LABEL}</p>
+          <p className="technical-hint">{open ? `The question open now: ${open.title}` : SAVE_QUESTION_NONE}</p>
+          <Button variant="secondary" icon={Download} disabled={!open} onClick={() => open && void exportQuestion(open.ref)}>Save as a file...</Button>
         </div>
         {dataLocation && (
           <div>

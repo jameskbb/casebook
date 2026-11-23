@@ -172,16 +172,16 @@ describe('EvidenceDrawer', () => {
     expect(pre.closest('.codes-only')).not.toBeNull()
   })
 
-  it('lists the claims and hypotheses that use it, each opening its drawer', async () => {
+  it('lists the findings that use it, each opening its drawer, and a replaced or ruled out one says only that', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
     const usedBy = within(drawer).getByRole('region', { name: 'Findings that use this source' })
     const items = within(usedBy).getAllByRole('button')
     expect(items.map((b) => b.textContent)).toEqual([
       'C-002Backs itThe extra calls were about a bill. About the same number of people called to buy.',
-      'C-003Goes against itReplaced by C-002The extra calls were people calling to buy.',
+      'C-003Replaced by C-002The extra calls were people calling to buy.',
       'C-004Goes against itCallers waited too long and hung up before buying.',
-      'H-002Goes against itRuled outA new ad brought in more callers.',
+      'H-002Ruled outA new ad brought in more callers.',
     ])
     expect(items[1].querySelector('.used-by-statement')).toHaveClass('is-retired')
     expect(items[0].querySelector('.used-by-statement')).not.toHaveClass('is-retired')

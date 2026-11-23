@@ -50,7 +50,7 @@ describe('Sidebar keyboard', () => {
     renderSidebar()
     const r = await rows()
     // The help desk question has no answer, so it comes first; the answered ones follow.
-    expect(r.map((b) => b.dataset.ref)).toEqual(['INV-0002', 'INV-0001', 'INV-0003'])
+    expect(r.map((b) => b.dataset.ref)).toEqual(['INV-0002', 'INV-0003', 'INV-0001'])
     expect(r.map((b) => b.tabIndex)).toEqual([0, -1, -1])
     expect(screen.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'true')
     await user.click(r[1])
@@ -77,7 +77,7 @@ describe('Sidebar keyboard', () => {
     await user.keyboard('{End}')
     expect(r[2]).toHaveFocus()
     await user.keyboard('{ArrowUp}{Enter}')
-    expect(screen.getByTestId('probe')).toHaveTextContent('selected:INV-0001')
+    expect(screen.getByTestId('probe')).toHaveTextContent('selected:INV-0003')
     expect(r[1]).toHaveAttribute('aria-current', 'true')
   })
 

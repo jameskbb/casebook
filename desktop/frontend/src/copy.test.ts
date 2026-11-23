@@ -131,6 +131,13 @@ describe('people-facing copy', () => {
     expect(copyOffenders(/follow-up questions?|one by one|guess to test|kind of source/i)).toEqual([])
   })
 
+  // Retired in round 4: saving a whole question as a file lives under
+  // Settings, Technical; a thing to find out left for later is not told to
+  // choose Later; the steps go to the person who set up the AI tool.
+  it('never shows a word retired in round 4', () => {
+    expect(copyOffenders(/Save the whole question|choose Later instead|whoever set/i)).toEqual([])
+  })
+
   it('allows MCP only once, where another AI tool has to support it', () => {
     const mentions = Object.entries(sources)
       .filter(([file]) => !/\.test\./.test(file))

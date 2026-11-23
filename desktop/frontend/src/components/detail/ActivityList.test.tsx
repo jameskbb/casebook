@@ -65,6 +65,23 @@ describe('ActivityList', () => {
     expect(items[1].querySelector('.activity-summary')).toHaveTextContent(/^Yes, says the head of billing\.$/)
   })
 
+  it('names the thing left for later by its words, and keeps the words of one added as its second line', async () => {
+    const words: NameOf = (ref) => (ref === 'Q-003' ? 'Did other stores see the same rise?' : undefined)
+    renderList(
+      [
+        row(human, 'question.defer', 'Q-003', 'Deferred question Q-003'),
+        row(human, 'question.add', 'Q-003', 'Added question Q-003: Did other stores see the same rise?'),
+      ],
+      undefined,
+      words,
+    )
+    const items = within(await screen.findByRole('region', { name: 'How we got here' })).getAllByRole('listitem')
+    expect(items[0].querySelector('.activity-sentence')?.textContent).toBe('You left "Did other stores see the same rise?" for later')
+    expect(items[0].querySelector('.activity-summary')).toBeNull()
+    expect(items[1]).toHaveTextContent('You added something to find out')
+    expect(items[1].querySelector('.activity-summary')).toHaveTextContent('Did other stores see the same rise?')
+  })
+
   it('names a source or finding by its words, with its code kept for when codes are on', async () => {
     const onOpenRef = vi.fn()
     const user = userEvent.setup()

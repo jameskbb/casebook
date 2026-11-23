@@ -6,11 +6,12 @@
 // line to run by hand, where the settings are, the program an AI uses to
 // reach Casebook) sits under Technical details.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CircleCheck, CircleDashed, Copy, RefreshCw, TriangleAlert } from 'lucide-react'
+import { CircleCheck, CircleDashed, Copy, TriangleAlert } from 'lucide-react'
 import { api } from '../../api/api'
 import { CLIPBOARD_COPY, errorCopy, plainError, toApiError } from '../../api/errors'
 import type { ClientChange, ClientConnection, ClientConnections, ClientTool } from '../../api/types'
 import { CLIENT_TOOLS, isConnected, type ToolName } from '../../lib/clients'
+import { useNoteClients } from '../../state/appData'
 import { BreakablePath } from '../ui/BreakablePath'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -29,8 +30,8 @@ export const CONNECTED = 'Connected'
 export const NOT_CONNECTED = 'Not connected'
 export const SETTINGS_UNREADABLE = 'Casebook cannot read its settings'
 export const NONE_FOUND_COPY = 'Casebook did not find an AI tool on this computer that it can connect by itself.'
-export const BY_HAND_COPY = 'Casebook cannot connect this one by itself. Send the steps under Technical details to whoever set up your AI tool.'
-export const OTHER_TOOL_COPY = 'If you use one of these, or another AI tool, send the steps under Technical details to whoever set it up.'
+export const BY_HAND_COPY = 'Casebook cannot connect this one by itself. Send the steps under Technical details to the person who set up your AI tool.'
+export const OTHER_TOOL_COPY = 'Using a different AI tool? Send the steps under Technical details to the person who set it up.'
 export const OTHER_MCP_COPY =
   'Another AI tool: run casebook setup mcp, paste what it prints into the tool\'s settings, then restart the tool. The tool has to support MCP, the usual way AI tools connect to other apps.'
 
@@ -169,18 +170,22 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastChange, setLastChange] = useState<ClientChange | null>(null)
+  const noteClients = useNoteClients()
 
+  // Read every time the window opens and after each change.
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setData(await api.clientConnections())
+      const c = await api.clientConnections()
+      setData(c)
+      noteClients(c)
       setError(null)
     } catch (e) {
       setError(errorCopy(toApiError(e)).message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [noteClients])
 
   useEffect(() => {
     void load()
@@ -216,14 +221,9 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
       initialFocus={doneRef}
       className="connect-dialog"
       footer={
-        <>
-          <Button variant="secondary" icon={RefreshCw} busy={loading} busyLabel="Looking..." onClick={() => void load()}>
-            Look again
-          </Button>
-          <Button variant="primary" ref={doneRef} onClick={onClose}>
-            Done
-          </Button>
-        </>
+        <Button variant="primary" ref={doneRef} onClick={onClose}>
+          Done
+        </Button>
       }
     >
       <p className="dialog-text" ref={introRef}>

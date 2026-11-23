@@ -4,7 +4,7 @@
 // (lib/records findingMark). Something to find out shows a word only when it
 // was left for later. The text is always present; color is never the only
 // signal.
-import { BadgeCheck, CirclePause, Lightbulb } from 'lucide-react'
+import { BadgeCheck, CirclePause } from 'lucide-react'
 import { ANSWERED, ARCHIVED, LATER, NO_ANSWER_YET } from '../../lib/labels'
 import { findingMark, type Finding, type Sources } from '../../lib/records'
 import { RecordId } from './RecordId'
@@ -36,13 +36,6 @@ export function FindingLabel({ finding, sources = NO_SOURCES }: { finding: Findi
     return (
       <span className="badge badge-verified">
         <BadgeCheck className="badge-icon" {...icon} />
-        {label}
-      </span>
-    )
-  if (tone === 'open')
-    return (
-      <span className="record-status record-status-open">
-        <Lightbulb className="record-status-icon" {...icon} />
         {label}
       </span>
     )

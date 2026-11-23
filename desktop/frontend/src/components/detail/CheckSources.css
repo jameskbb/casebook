@@ -90,3 +90,28 @@
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
+
+/* The end has a line or two: the window fits it. */
+.check-sources.is-end .dialog-body {
+  height: auto;
+}
+
+/* The main button opens focused; the ring shows even when a click opened the window. */
+.check-sources .dialog-footer .btn-primary:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.check-disagree-source + .check-disagree-source {
+  margin-top: var(--space-2);
+}
+
+.check-disagree-source .badge {
+  margin-left: var(--space-2);
+}
+
+.check-disagree-summary {
+  display: block;
+  color: var(--ink-muted);
+  white-space: pre-line;
+}

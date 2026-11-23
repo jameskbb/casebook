@@ -12,7 +12,7 @@
 // goes through requestNavigate: with unsaved input in a drawer editor the
 // user is asked "Discard this draft?" first.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { FileText, Lightbulb, Quote, type LucideIcon } from 'lucide-react'
+import { FileText, Quote, type LucideIcon } from 'lucide-react'
 import type { InvestigationDetail } from '../../api/types'
 import { useAppData } from '../../state/appData'
 import { RecordId } from '../record/RecordId'
@@ -44,7 +44,7 @@ export function drawerKind(ref: string): DrawerKind | null {
 
 const KIND_META: Record<DrawerKind, { noun: string; icon: LucideIcon }> = {
   claim: { noun: 'Finding', icon: Quote },
-  hypothesis: { noun: 'Finding', icon: Lightbulb },
+  hypothesis: { noun: 'Finding', icon: Quote },
   evidence: { noun: 'Source', icon: FileText },
 }
 

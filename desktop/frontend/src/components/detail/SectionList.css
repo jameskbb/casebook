@@ -24,9 +24,6 @@
   color: var(--claim);
 }
 
-.section-hypothesis .section-icon {
-  color: var(--hypothesis);
-}
 
 .section-question .section-icon {
   color: var(--question);

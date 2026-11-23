@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
 import type { ListOptions, SearchHit } from '../../api/types'
-import { AppDataProvider, useAppData } from '../../state/appData'
+import { AppDataProvider, LIST_LIMIT, useAppData } from '../../state/appData'
 import { archivedHit, archivedSummaries, hits, markupHit } from '../../test/fixtures.dataops'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
@@ -219,7 +219,7 @@ describe('Sidebar search', () => {
     // Home stays reachable when every question is archived.
     expect(screen.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('button', { name: SHOW_ARCHIVED })).toBeInTheDocument()
-    expect(mocks.api.listInvestigations).toHaveBeenCalledWith({ include_archived: true, limit: 1 })
+    expect(mocks.api.listInvestigations).toHaveBeenCalledWith({ include_archived: true, limit: LIST_LIMIT })
     expect(screen.queryByText('No questions yet.')).not.toBeInTheDocument()
   })
 

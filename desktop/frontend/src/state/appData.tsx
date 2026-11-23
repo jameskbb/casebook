@@ -19,7 +19,8 @@ import { api } from '../api/api'
 import { useChangeToken } from '../hooks/useChangeToken'
 import { useRequestNavigate } from './dirtyGuard'
 import { ApiError, toApiError } from '../api/errors'
-import type { InvestigationDetail, InvestigationSummary, StartupInfo } from '../api/types'
+import type { ClientConnections, InvestigationDetail, InvestigationSummary, StartupInfo } from '../api/types'
+import { anyClientConnected } from '../lib/clients'
 
 export const DEFAULT_ACTIVITY_LIMIT = 20
 /**
@@ -69,6 +70,10 @@ export interface AppData {
   ownDetail: InvestigationDetail | null
   /** True after three consecutive ChangeToken failures, until the next success. */
   pollTrouble: boolean
+  /** An AI tool on this computer is connected to Casebook (read at startup and whenever Connect your AI reads it). */
+  aiConnected: boolean
+  /** Connect your AI passes what it read, so the rest of the app follows. */
+  noteClients(c: ClientConnections): void
 }
 
 const AppDataContext = createContext<AppData | null>(null)
@@ -89,6 +94,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [detailError, setDetailError] = useState<ApiError | null>(null)
   const [activityLimit, setActivityLimitState] = useState(DEFAULT_ACTIVITY_LIMIT)
   const [dataVersion, setDataVersion] = useState(0)
+  const [aiConnected, setAiConnected] = useState(false)
+  const noteClients = useCallback((c: ClientConnections) => setAiConnected(anyClientConnected(c)), [])
 
   // Latest values for async callbacks.
   const selectedRefRef = useRef<string | null>(null)
@@ -203,6 +210,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setStartup(info)
       setDataLocation(info.db_path)
       if (!info.ok) return
+      api.clientConnections().then(noteClients, () => {})
       api.dataLocation().then(
         (loc) => {
           if (!cancelled && loc) setDataLocation(loc)
@@ -217,7 +225,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [loadList, readToken, setBaseline, markStale, startupAttempt])
+  }, [loadList, readToken, setBaseline, markStale, noteClients, startupAttempt])
 
   // Opening another investigation unmounts every editor on the page, so it
   // asks before discarding unsaved input (dirtyGuard.tsx).
@@ -297,6 +305,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       refresh,
       ownDetail,
       pollTrouble,
+      aiConnected,
+      noteClients,
     }),
     [
       startup,
@@ -319,11 +329,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       refresh,
       ownDetail,
       pollTrouble,
+      aiConnected,
+      noteClients,
     ],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
 }
+
+/** noteClients, or nothing outside the provider (Connect your AI is also shown on its own). */
+export function useNoteClients(): (c: ClientConnections) => void {
+  return useContext(AppDataContext)?.noteClients ?? ignoreClients
+}
+const ignoreClients = () => {}
 
 export function useAppData(): AppData {
   const ctx = useContext(AppDataContext)

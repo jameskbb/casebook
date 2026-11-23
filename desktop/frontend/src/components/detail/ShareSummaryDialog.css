@@ -42,3 +42,9 @@
   color: var(--ink-muted);
   font-size: var(--text-label);
 }
+
+/* Copy and Copied take the same width, so Close and Save never move under the pointer. */
+.share-copy {
+  width: 7.5rem;
+  justify-content: center;
+}

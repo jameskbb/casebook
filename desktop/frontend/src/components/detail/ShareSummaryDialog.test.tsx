@@ -52,6 +52,15 @@ describe('ShareSummaryDialog', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Copy' }))
     await waitFor(() => expect(mocked.copySharePreview).toHaveBeenLastCalledWith('newer'))
   })
+  it('keeps Copy one fixed width when it turns into Copied, so Close and Save stay put', async () => {
+    renderDialog()
+    const copy = await screen.findByRole('button', { name: 'Copy' })
+    expect(copy).toHaveClass('share-copy')
+    await waitFor(() => expect(copy).toBeEnabled())
+    await userEvent.click(copy)
+    expect(await screen.findByRole('button', { name: 'Copied' })).toHaveClass('share-copy')
+  })
+
   it('names the file the save returned in the toast', async () => {
     mocked.saveSharePreview.mockResolvedValue({ cancelled: false, path: 'C:\\Users\\Ada\\Documents\\Why did calls go up (everything).html', file_name: 'Why did calls go up (everything).html' })
     renderDialog()

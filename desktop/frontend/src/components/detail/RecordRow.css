@@ -121,3 +121,14 @@ button.finding-source:hover {
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
+
+.record-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.record-row-actions .btn-ghost {
+  padding: 0 var(--space-2);
+}

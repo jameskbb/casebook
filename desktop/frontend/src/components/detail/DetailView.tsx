@@ -14,23 +14,27 @@
 // the sources nested under them, source rows and the records named in How we
 // got here open the drawer stack. pendingOpen says what to open once the
 // matching detail is loaded: a search hit's record opens its drawer or
-// focuses its row; Home's buttons open the source check, the first finding
-// where sources disagree, the answer editor or the answer check.
+// focuses its row; Home's buttons open the check (Decide opens it too: its
+// sources are all checked, so it starts on the findings where sources
+// disagree), the answer editor or the answer check. When the check closes,
+// focus goes back to the answer's first button.
 //
 // Still to find out holds findings not tested yet and the things a person
-// or an AI still wants to find out, in one list. Those offer Answer and
-// Later; answered ones collapse under Show N answered. Focus moves to a new
-// row.
+// or an AI still wants to find out, in one list. A finding not tested yet
+// offers This turned out right and Rule this out on its row; something to
+// find out offers Answer and Later. Answered ones collapse under Show N
+// answered. Focus moves to a new row.
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleQuestionMark, FileText, Pencil, Plus, Quote, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
-import { plainError } from '../../api/errors'
-import type { Evidence, InvestigationDetail, Question } from '../../api/types'
+import { plainError, toApiError } from '../../api/errors'
+import type { Evidence, Hypothesis, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
 import { evidenceByRef, groupFindings, partitionQuestions, type Finding } from '../../lib/records'
 import { useAppData } from '../../state/appData'
 import { useWrite } from '../../state/useWrite'
 import { drawerKind, DrawerStackProvider, useDrawers } from '../drawers/DrawerStack'
+import { RULE_OUT_ACTION, TURNED_OUT_RIGHT_ACTION } from '../drawers/StatementDrawer'
 import { DeferQuestionDialog } from '../dialogs/DeferQuestionDialog'
 import { DeleteDialog } from '../dialogs/DeleteDialog'
 import { EditInvestigationDialog } from '../dialogs/EditInvestigationDialog'
@@ -112,17 +116,25 @@ function Page({ detail }: { detail: InvestigationDetail }) {
   const inv = detail.investigation
   const [checking, setChecking] = useState(false)
   const [answerIntent, setAnswerIntent] = useState<AnswerIntent | null>(null)
+  const [focusAnswer, setFocusAnswer] = useState(false)
+
+  // After the check closes (Escape, Done, Not now) focus goes to the answer's
+  // first button, Check the next source while one is left: whatever opened
+  // the window may be gone by then.
+  useEffect(() => {
+    if (!focusAnswer) return
+    setFocusAnswer(false)
+    const panel = document.querySelector('.conclusion-panel')
+    ;(panel?.querySelector<HTMLElement>('.btn-primary') ?? panel?.querySelector<HTMLElement>('button'))?.focus()
+  }, [focusAnswer])
 
   // Consumes pendingOpen once the matching detail is loaded.
   useEffect(() => {
     if (!pendingOpen || inv.ref !== selectedRef) return
-    if (pendingOpen === 'check-sources') {
+    if (pendingOpen === 'check-sources' || pendingOpen === 'decide') {
       setChecking(true)
     } else if (pendingOpen === 'write-answer' || pendingOpen === 'check-answer') {
       setAnswerIntent(pendingOpen)
-    } else if (pendingOpen === 'decide') {
-      const first = groupFindings(detail.claims, detail.hypotheses, evidenceByRef(detail)).disagree[0]
-      if (first) open(first.record.ref)
     } else if (drawerKind(pendingOpen)) {
       open(pendingOpen)
     } else {
@@ -151,13 +163,22 @@ function Page({ detail }: { detail: InvestigationDetail }) {
         onIntentDone={() => setAnswerIntent(null)}
       />
       <ReadingSections detail={detail} />
-      {checking && <CheckSources detail={detail} onClose={() => setChecking(false)} />}
+      {checking && (
+        <CheckSources
+          detail={detail}
+          onClose={() => {
+            setChecking(false)
+            setFocusAnswer(true)
+          }}
+          onWriteAnswer={() => {
+            setChecking(false)
+            setAnswerIntent('write-answer')
+          }}
+        />
+      )}
     </>
   )
 }
-
-export const deleteQuestionBody = (q: Question) =>
-  `This will be removed from Still to find out${q.status === 'resolved' ? ' with its answer' : ''}. Use this for one added by mistake. To keep it for later, choose Later instead.`
 
 export const DETAIL_GONE_COPY = 'Casebook could not find this question. Your AI may have changed it. Choose a question from the list.'
 export const DETAIL_STALE_COPY = 'Casebook could not load this question again. This is how it looked last time.'
@@ -212,6 +233,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
   const [focusRef, setFocusRef] = useState<string | null>(null)
   const [reopening, setReopening] = useState<string | null>(null)
   const [legendOpen, setLegendOpen] = useState(false)
+  const [testing, setTesting] = useState<string | null>(null)
   const sectionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -241,6 +263,25 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       setReopening(null)
     }
   }
+
+  // A finding not tested yet: it turned out right, or it is ruled out.
+  const settle = async (h: Hypothesis, status: 'supported' | 'disproven') => {
+    if (testing) return
+    setTesting(h.ref)
+    try {
+      await write(() => api.updateHypothesis(invRef, h.ref, { status }))
+    } catch (e) {
+      toast.error(plainError(toApiError(e)))
+    } finally {
+      setTesting(null)
+    }
+  }
+  const testActions = (h: Hypothesis) => (
+    <>
+      <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'supported')}>{TURNED_OUT_RIGHT_ACTION}</Button>
+      <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'disproven')}>{RULE_OUT_ACTION}</Button>
+    </>
+  )
 
   const deleteButton = (q: Question) => (
     <IconButton icon={Trash2} label={`Delete: ${q.question}`} onClick={() => setDialog({ type: 'delete', question: q })} />
@@ -280,6 +321,7 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
     ...detail.evidence.map((e) => [e.ref, e.title] as const),
     ...detail.claims.map((c) => [c.ref, c.statement] as const),
     ...detail.hypotheses.map((h) => [h.ref, h.statement] as const),
+    ...detail.questions.map((q) => [q.ref, q.question] as const),
   ])
   const questions = partitionQuestions(detail.questions)
   const close = () => setDialog(null)
@@ -313,7 +355,13 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
         collapsed={questions.ruledOut.map((question) => ({ question }))}
         collapsedNoun={['answered', 'answered']}
         itemKey={(x) => ('finding' in x ? findingKey(x.finding) : x.question.ref)}
-        renderItem={(x) => ('finding' in x ? findingRow(x.finding) : <QuestionRow question={x.question} actions={questionActions(x.question)} />)}
+        renderItem={(x) =>
+          'finding' in x ? (
+            <RecordRow {...x.finding} sources={sources} onOpen={open} actions={x.finding.kind === 'hypothesis' && testActions(x.finding.record)} />
+          ) : (
+            <QuestionRow question={x.question} actions={questionActions(x.question)} />
+          )
+        }
       />
       <SectionList<Evidence>
         id="evidence"
@@ -361,7 +409,6 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       {dialog?.type === 'delete' && (
         <DeleteDialog
           title="Delete this?"
-          body={deleteQuestionBody(dialog.question)}
           confirmLabel="Delete"
           onConfirm={async () => {
             const ref = dialog.question.ref

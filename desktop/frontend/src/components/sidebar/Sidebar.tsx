@@ -1,7 +1,9 @@
 // The sidebar: wordmark, New question, the search field, then the scrolling
 // list: Home (always there, with how many questions need you), the questions
-// under No answer yet and Answered (grouped search hits while a query is
-// present), one small line that shows or hides archived questions, and the
+// under No answer yet and Answered, each newest first by when it was asked,
+// so a row never moves while the person works on it (grouped search hits
+// while a query is present), one small line that shows or hides archived
+// questions (only when there are some), and the
 // footer with the Settings menu and theme. Everything but the
 // list stays fixed while the list scrolls.
 //
@@ -122,19 +124,20 @@ export function Sidebar({ onNew }: SidebarProps) {
     [],
   )
 
-  // With archived questions hidden and nothing listed, learn whether any
-  // exist so the empty line can point to the line that shows them.
-  const listEmpty = listStatus === 'ready' && investigations.length === 0
+  // With archived questions hidden, learn whether any exist: the line that
+  // shows them is offered only then, and the empty line can point to it.
+  const listReady = listStatus === 'ready'
+  const listEmpty = listReady && investigations.length === 0
   const [archivedExist, setArchivedExist] = useState<boolean | null>(null)
   useEffect(() => {
-    if (!listEmpty || includeArchived) {
+    if (!listReady || includeArchived) {
       setArchivedExist(null)
       return
     }
     let cancelled = false
-    api.listInvestigations({ include_archived: true, limit: 1 }).then(
+    api.listInvestigations({ include_archived: true, limit: LIST_LIMIT }).then(
       (list) => {
-        if (!cancelled) setArchivedExist(list.length > 0)
+        if (!cancelled) setArchivedExist(list.some((i) => i.archived))
       },
       () => {
         if (!cancelled) setArchivedExist(false)
@@ -143,10 +146,11 @@ export function Sidebar({ onNew }: SidebarProps) {
     return () => {
       cancelled = true
     }
-  }, [listEmpty, includeArchived, dataVersion])
+  }, [listReady, includeArchived, dataVersion])
 
-  // The rows in the order they show: No answer yet, then Answered.
-  const groups = groupQuestions(investigations)
+  // The rows in the order they show: No answer yet, then Answered. The list
+  // arrives most recently updated first; asked order keeps rows still.
+  const groups = groupQuestions([...investigations].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id))
   const ordered = [...groups.noAnswer, ...groups.answered]
   const selectedIndex = ordered.findIndex((i) => i.ref === selectedRef)
   const roving = useRovingFocus(ordered.length, selectedIndex)
@@ -253,7 +257,6 @@ export function Sidebar({ onNew }: SidebarProps) {
                 ))}
               </ul>
             )}
-            {emptyLine && <p className="sidebar-empty">{emptyLine}</p>}
             {listStatus === 'error' && (
               <div className="sidebar-load-error" role="alert">
                 <p className="sidebar-search-error">
@@ -278,13 +281,14 @@ export function Sidebar({ onNew }: SidebarProps) {
                 <span className="inv-row-time">{needYouCount(toCheck)}</span>
               </button>
             )}
+            {emptyLine && <p className="sidebar-empty">{emptyLine}</p>}
             {investigations.length > 0 && (
               <div className="sidebar-groups" onKeyDown={roving.onKeyDown}>
                 {group(NO_ANSWER_GROUP, groups.noAnswer, 0)}
                 {group(ANSWERED_GROUP, groups.answered, groups.noAnswer.length)}
               </div>
             )}
-            {listStatus === 'ready' && (includeArchived || archivedExist !== false) && (
+            {listReady && (includeArchived || archivedExist === true) && (
               <button type="button" className="text-button sidebar-archived" aria-pressed={includeArchived} onClick={() => setIncludeArchived(!includeArchived)}>
                 {includeArchived ? HIDE_ARCHIVED : SHOW_ARCHIVED}
               </button>

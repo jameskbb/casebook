@@ -40,9 +40,6 @@
   flex: none;
 }
 
-.record-status-open .record-status-icon {
-  color: var(--hypothesis);
-}
 
 .record-status-supported .record-status-icon {
   color: var(--claim);

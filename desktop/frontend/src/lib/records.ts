@@ -70,7 +70,7 @@ export function sourcesDisagree(r: FindingRecord, sources: Sources): boolean {
 }
 
 /** How a finding's label is drawn: color and icon never carry the meaning alone. */
-export type FindingTone = 'checked' | 'disagree' | 'open' | 'plain' | 'retired'
+export type FindingTone = 'checked' | 'disagree' | 'plain' | 'retired'
 
 /** The one label a finding shows, and how it is drawn. */
 export function findingMark(f: Finding, sources: Sources): { label: string; tone: FindingTone } {
@@ -79,7 +79,7 @@ export function findingMark(f: Finding, sources: Sources): { label: string; tone
   if (isRuledOut(r)) return { label: RULED_OUT, tone: 'retired' }
   if (sourcesDisagree(r, sources)) return { label: SOURCES_DISAGREE, tone: 'disagree' }
   if (r.verification === 'human_verified' && hasLiveAgainst(r, sources)) return { label: DECIDED_HOLDS, tone: 'checked' }
-  if (f.kind === 'hypothesis' && r.status === 'open') return { label: NOT_TESTED, tone: 'open' }
+  if (f.kind === 'hypothesis' && r.status === 'open') return { label: NOT_TESTED, tone: 'plain' }
   const live = liveLinks(r, sources)
   if (live.length === 0) return { label: NO_SOURCE_YET, tone: 'plain' }
   const checked = live.filter((l) => sources.get(l.evidence_ref)?.verification === 'human_verified').length

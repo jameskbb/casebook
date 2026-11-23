@@ -18,8 +18,8 @@ describe('kindRuleClass', () => {
   it('maps each kind and state to its rule', () => {
     expect(kindRuleClass('evidence')).toContain('kind-rule-evidence')
     expect(kindRuleClass('claim', { status: 'active' })).toContain('kind-rule-claim')
-    expect(kindRuleClass('hypothesis', { status: 'open' })).toContain('kind-rule-hypothesis-open')
-    expect(kindRuleClass('hypothesis', { status: 'supported' })).toContain('kind-rule-hypothesis-supported')
+    expect(kindRuleClass('hypothesis', { status: 'open' })).toContain('kind-rule-claim')
+    expect(kindRuleClass('hypothesis', { status: 'supported' })).toContain('kind-rule-claim')
     expect(kindRuleClass('question', { status: 'open' })).toContain('kind-rule-question')
     expect(kindRuleClass('claim', { status: 'disputed' })).toContain('kind-rule-disputed')
     expect(kindRuleClass('claim', { status: 'active', verification: 'disputed' })).toContain('kind-rule-disputed')
@@ -146,10 +146,10 @@ describe('RecordRow', () => {
     expect(row.querySelector('.record-statement')?.className).toContain('is-retired')
   })
 
-  it('shows a finding nobody has tested with the dashed rule and one label, Not tested yet', () => {
+  it('shows a finding nobody has tested with the same rule as every finding and one label, Not tested yet', () => {
     const { container } = render(<RecordRow kind="hypothesis" record={{ ...byRef(hypotheses, 'H-001'), verification: 'human_verified' }} />)
     const row = container.querySelector('[data-ref="H-001"]') as HTMLElement
-    expect(row.className).toContain('kind-rule-hypothesis-open')
+    expect(row.className).toContain('kind-rule-claim')
     expect(row.querySelector('.row-line')).toHaveTextContent(/^H-001Not tested yet$/)
   })
 

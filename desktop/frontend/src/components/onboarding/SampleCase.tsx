@@ -9,7 +9,6 @@ import './SampleCase.css'
 
 const SOURCE_TITLE = 'Call log, September and October'
 const FINDING = 'Almost all of the extra calls were about a bill, not about buying.'
-const NOT_TESTED = 'A billing mistake in October charged some customers twice.'
 
 const sampleClaim: Claim = {
   id: 0,
@@ -80,10 +79,9 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
                 </tbody>
               </table>
               <p>Open the call log and count the calls yourself. It shows what the extra calls were about. It does not show why so many people asked about a bill.</p>
-              <p>In your own question, open the finding, read its sources, then choose I checked this. Choose Sources disagree when a source says something different.</p>
+              <p>In your own question, choose Check the next source. It shows one source at a time: read it, then choose I checked this. Each finding's label counts the sources you checked. A finding with a source that goes against it shows under Where sources disagree until you decide about it.</p>
             </div>}
           </div>
-          <p><strong>Not tested yet:</strong> {NOT_TESTED}</p>
         </section>
         <section className="sample-section" aria-labelledby="sample-share">
           <h2 id="sample-share">Share the answer</h2>
@@ -91,9 +89,10 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
           <Button variant="secondary" aria-expanded={shareOpen} onClick={() => setShareOpen((open) => !open)}>{shareOpen ? 'Hide the example' : 'See an example'}</Button>
           {shareOpen && <div className="sample-summary">
             <h3>Example of a shared answer</h3>
-            <p><strong>Answer, not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed the same.</p>
-            <p><strong>Finding, not checked:</strong> {FINDING} Source: {SOURCE_TITLE} (not checked).</p>
-            <p><strong>Not tested yet:</strong> {NOT_TESTED}</p>
+            <p><strong>Answer:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed the same.</p>
+            <p>0 of 1 source checked by a person.</p>
+            <p><strong>Finding:</strong> {FINDING} (0 of 1 source checked by a person)</p>
+            <p><strong>Backs it:</strong> {SOURCE_TITLE} (Not checked)</p>
             <p className="sample-note">Read it for anything private before you send it. Casebook gives you text to paste or a file. You choose where it goes.</p>
           </div>}
         </section>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
@@ -227,12 +227,12 @@ describe('ConnectClientsDialog', () => {
     expect(mocks.api.copyText).toHaveBeenCalledWith(CLI_PATH)
   })
 
-  it('changes no settings until a button asks: Look again only reads', async () => {
+  it('changes no settings until a button asks, and has no Look again button', async () => {
     const user = userEvent.setup()
     const onClose = renderDialog()
     await screen.findByRole('region', { name: 'Claude Code' })
-    await user.click(screen.getByRole('button', { name: 'Look again' }))
-    await waitFor(() => expect(mocks.api.clientConnections).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole('button', { name: 'Look again' })).toBeNull()
+    expect(mocks.api.clientConnections).toHaveBeenCalledTimes(1)
     await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(onClose).toHaveBeenCalled()
     const called = Object.entries(mocks.api)
@@ -241,16 +241,16 @@ describe('ConnectClientsDialog', () => {
     expect(called.sort()).toEqual(['clientConnections'])
   })
 
-  it('shows a plain error, never the engine text, and Look again loads the settings', async () => {
+  it('shows a plain error, never the engine text, and reads the settings again when the window opens again', async () => {
     Object.assign(mocks.api, { clientConnections: vi.fn()
       .mockRejectedValueOnce(new Error(JSON.stringify({ kind: 'other', message: 'Casebook cannot find your home folder' })))
       .mockResolvedValue(clientConnections) })
-    const user = userEvent.setup()
-    renderDialog()
+    const first = render(<ToastProvider><ConnectClientsDialog onClose={() => {}} /></ToastProvider>)
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent(WENT_WRONG_COPY)
     expect(alert).not.toHaveTextContent(/home folder/)
-    await user.click(screen.getByRole('button', { name: 'Look again' }))
+    first.unmount()
+    renderDialog()
     expect(await screen.findByRole('region', { name: 'Claude Code' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })

@@ -161,12 +161,13 @@ describe('deleting records', () => {
     expect(mocks.api.deleteClaim).not.toHaveBeenCalled()
   })
 
-  it('deletes something to find out from its row', async () => {
+  it('deletes something to find out from its row, asking in one line', async () => {
     const user = renderDetail()
     await user.click(await screen.findByRole('button', { name: 'Delete: Have the customers who were charged twice been paid back?' }))
     const dialog = screen.getByRole('dialog', { name: 'Delete this?' })
-    expect(dialog).toHaveTextContent('This will be removed from Still to find out.')
-    expect(dialog).toHaveTextContent(IRREVERSIBLE)
+    expect(dialog.querySelector('.dialog-body')).toHaveTextContent(/^It cannot be brought back.$/)
+    expect(dialog).not.toHaveTextContent(/Later/)
+    expect(within(dialog).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['Close', 'Cancel', 'Delete'])
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
     expect(mocks.api.deleteQuestion).toHaveBeenCalledWith('INV-0001', 'Q-001')
   })
@@ -177,7 +178,7 @@ describe('deleting records', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Delete question...' }))
     const dialog = screen.getByRole('dialog', { name: 'Delete this question?' })
     expect(dialog).toHaveTextContent(/will be removed with everything in it: \d+ sources?/)
-    expect(dialog).toHaveTextContent('Save a copy first if you might need it again.')
+    expect(dialog).toHaveTextContent('To keep a copy, first choose Settings, then Technical, then Save a question as a file to move it.')
     expect(dialog).not.toHaveTextContent('INV-0003')
     await user.click(within(dialog).getByRole('button', { name: 'Delete question' }))
     expect(mocks.api.deleteInvestigation).toHaveBeenCalledWith('INV-0003')

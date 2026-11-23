@@ -108,7 +108,7 @@ export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClos
       footer={<>
         <Button onClick={onClose} disabled={sharing}>Close</Button>
         <Button icon={Download} disabled={disabled} onClick={() => void save()}>Save as a file...</Button>
-        <Button variant="primary" icon={ClipboardCopy} disabled={disabled} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
+        <Button variant="primary" icon={ClipboardCopy} className="share-copy" disabled={disabled} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
       </>}
     >
       <p className="share-summary-lede">{SHARE_LEDE}</p>

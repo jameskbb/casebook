@@ -1,6 +1,6 @@
 // Shared test data: a call center question with findings and sources in
 // every state, a help desk question with no answer yet, and an archived
-// payroll question. Screenshots are taken over this, so it stays plain.
+// question about customers who cancelled. Screenshots are taken over this, so it stays plain.
 import type {
   Activity,
   Actor,
@@ -95,7 +95,7 @@ export const summaries: InvestigationSummary[] = [
   {
     id: 3,
     ref: 'INV-0003',
-    title: 'Why was March payroll $18,000 over budget?',
+    title: 'Why did more customers cancel in March?',
     status: 'archived',
     conclusion_confidence: 'high',
     created_at: '2026-11-02T15:00:00.000Z',
@@ -104,7 +104,7 @@ export const summaries: InvestigationSummary[] = [
     archived: true,
     is_active: false,
     counts: { evidence: 1, claims: 1, hypotheses: 0, questions: 0, open_questions: 0 },
-    conclusion: 'Two new hires started a month earlier than the budget assumed.',
+    conclusion: 'Customers who joined with two free months in January cancelled when they had to start paying in March.',
     sources_total: 1,
     sources_checked_by_you: 1,
     findings_disagree: 0,

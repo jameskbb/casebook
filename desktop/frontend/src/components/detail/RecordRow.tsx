@@ -4,7 +4,9 @@
 // name and its own check label, so a person reads a finding and its sources
 // in one place. With onOpen the whole row opens the finding through a
 // stretched button under the content, and each source is its own button (no
-// nested controls); without it nothing is clickable.
+// nested controls); without it nothing is clickable. actions sit on the row
+// below its sources.
+import type { ReactNode } from 'react'
 import type { Evidence, EvidenceLink } from '../../api/types'
 import { relationTags } from '../../lib/labels'
 import { isReplaced, isRuledOut, sourcesDisagree, type Finding, type Sources } from '../../lib/records'
@@ -19,11 +21,13 @@ export type RecordRowProps = Finding & {
   onOpen?: (ref: string) => void
   /** The question's sources by code: the finding's label and each nested source's label come from them. */
   sources?: Sources
+  /** Buttons on the row, for example This turned out right and Rule this out. */
+  actions?: ReactNode
 }
 
 const NO_SOURCES: Sources = new Map()
 
-export function RecordRow({ onOpen, sources, ...finding }: RecordRowProps) {
+export function RecordRow({ onOpen, sources, actions, ...finding }: RecordRowProps) {
   const r = finding.record
   const retired = isReplaced(r) || isRuledOut(r)
   // The hatched rule goes with the label Sources disagree, never with the stored value alone.
@@ -59,6 +63,7 @@ export function RecordRow({ onOpen, sources, ...finding }: RecordRowProps) {
             ))}
           </ul>
         )}
+        {actions && <div className="record-row-actions">{actions}</div>}
       </div>
     </div>
   )

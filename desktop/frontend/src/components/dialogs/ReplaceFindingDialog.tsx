@@ -15,25 +15,26 @@ export const REPLACE_TITLE = 'Replace with a newer finding'
 export const REPLACE_LEDE = 'Write the finding as it should read now. It keeps the same sources. The old one stays, crossed out.'
 
 /**
- * Adds the newer finding and replaces the old one with it. Two calls: when
+ * Adds the newer finding, as Not checked (nobody has decided it holds), and
+ * replaces the old one with it. Two calls: when
  * the second is refused the new finding is already there, and the error says
  * what happened.
  */
 export async function replaceWithNew(invRef: string, old: Finding, statement: string): Promise<{ ref: string }> {
   const links: EvidenceLinkInput[] = old.record.links.map((l) => ({ evidence_ref: l.evidence_ref, relation: l.relation }))
   if (old.kind === 'claim') {
-    const added = await api.addClaim(invRef, { statement, confidence: 'unknown', confidence_rationale: '', links })
+    const added = await api.addClaim(invRef, { statement, confidence: 'unknown', confidence_rationale: '', verification: 'ai_generated', links })
     await api.supersedeClaim(invRef, old.record.ref, added.ref)
     return added
   }
   // One that had turned out right stays out of Still to find out.
   const status = old.record.status === 'supported' ? 'supported' : ''
-  const added = await api.addHypothesis(invRef, { statement, confidence: 'unknown', rationale: '', status, links })
+  const added = await api.addHypothesis(invRef, { statement, confidence: 'unknown', rationale: '', status, verification: 'ai_generated', links })
   await api.supersedeHypothesis(invRef, old.record.ref, added.ref)
   return added
 }
 
-export function ReplaceFindingDialog({ finding, invRef, onClose }: { finding: Finding; invRef: string; onClose: () => void }) {
+export function ReplaceFindingDialog({ finding, invRef, onClose, onReplaced }: { finding: Finding; invRef: string; onClose: () => void; onReplaced?: (ref: string) => void }) {
   const write = useWrite()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -49,7 +50,10 @@ export function ReplaceFindingDialog({ finding, invRef, onClose }: { finding: Fi
     setSummary(undefined)
     try {
       const saved = await write(() => replaceWithNew(invRef, finding, text), { rethrowConflict: true, onRetry: () => void submitRef.current() })
-      if (saved) onClose()
+      if (saved) {
+        onClose()
+        onReplaced?.(saved.ref)
+      }
     } catch (e) {
       const split = splitFieldErrors(e, ['statement'])
       setError(split.fieldErrors.statement)

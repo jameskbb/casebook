@@ -90,8 +90,11 @@ function ActivityRow({
   const s = activitySentence(a)
   const plain = activitySummary(a, { conclusionReviewedAt })
   const name = a.target_ref ? nameOf?.(a.target_ref) : undefined
+  // Something to find out left for later is named by its words.
+  if (a.action === 'question.defer' && name) s.segments = [{ text: `left "${shortName(name)}" for later` }]
+  const named = Boolean(name) && s.segments.some((seg) => 'ref' in seg || a.action === 'question.defer')
   // The second line shows only when it adds to the first.
-  const showSummary = plain !== '' && plain !== name
+  const showSummary = plain !== '' && !(named && plain === name)
   return (
     <div className="activity-row">
       <div className="activity-main">

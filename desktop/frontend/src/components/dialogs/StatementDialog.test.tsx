@@ -72,6 +72,7 @@ describe('StatementDialog', () => {
       statement: 'The bills went out twice because a file was loaded two times.',
       confidence: 'unknown',
       confidence_rationale: 'Code and docs.',
+      verification: 'ai_generated',
       links: [
         { evidence_ref: 'E-001', relation: 'supports' },
         { evidence_ref: 'E-003', relation: 'contradicts' },

@@ -3,7 +3,9 @@
 // one line saying whether they checked the answer, one row of buttons (Check
 // the next source while one is left, I checked this answer, Share the
 // answer; the first one that applies is the main button) and how the person
-// knows. Edit mode is inline in the same panel:
+// knows; the findings that back it or go against it, counted from the page
+// as it is now (ruled out and replaced ones are not counted). Once the person
+// checked the answer, Undo my check sets it back to not checked. Edit mode is inline in the same panel:
 // the answer and how you know, saved together through UpdateConclusion with
 // the findings on the page behind it (lib/records answerFindings). Confidence
 // is stored and passed through unchanged, never shown. Clearing asks first.
@@ -71,6 +73,8 @@ export const CHECK_NEXT_SOURCE = 'Check the next source'
 export const SHARE_THE_ANSWER = 'Share the answer'
 export const CHECKED_ANSWER_ACTION = 'I checked this answer'
 export const NOT_CHECKED_ANSWER = 'You have not checked this answer yet.'
+export const JUST_WROTE_ANSWER = 'You wrote this. Check it against the sources before you share it.'
+export const UNDO_ANSWER_CHECK = 'Undo my check'
 export const CHECK_ANSWER_AGAIN = 'Something changed after you checked this answer. Check it again.'
 export const WHAT_DID_YOU_CHECK = 'What did you check? Write one sentence.'
 
@@ -112,6 +116,8 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
   const [checking, setChecking] = useState<Investigation | null>(null)
   const [checkBasis, setCheckBasis] = useState('')
   const [busy, setBusy] = useState(false)
+  // Set by the person's own save of the answer, for the line under it.
+  const [justWrote, setJustWrote] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [clearing, setClearing] = useState(false)
   // Lives here, not in the button, so a reload that moves the button cannot close the dialog.
@@ -201,10 +207,32 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           // The answer rests on the findings on the page now. An answer the
           // person checked and then changed is not checked any more.
           ...(filled ? answerFindings(claims, evidenceByRef({ evidence })) : {}),
-          ...(filled && inv.conclusion_verification === 'human_verified' ? { verification: 'ai_generated' as const } : {}),
+          ...(filled && inv.conclusion_verification === 'human_verified' &&
+            (draft.conclusion !== inv.conclusion || draft.rationale !== inv.conclusion_rationale)
+            ? { verification: 'ai_generated' as const } : {}),
         }),
       )
-      if (saved) finish()
+      if (saved) {
+        setJustWrote(filled)
+        finish()
+      }
+    } catch (e) {
+      showErrors(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Takes back the person's check: the same answer, saved as not checked.
+  const undoCheck = async () => {
+    if (busy) return
+    setBusy(true)
+    setSummary(undefined)
+    try {
+      const saved = await write(() =>
+        api.updateConclusion(inv.ref, { conclusion: inv.conclusion, confidence: storedConfidence(inv), rationale: inv.conclusion_rationale, verification: 'ai_generated' }),
+      )
+      if (saved) setFocusTarget('checkButton')
     } catch (e) {
       showErrors(e)
     } finally {
@@ -241,8 +269,8 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
 
   const findingText = (ref: string) => claims.find((c) => c.ref === ref)?.statement ?? 'A finding that is no longer here'
 
-  const backing = inv.conclusion_supporting_claims ?? []
-  const against = inv.conclusion_contradicting_claims ?? []
+  // The findings on the page now, so one ruled out or replaced since the save is not counted.
+  const { supporting_claims: backing, contradicting_claims: against } = answerFindings(claims, evidenceByRef({ evidence }))
   const checkedAt = inv.conclusion_reviewed_at
   const upToDate = answerChecked(inv)
   const checkStale = checking !== null && checking.conclusion_review_token !== inv.conclusion_review_token
@@ -350,8 +378,13 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
           <p className="conclusion-text"><CodedText text={inv.conclusion} /></p>
           <SourcesChecked evidence={evidence} />
           <p className="conclusion-check-state" role="status">
-            {!checkedAt ? NOT_CHECKED_ANSWER : !upToDate ? CHECK_ANSWER_AGAIN : <>You checked this answer on <time dateTime={checkedAt}>{formatDate(checkedAt)}</time>.</>}
+            {!checkedAt ? (justWrote ? JUST_WROTE_ANSWER : NOT_CHECKED_ANSWER) : !upToDate ? CHECK_ANSWER_AGAIN : <>You checked this answer on <time dateTime={checkedAt}>{formatDate(checkedAt)}</time>.</>}
           </p>
+          {upToDate && !checking && (
+            <div>
+              <Button variant="ghost" busy={busy} busyLabel="Saving..." onClick={() => void undoCheck()}>{UNDO_ANSWER_CHECK}</Button>
+            </div>
+          )}
           {actions}
           {!checking && summary && <p className="conclusion-summary" role="alert">{summary}</p>}
           {checking && (

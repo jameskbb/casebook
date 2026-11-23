@@ -109,9 +109,12 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                   >
                     <span className="used-by-line">
                       <span className="used-by-ref tabular">{u.ref}</span>
-                      <span className={`used-by-relation used-by-${u.relation}`}>
-                        {relationTags[u.relation]}
-                      </span>
+                      {/* One label a row: a finding that is no longer counted says only that. */}
+                      {!retired && (
+                        <span className={`used-by-relation used-by-${u.relation}`}>
+                          {relationTags[u.relation]}
+                        </span>
+                      )}
                       {retired && rec && (
                         <span className="used-by-status">
                           {rec.status === 'superseded' ? REPLACED : RULED_OUT}

@@ -50,6 +50,7 @@ describe('ReplaceFindingDialog', () => {
       statement: 'The extra calls were about a bill sent twice.',
       confidence: 'unknown',
       confidence_rationale: '',
+      verification: 'ai_generated',
       links: [
         { evidence_ref: 'E-002', relation: 'supports' },
         { evidence_ref: 'E-003', relation: 'supports' },

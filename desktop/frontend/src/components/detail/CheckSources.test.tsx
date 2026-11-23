@@ -9,7 +9,8 @@ import { detail as baseDetail, evidence } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, GO_BACK_TO_SKIPPED, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION } from './CheckSources'
+import { RULE_OUT_ACTION, STILL_HOLDS_ACTION } from '../drawers/StatementDrawer'
+import { ALL_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, DISAGREE_HEADING, goBackText, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION, WRITE_THE_ANSWER } from './CheckSources'
 import { CHECKED_ANSWER_ACTION, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -31,8 +32,20 @@ describe('checkStep', () => {
   })
 })
 
+describe('skipped wording', () => {
+  it('names one or many sources and findings', () => {
+    expect(goBackText(1)).toBe('Go back to the skipped source')
+    expect(goBackText(2)).toBe('Go back to the skipped sources')
+    expect(goBackText(0, 1)).toBe('Go back to the skipped finding')
+    expect(goBackText(1, 1)).toBe('Go back to what you skipped')
+    expect(skippedText(1)).toBe('You skipped 1 source. It is still not checked.')
+    expect(skippedText(0, 2)).toBe('You skipped 2 findings. Sources still disagree about them.')
+  })
+})
+
 describe('CheckSources', () => {
   let current: InvestigationDetail
+  const onWriteAnswer = vi.fn()
 
   beforeEach(() => {
     current = structuredClone(baseDetail)
@@ -44,8 +57,16 @@ describe('CheckSources', () => {
           current = { ...current, evidence: current.evidence.map((e) => (e.ref === ref ? { ...e, verification: v } : e)) }
           return current.evidence.find((e) => e.ref === ref)!
         },
+        updateClaim: async (_inv, ref, patch) => {
+          current = { ...current, claims: current.claims.map((c) => (c.ref === ref ? { ...c, ...patch, verification: 'ai_generated' } : c)) }
+          return current.claims.find((c) => c.ref === ref)!
+        },
+        reviewStatement: async (_inv, input) => {
+          current = { ...current, claims: current.claims.map((c) => (c.ref === input.ref ? { ...c, status: 'active', verification: 'human_verified' } : c)) }
+        },
       }),
     )
+    onWriteAnswer.mockClear()
   })
 
   function Harness() {
@@ -54,7 +75,7 @@ describe('CheckSources', () => {
     return (
       <>
         <button onClick={() => setOpen(true)}>Open</button>
-        {open && detail && <CheckSources detail={detail} onClose={() => setOpen(false)} />}
+        {open && detail && <CheckSources detail={detail} onClose={() => setOpen(false)} onWriteAnswer={onWriteAnswer} />}
       </>
     )
   }
@@ -68,7 +89,7 @@ describe('CheckSources', () => {
     return { user, dialog: await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE }) }
   }
 
-  it('shows one source at a time with its finding and progress, moves on by itself, and ends with the answer check', async () => {
+  it('goes through the sources, then each finding where sources disagree, then the answer, in one pass', async () => {
     const { user, dialog } = await renderWalk()
     expect(within(dialog).getByText('Source 1 of 3')).toBeInTheDocument()
     expect(within(dialog).getByRole('heading', { name: evidence[0].title })).toBeInTheDocument()
@@ -85,13 +106,25 @@ describe('CheckSources', () => {
     await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
 
     // The skipped one is still not checked; going back offers it again.
-    expect(await within(dialog).findByText(skippedText(1))).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button', { name: GO_BACK_TO_SKIPPED }))
+    // Then the finding where sources disagree, with its sources both ways.
+    expect(await within(dialog).findByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    expect(within(dialog).getByText('Finding 1 of 1')).toBeInTheDocument()
+    expect(within(dialog).getByText('Callers waited too long and hung up before buying.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Goes against it')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION })).toHaveFocus()
+    await user.click(within(dialog).getByRole('button', { name: SKIP_ACTION }))
+
+    // The skipped ones still need the person; going back offers them again, source first.
+    expect(await within(dialog).findByText(skippedText(1, 1))).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText(WHAT_DID_YOU_CHECK)).toBeNull()
+    await user.click(within(dialog).getByRole('button', { name: goBackText(1, 1) }))
     expect(within(dialog).getByText('Source 3 of 3')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
+    await user.click(await within(dialog).findByRole('button', { name: RULE_OUT_ACTION }))
+    expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-004', { status: 'rejected' })
 
-    // Every source is checked and the answer is not: it is the last step.
-    expect(await within(dialog).findByText(ALL_SOURCES_CHECKED)).toBeInTheDocument()
+    // Every source is checked and nothing is left to decide: the answer is the last step.
+    expect(await within(dialog).findByText('Last, check the answer.')).toBeInTheDocument()
     const field = within(dialog).getByLabelText(WHAT_DID_YOU_CHECK)
     expect(field).toHaveFocus()
     const confirm = within(dialog).getByRole('button', { name: CHECKED_ANSWER_ACTION })
@@ -112,14 +145,30 @@ describe('CheckSources', () => {
     expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus()
   })
 
-  it('ends with Done when there is no answer to check', async () => {
-    current = { ...current, investigation: { ...current.investigation, conclusion: '' }, evidence: current.evidence.filter((e) => e.ref === 'E-001' || e.ref === 'E-004') }
+  it('records It still holds as the person read the finding', async () => {
+    current = { ...current, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })) }
+    const { user, dialog } = await renderWalk()
+    expect(within(dialog).getByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'fixture-C-004', verification: 'human_verified', settle_dispute: true })
+    expect(await within(dialog).findByText('Last, check the answer.')).toBeInTheDocument()
+  })
+
+  it('ends on You have checked everything with Write the answer when there is no answer', async () => {
+    current = {
+      ...current,
+      investigation: { ...current.investigation, conclusion: '' },
+      evidence: current.evidence.filter((e) => e.ref === 'E-001' || e.ref === 'E-004'),
+      claims: current.claims.filter((c) => c.ref !== 'C-004'),
+    }
     const { user, dialog } = await renderWalk()
     expect(within(dialog).getByText('Source 1 of 1')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
-    expect(await within(dialog).findByText(ALL_SOURCES_CHECKED)).toBeInTheDocument()
+    expect(await within(dialog).findByText(ALL_CHECKED)).toBeInTheDocument()
     expect(within(dialog).queryByLabelText(WHAT_DID_YOU_CHECK)).toBeNull()
-    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    const writeIt = within(dialog).getByRole('button', { name: WRITE_THE_ANSWER })
+    expect(writeIt).toHaveFocus()
+    await user.click(writeIt)
+    expect(onWriteAnswer).toHaveBeenCalled()
   })
 })

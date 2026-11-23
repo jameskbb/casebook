@@ -368,11 +368,24 @@ describe('StatementDrawer deciding about a finding', () => {
     expect(screen.queryByText(/superseded; set its status first/)).toBeNull()
   })
 
-  it('Replace with a newer finding opens the replace window', async () => {
+  it('Replace with a newer finding opens the replace window, and the drawer moves to the new finding', async () => {
     const user = userEvent.setup()
-    renderDrawer(C002)
+    const onOpenRef = vi.fn()
+    render(providers(drawerFor(C002, detail, onOpenRef)))
     await user.click(within(decide()).getByRole('button', { name: REPLACE_ACTION }))
-    expect(screen.getByRole('dialog', { name: 'Replace with a newer finding' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Replace with a newer finding' })
+    await user.type(within(dialog).getByLabelText('The newer finding'), 'The extra calls were about a bill sent twice.')
+    await user.click(within(dialog).getByRole('button', { name: 'Replace finding' }))
+    await waitFor(() => expect(onOpenRef).toHaveBeenCalledWith('C-001'))
+  })
+
+  it('puts the It still holds question on its own line above its buttons', async () => {
+    const user = userEvent.setup()
+    renderDrawer(C004)
+    await user.click(within(decide()).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    const banner = within(decide()).getByText(SETTLE_COPY).closest('.banner')!
+    expect(banner).toHaveClass('banner-stacked')
+    expect(banner.querySelector('.banner-actions')).toHaveTextContent(/^Cancel.*Yes, it still holds$/)
   })
 })
 
