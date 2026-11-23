@@ -12,7 +12,7 @@ It runs on your own computer. There is no account and nothing to host.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/detail-dark.png">
-  <img src="docs/screenshots/main.png" alt="Casebook with the question &quot;Why did calls go up 30% in October when sales stayed the same?&quot; open. The answer is at the top with &quot;2 of 9 sources checked by you&quot;, a Check the next source button and a Share the answer button. The list on the left groups questions under No answer yet and Answered." width="100%">
+  <img src="docs/screenshots/main.png" alt="Casebook with the question &quot;Why did calls go up 30% in October when sales stayed the same?&quot; open. Under the question and its background is the answer, with &quot;2 of 9 sources checked by you, 1 checked by AI, 6 not checked&quot;, the date you checked the answer, and the buttons Check the next source and Share the answer. The list on the left shows Home and groups the questions under No answer yet and Answered." width="100%">
 </picture>
 
 <p align="center">
@@ -58,7 +58,7 @@ Under the answer, Casebook shows **2 of 9 sources checked by you**. It does not 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/investigation-dark.png">
-  <img src="docs/screenshots/investigation.png" alt="The findings behind the call center answer. Each finding has its sources listed under it, and every finding and source carries a label: Not checked, AI checked the source or You checked this. Below them, a finding where sources disagree." width="100%">
+  <img src="docs/screenshots/investigation.png" alt="What backs this up, for the call center answer: three findings, each with how many of its sources you checked and its sources listed under it. Each source is marked Not checked, AI checked the source or You checked this. Below them, Where sources disagree starts with a finding that has one source backing it, one going against it, and a Decide button." width="100%">
 </picture>
 
 ## Check the sources
@@ -68,7 +68,7 @@ Open a question. The answer is at the top. Under it is each finding, with its so
 - Choose **Check the next source**. It shows one source at a time, with the finding it backs or goes against.
 - Read the source. Open the report or the email it points to and compare.
 - Choose **I checked this** when it holds up, or **Skip**. Casebook moves to the next source by itself.
-- Then it shows each finding where sources disagree. Choose **It still holds** or **Rule this out**.
+- Then it shows each finding where sources disagree. Choose **It still holds** or **Rule this out**. When no source is left to check, the main button under the answer reads **Decide**. Each finding under Where sources disagree also has its own **Decide** button.
 - Last it shows the answer. Choose **I checked this answer** when you are happy with it.
 
 If something changes after you checked the answer, Casebook tells you to check it again. To take your check back, choose **Undo my check**.
@@ -89,9 +89,9 @@ If your AI rewrites something you checked, the label goes back to Not checked an
 
 ## Share the answer
 
-Choose **Share the answer** on a question. Pick **Short version** for the answer and the findings behind it, or **Everything** to add the full history. **Copy** puts the text on the clipboard for an email or a document. **Save** writes a web page that opens in any browser.
+Choose **Share the answer** on a question. Pick **Short version** for the answer and the findings behind it, or **Everything** to add the full history. **Copy** puts the text on the clipboard for an email or a document. **Save as a file** writes a web page that opens in any browser.
 
-![The Share the answer window for the call center question: the choice between Short version and Everything, Choose what to share, the answer as the reader will see it, and Copy and Save.](docs/screenshots/share-summary.png)
+![The Share the answer window for the call center question with Short version picked under How much to share. Below it, the start of the answer as the reader will see it: the question, when it was asked, the background, and the answer with how many sources were checked. At the bottom, Close, Save as a file and Copy.](docs/screenshots/share-summary.png)
 
 The reader does not need Casebook. The shared answer names each finding and source in its own words, says which ones a person checked, and always includes findings where sources disagree. The short version ends by saying what it left out. Casebook builds the text from what is saved and does not ask an AI to rewrite it.
 
