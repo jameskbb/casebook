@@ -61,7 +61,7 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
       </header>
       <div className="sample-reading">
         <div className="sample-intro">
-          <h1 ref={headingRef} tabIndex={-1}>Why did calls go up 30% in October when sales stayed flat?</h1>
+          <h1 ref={headingRef} tabIndex={-1}>Why did calls go up 30% in October when sales stayed the same?</h1>
           <p className="sample-note">Every figure, source and finding below is made up. This example is never saved to your data.</p>
         </div>
         <section className="sample-section" aria-labelledby="sample-finding">
@@ -100,7 +100,7 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
           <Button variant="secondary" aria-expanded={shareOpen} onClick={() => setShareOpen((open) => !open)}>{shareOpen ? 'Hide the example' : 'See an example'}</Button>
           {shareOpen && <div className="sample-summary">
             <h3>Example of a shared answer</h3>
-            <p><strong>Answer · Not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed flat.</p>
+            <p><strong>Answer · Not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed the same.</p>
             <p><strong>C-001 · Not checked:</strong> {FINDING} Supports: E-001, {SOURCE_TITLE} (Not checked).</p>
             <p><strong>Not tested yet:</strong> {NOT_TESTED}</p>
             <p className="sample-note">Read the preview for anything sensitive before you copy or save it. Casebook prepares a file or text to paste; you choose where it goes.</p>

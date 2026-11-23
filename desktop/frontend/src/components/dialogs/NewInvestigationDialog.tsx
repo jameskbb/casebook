@@ -86,7 +86,7 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
       <div className="dialog-fields" ref={fieldsRef}>
         <TextField
           label="Question"
-          hint="What do you want to know? For example: Why did calls go up when sales stayed flat?"
+          hint="What do you want to know? For example: Why did calls go up when sales stayed the same?"
           value={title}
           onChange={setTitle}
           error={fieldErrors.title}

@@ -45,7 +45,7 @@ export function EmptyMain({ onNew, onImport }: EmptyMainProps) {
           />
           <div className="empty-main-guide">
             <h3>See an example</h3>
-            <p>Why did calls go up 30% in October when sales stayed flat? Follow a finding back to its source before you take it to your team.</p>
+            <p>Why did calls go up 30% in October when sales stayed the same? Follow a finding back to its source before you take it to your team.</p>
             <Button ref={sampleButton} variant="secondary" icon={BookOpen} onClick={() => setSampleOpen(true)}>Open the call center example</Button>
             <p className="empty-main-sample-note">Read-only and made up. Nothing is added to your questions.</p>
           </div>

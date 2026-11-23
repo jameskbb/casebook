@@ -49,7 +49,7 @@ describe('first case guidance', () => {
     await user.click(screen.getByRole('button', { name: 'Open the call center example' }))
     await user.click(screen.getByRole('button', { name: 'Connect your AI' }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Done' }))
-    expect(screen.getByRole('heading', { name: 'Why did calls go up 30% in October when sales stayed flat?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Why did calls go up 30% in October when sales stayed the same?' })).toBeInTheDocument()
   })
 
   it('starts a real case through the existing create action', async () => {
