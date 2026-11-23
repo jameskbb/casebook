@@ -2,7 +2,7 @@
 
 All notable changes to Casebook are recorded here. Versions follow [Semantic Versioning](https://semver.org/); while the version is 0.x, a minor release may change behavior.
 
-## Unreleased
+## 0.9.0 (2026-11-23)
 
 Casebook is rebuilt around one job: keeping how you reached an answer with AI, so you can check it and share it. It now uses four words: a **question** has an **answer**, the answer rests on **findings**, and each finding has **sources**. You **check** them. Your saved work is kept and needs no conversion.
 
