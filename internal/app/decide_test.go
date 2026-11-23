@@ -60,12 +60,12 @@ func TestDecideWithReasonAcrossSurfaces(t *testing.T) {
 	r := reviewRow(t, a, inv.Ref, c.Ref)
 	got, err := a.ReviewStatement(ctx, apptest.Human, inv.Ref, app.ReviewStatementInput{
 		Kind: app.RecordClaim, Ref: c.Ref, Basis: r.Basis, Verification: app.VerificationHumanVerified, SettleDispute: true,
-		Rationale: "Shops and offices stayed the same, so the rival explains only part of it.",
+		Rationale: "Only cafes fell. Still holds: Shops and offices stayed the same, so the rival explains only part of it.",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Rationale != "Shops and offices stayed the same, so the rival explains only part of it." || got.Verification != app.VerificationHumanVerified {
+	if got.Rationale != "Only cafes fell. Still holds: Shops and offices stayed the same, so the rival explains only part of it." || got.Verification != app.VerificationHumanVerified {
 		t.Fatalf("decided = %+v", got)
 	}
 	if s := summary(); s.FindingsDisagree != 0 || s.FindingsBacking != 1 || s.FindingsDecided != 1 {
@@ -79,7 +79,7 @@ func TestDecideWithReasonAcrossSurfaces(t *testing.T) {
 		}
 		for _, want := range []string{
 			"- The price rise made cafes order less. (A person decided this holds) (1 source goes against it)\n",
-			"  - Why it still holds: Shops and offices stayed the same, so the rival explains only part of it.\n",
+			"  - Why we think so: Only cafes fell.\n  - Why it still holds: Shops and offices stayed the same, so the rival explains only part of it.\n",
 			"  - Exact words: Cafes: Aug 412, Sep 338.\n",
 			"  - Exact words: 9 of 14 cafes: new wholesaler.\n",
 			"  - Added by a person",

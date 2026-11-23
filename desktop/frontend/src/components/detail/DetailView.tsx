@@ -191,6 +191,10 @@ function Page({ detail }: { detail: InvestigationDetail }) {
             setChecking(null)
             setAnswerIntent('write-answer')
           }}
+          onAddFinding={() => {
+            setChecking(null)
+            setAddFinding(true)
+          }}
         />
       )}
     </>

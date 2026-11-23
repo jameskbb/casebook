@@ -152,8 +152,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	}
 	// label is "" when the section heading already says the state. A ruled
 	// out finding's reason reads "Why we thought so:". A finding a person
-	// decided holds while a source still goes against it says how many do,
-	// and its reason reads "Why it still holds:".
+	// decided holds while a source still goes against it says how many do.
 	finding := func(statement, why string, v domain.Verification, imported bool, links []domain.EvidenceLink, label string, ruled bool) []string {
 		line := "- " + oneLine(statement) + stateWords(imported, label)
 		whyLabel := "Why we think so: "
@@ -165,11 +164,19 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 			} else {
 				line += fmt.Sprintf(" (%d sources go against it)", n)
 			}
-			whyLabel = "Why it still holds: "
+		}
+		// The desktop saves a reason given at Decide after the old why as
+		// "<why> Still holds: <reason>"; each part gets its own line.
+		held := ""
+		if i := strings.LastIndex(why, stillHoldsMark); !ruled && i >= 0 {
+			why, held = why[:i], why[i+len(stillHoldsMark):]
 		}
 		lines := []string{line}
 		if w := oneLine(why); w != "" {
 			lines = append(lines, "  - "+whyLabel+w)
+		}
+		if w := oneLine(held); w != "" {
+			lines = append(lines, "  - Why it still holds: "+w)
 		}
 		return append(lines, sources(links)...)
 	}
@@ -278,6 +285,9 @@ func againstIt(links []domain.EvidenceLink, verification map[string]domain.Verif
 
 // againstCount counts the sources that have not been replaced and go against
 // a finding with these links.
+// stillHoldsMark starts a reason a person gave when deciding a finding holds.
+const stillHoldsMark = "Still holds: "
+
 func againstCount(links []domain.EvidenceLink, verification map[string]domain.Verification) int {
 	n := 0
 	for _, l := range links {

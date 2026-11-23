@@ -1,7 +1,8 @@
 // Source row in the question page's Sources list, which shows every source
 // once. Line 1: its check label. Then the name 16/600 and where to find it;
 // with invRef, Show the exact words under it, the same toggle as the source
-// drawer. What it shows is in the drawer the row opens.
+// drawer. What it shows sits under the name, two lines at most; the drawer
+// the row opens has all of it.
 import type { Evidence } from '../../api/types'
 import { ExactWords } from '../drawers/EvidenceDrawer'
 import { ImportedTag } from '../record/ImportedTag'
@@ -36,6 +37,7 @@ export function EvidenceRow({ evidence: e, onOpen, invRef }: EvidenceRowProps) {
           {e.imported && <ImportedTag />}
         </p>
         <p className={['evidence-title', retired ? 'is-retired' : ''].filter(Boolean).join(' ')}>{e.title}</p>
+        {e.summary && <p className="evidence-summary">{e.summary}</p>}
         {e.source_ref && <p className="evidence-where">Where to find it: {e.source_ref}</p>}
         {invRef && e.has_raw_detail && <ExactWords evidence={e} invRef={invRef} inline />}
       </div>

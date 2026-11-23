@@ -13,7 +13,7 @@ import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ADD_TO_FIND_OUT } from '../dialogs/QuestionDialog'
 import { LATER } from '../record/StatusLabel'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_SOURCES_TITLE, SOURCE_CHECKED_ACTION } from './CheckSources'
+import { CHECK_SOURCES_TITLE, SOURCE_QUESTION } from './CheckSources'
 import { CHECK_NEXT_SOURCE, SHARE_THE_ANSWER } from './ConclusionPanel'
 import { DetailView, SOURCES_HEADING } from './DetailView'
 import { ADD_FINDING, ADD_SOURCE } from './FirstFindingGuide'
@@ -86,7 +86,7 @@ describe('DetailView reading column', () => {
     const next = screen.getByRole('button', { name: CHECK_NEXT_SOURCE })
     await user.click(next)
     const check = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
-    expect(within(check).getByRole('button', { name: SOURCE_CHECKED_ACTION })).toHaveFocus()
+    expect(within(check).getByRole('heading', { name: SOURCE_QUESTION })).toHaveFocus()
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: CHECK_SOURCES_TITLE })).toBeNull()
     expect(next).toHaveFocus()

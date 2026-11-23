@@ -426,7 +426,8 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
       ) : (
         <div className="conclusion-empty">
           <p className="conclusion-empty-text">{bare || next || backing.length > 0 ? 'No answer yet.' : `No answer yet. ${ADD_FINDING_NEED}`}</p>
-          {!bare && (
+          {/* An answer stands on a finding that holds, as Home says. */}
+          {!bare && backing.length > 0 && (
             <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
               Write the answer
             </Button>

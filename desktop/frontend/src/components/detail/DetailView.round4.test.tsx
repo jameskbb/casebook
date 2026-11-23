@@ -15,7 +15,7 @@ import { mockApi } from '../../test/mockApi'
 import { DECIDED_HOLDS, SOURCES_DISAGREE } from '../../lib/labels'
 import { RULE_OUT_ACTION, STILL_HOLDS_QUESTION, TURNED_OUT_RIGHT_ACTION } from '../drawers/StatementDrawer'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, DECIDE_TITLE, SOURCE_CHECKED_ACTION, WRITE_THE_ANSWER } from './CheckSources'
+import { ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, DECIDE_TITLE, SOURCE_QUESTION, WRITE_THE_ANSWER } from './CheckSources'
 import { CHECK_NEXT_SOURCE, JUST_WROTE_ANSWER, UNDO_ANSWER_CHECK } from './ConclusionPanel'
 import { DetailView } from './DetailView'
 import { ADD_FINDING } from './FirstFindingGuide'
@@ -113,10 +113,10 @@ describe('round 4 on the question page', () => {
     expect(within(dialog).getByText('Callers waited too long and hung up before buying.')).toBeInTheDocument()
   })
 
-  it('opens the check from Home with focus on its main button, and Escape puts focus on Check the next source', async () => {
+  it('opens the check from Home with focus on its question, and Escape puts focus on Check the next source', async () => {
     const user = renderPage(detail, 'check-sources')
     const dialog = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION })).toHaveFocus())
+    await waitFor(() => expect(within(dialog).getByRole('heading', { name: SOURCE_QUESTION })).toHaveFocus())
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: CHECK_SOURCES_TITLE })).toBeNull()
     await waitFor(() => expect(screen.getByRole('button', { name: CHECK_NEXT_SOURCE })).toHaveFocus())

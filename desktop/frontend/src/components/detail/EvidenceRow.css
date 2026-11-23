@@ -31,3 +31,15 @@
   align-self: stretch;
   pointer-events: auto;
 }
+
+/* What it shows, under the name: two lines at most; the drawer has all of it. */
+.evidence-summary {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

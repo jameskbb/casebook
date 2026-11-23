@@ -157,10 +157,9 @@ describe('ConclusionPanel editing', () => {
 
   it('writes a first conclusion from the empty state', async () => {
     const user = userEvent.setup()
-    renderPanel({ ...investigation, conclusion: '', conclusion_confidence: 'unknown', conclusion_rationale: '' })
-    expect(
-      within(panel()).getByText('No answer yet. Add a finding from your sources.'),
-    ).toBeInTheDocument()
+    const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
+    render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '', conclusion_confidence: 'unknown', conclusion_rationale: '' }} claims={detail.claims.slice(0, 1)} evidence={checked} />))
+    expect(within(panel()).getByText('No answer yet.')).toBeInTheDocument()
     await user.click(within(panel()).getByRole('button', { name: 'Write the answer' }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('')
 
@@ -171,7 +170,7 @@ describe('ConclusionPanel editing', () => {
 describe('The empty answer card', () => {
   beforeEach(() => { Object.assign(mocks.api, mockApi()) })
 
-  it('says No answer yet once a finding holds, and what Home says before one does', () => {
+  it('says No answer yet once a finding holds, and what Home says before one does, with no Write the answer until then', () => {
     const empty = { ...investigation, conclusion: '', conclusion_rationale: '' }
     const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
     const { unmount } = render(providers(<ConclusionPanel investigation={empty} claims={detail.claims.slice(0, 1)} evidence={checked} onCheckSources={() => {}} />))
@@ -179,6 +178,7 @@ describe('The empty answer card', () => {
     unmount()
     render(providers(<ConclusionPanel investigation={empty} claims={[]} evidence={checked} onCheckSources={() => {}} />))
     expect(within(panel()).getByText(`No answer yet. ${ADD_FINDING_NEED}`)).toBeInTheDocument()
+    expect(within(panel()).queryByRole('button', { name: 'Write the answer' })).toBeNull()
   })
 })
 

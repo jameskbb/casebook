@@ -41,8 +41,8 @@ type ReviewStatementInput struct {
 	Verification  Verification      `json:"verification"`
 	SettleDispute bool              `json:"settle_dispute"`
 	// Rationale, when not empty, replaces the finding's why in the same write:
-	// the person's reason that it still holds. The desktop shows the current
-	// why in the field first, so nothing is replaced unseen.
+	// the person's reason that it still holds. The desktop sends the old why
+	// with the new reason after it, so nothing is lost.
 	Rationale string `json:"rationale,omitempty"`
 }
 

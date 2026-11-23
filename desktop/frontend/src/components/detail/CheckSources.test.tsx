@@ -10,8 +10,10 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { RULE_OUT_ACTION, STILL_HOLDS_ACTION, STILL_HOLDS_QUESTION } from '../drawers/StatementDrawer'
-import { ALL_DECIDED, ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, DECIDE_TITLE, endText, goBackText, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION, WHY_STILL_HOLDS, WRITE_THE_ANSWER } from './CheckSources'
+import { ALL_DECIDED, ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, DECIDE_TITLE, endText, goBackText, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION, SOURCE_QUESTION, stillHoldsWhy, WHY_STILL_HOLDS, WRITE_THE_ANSWER } from './CheckSources'
 import { CHECKED_ANSWER_ACTION, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
+import { ADD_FINDING } from './FirstFindingGuide'
+import { ADD_FINDING_NEED } from '../../lib/questions'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -53,6 +55,7 @@ describe('skipped wording', () => {
 describe('CheckSources', () => {
   let current: InvestigationDetail
   const onWriteAnswer = vi.fn()
+  const onAddFinding = vi.fn()
 
   beforeEach(() => {
     current = structuredClone(baseDetail)
@@ -74,6 +77,7 @@ describe('CheckSources', () => {
       }),
     )
     onWriteAnswer.mockClear()
+    onAddFinding.mockClear()
   })
 
   function Harness() {
@@ -82,7 +86,7 @@ describe('CheckSources', () => {
     return (
       <>
         <button onClick={() => setOpen(true)}>Open</button>
-        {open && detail && <CheckSources detail={detail} onClose={() => setOpen(false)} onWriteAnswer={onWriteAnswer} />}
+        {open && detail && <CheckSources detail={detail} onClose={() => setOpen(false)} onWriteAnswer={onWriteAnswer} onAddFinding={onAddFinding} />}
       </>
     )
   }
@@ -144,12 +148,14 @@ describe('CheckSources', () => {
     expect(mocks.api.updateConclusion).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ review: true, review_basis: 'The call log matches the answer.', verification: 'human_verified' }))
   })
 
-  it('keeps focus on I checked this so Enter moves through the sources, and Escape closes with focus back on the opener', async () => {
+  it('starts each source on its question so Enter checks nothing unread, and Escape closes with focus back on the opener', async () => {
     const { user, dialog } = await renderWalk()
-    expect(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION })).toHaveFocus()
+    expect(within(dialog).getByRole('heading', { name: SOURCE_QUESTION })).toHaveFocus()
     await user.keyboard('{Enter}')
+    expect(mocks.api.setEvidenceVerification).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
     expect(await within(dialog).findByText('Source 2 of 3')).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION })).toHaveFocus()
+    expect(within(dialog).getByRole('heading', { name: SOURCE_QUESTION })).toHaveFocus()
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: CHECK_SOURCES_TITLE })).toBeNull()
     expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus()
@@ -176,15 +182,18 @@ describe('CheckSources', () => {
     expect(await within(dialog).findByText('Words of E-003')).toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(WHY_STILL_HOLDS), 'The wait stayed the same, but the sales manager saw it.')
     await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ ref: 'C-004', rationale: 'The wait stayed the same, but the sales manager saw it.' }))
+    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ ref: 'C-004', rationale: 'Still holds: The wait stayed the same, but the sales manager saw it.' }))
   })
 
-  it("shows the finding's current why in the reason field, and sends nothing when it is left as it is", async () => {
+  it("starts the reason field empty, sends nothing when it stays empty, and keeps the finding's why in front of a new reason", async () => {
+    expect(stillHoldsWhy('', 'New reason.')).toBe('Still holds: New reason.')
+    expect(stillHoldsWhy('The sales manager said so.', 'New reason.')).toBe('The sales manager said so. Still holds: New reason.')
     current = { ...current, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })), claims: current.claims.map((c) => (c.ref === 'C-004' ? { ...c, confidence_rationale: 'The sales manager said so.' } : c)) }
     const { user, dialog } = await renderWalk()
-    expect(within(dialog).getByLabelText(WHY_STILL_HOLDS)).toHaveValue('The sales manager said so.')
+    expect(within(dialog).getByLabelText(WHY_STILL_HOLDS)).toHaveValue('')
+    await user.type(within(dialog).getByLabelText(WHY_STILL_HOLDS), 'The wait stayed the same.')
     await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
-    expect(vi.mocked(mocks.api.reviewStatement).mock.calls[0][1]).not.toHaveProperty('rationale')
+    expect(vi.mocked(mocks.api.reviewStatement).mock.calls[0][1]).toHaveProperty('rationale', 'The sales manager said so. Still holds: The wait stayed the same.')
   })
 
   it('ends by saying what the person did: every source checked, and every finding decided only after deciding one', async () => {
@@ -215,5 +224,23 @@ describe('CheckSources', () => {
     expect(writeIt).toHaveFocus()
     await user.click(writeIt)
     expect(onWriteAnswer).toHaveBeenCalled()
+  })
+
+  it('ends on Add a finding, not Write the answer, when every finding was ruled out', async () => {
+    current = {
+      ...current,
+      investigation: { ...current.investigation, conclusion: '' },
+      evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })),
+      claims: current.claims.filter((c) => c.ref === 'C-004'),
+      hypotheses: [],
+    }
+    const { user, dialog } = await renderWalk()
+    await user.click(within(dialog).getByRole('button', { name: RULE_OUT_ACTION }))
+    expect(await within(dialog).findByText(ADD_FINDING_NEED)).toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: WRITE_THE_ANSWER })).toBeNull()
+    const addIt = within(dialog).getByRole('button', { name: ADD_FINDING })
+    expect(addIt).toHaveFocus()
+    await user.click(addIt)
+    expect(onAddFinding).toHaveBeenCalled()
   })
 })
