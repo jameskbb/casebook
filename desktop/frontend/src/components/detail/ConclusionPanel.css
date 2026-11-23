@@ -128,9 +128,9 @@
   width: 100%;
   min-width: 0;
 }
-.conclusion-basis,
 /* The check state and Undo my check on one line. */
 .conclusion-check-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.conclusion-basis,
 .conclusion-check-state { overflow-wrap: anywhere; }
 .conclusion-check-state { color: var(--ink-muted); }
 .conclusion-basis ul { padding-left: var(--space-6); }

@@ -19,7 +19,7 @@ A shared answer has no record codes: the title is the question, and findings and
 - `## Where sources disagree`: findings a source goes against, until someone decides, and findings your AI marked that way.
 - `## Found out`: each thing to find out that has an answer, with its answer.
 - `## Still to find out`: findings not tested yet, then each thing to find out marked `not answered yet` or `left for later`, with why it can wait.
-- `## Ruled out` (Everything only): findings that were ruled out, each with `Why it was ruled out:` and the sources that go against them.
+- `## Ruled out` (Everything only): findings that were ruled out, each with `Why we thought so:` and the sources that go against them.
 - `## Replaced` (Everything only): findings a newer finding took the place of.
 - `## Sources`: each source once, with its label, its name, where to find it and what it shows. Something you saw yourself reads `Seen by the person who shared this`. Everything also gives the date of each source, once.
 - `## How we got here` (Everything only): the history of changes, oldest first, one heading per day.

@@ -38,7 +38,7 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 ## Ruled out
 
 - The failure is a midnight boundary: the fixture's date flips between seeding and assertion.
-  - Why it was ruled out: No failure is near midnight (E-003).
+  - Why we thought so: No failure is near midnight (E-003).
   - Backs it: Fixture seeds order dates from time.Now() truncated to the day (Not checked)
   - Goes against it: Failure times are spread across the day; none within 30 min of 00:00 UTC (Not checked)
 

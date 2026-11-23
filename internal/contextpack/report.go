@@ -147,13 +147,13 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		return out
 	}
 	// label is "" when the section heading already says the state. A ruled
-	// out finding's reason reads "Why it was ruled out:".
+	// out finding's reason reads "Why we thought so:".
 	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string, ruled bool) []string {
 		lines := []string{"- " + oneLine(statement) + stateWords(imported, label)}
 		if w := oneLine(why); w != "" {
 			whyLabel := "Why we think so: "
 			if ruled {
-				whyLabel = "Why it was ruled out: "
+				whyLabel = "Why we thought so: "
 			}
 			lines = append(lines, "  - "+whyLabel+w)
 		}
