@@ -59,11 +59,11 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
 
   return (
     <Dialog
-      title={question ? `Edit question ${question.ref}` : 'Add question'}
+      title={question ? `Edit follow-up question ${question.ref}` : 'Add follow-up question'}
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel={question ? 'Save changes' : 'Add question'}
+      submitLabel={question ? 'Save changes' : 'Add follow-up question'}
       busyLabel={question ? 'Saving...' : 'Adding...'}
       busy={busy}
       dirty={text !== initial}
@@ -76,7 +76,7 @@ export function QuestionDialog({ invRef, question, onClose, onCreated }: Questio
       }
     >
       <TextArea
-        label="Question"
+        label="Follow-up question"
         hint="What still needs an answer?"
         value={text}
         onChange={setText}

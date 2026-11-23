@@ -70,8 +70,8 @@
   color: var(--ink-muted);
 }
 
-.inv-row-bottom {
-  justify-content: space-between;
+.inv-row-meta .inv-row-time {
+  margin-left: auto;
 }
 
 .inv-row-time {

@@ -33,21 +33,21 @@ export function EmptyMain({ onNew, onImport }: EmptyMainProps) {
         <div className="empty-main">
           <EmptyState
             icon={Inbox}
-            heading="Start your first case"
-            body="Connect your AI, then ask it a question that needs digging. What it finds lands here for you to check and share."
+            heading="Check what your AI tells you"
+            body="You ask your AI why a number moved, and it gives you an answer. This app keeps what it found, where each finding came from, and which ones you have checked yourself."
             actions={
               <>
                 <Button variant="primary" icon={Plug} onClick={() => setConnectOpen(true)}>Connect your AI</Button>
-                <Button variant="secondary" icon={Plus} onClick={onNew}>New case</Button>
-                {onImport && <Button variant="ghost" icon={Upload} onClick={onImport}>Import case...</Button>}
+                <Button variant="secondary" icon={Plus} onClick={onNew}>New question</Button>
+                {onImport && <Button variant="ghost" icon={Upload} onClick={onImport}>Import question...</Button>}
               </>
             }
           />
           <div className="empty-main-guide">
-            <h3>See what a case gives you</h3>
-            <p>Why did Northeast margin fall six points? Follow a finding back to its source before you take it to your team.</p>
-            <Button ref={sampleButton} variant="secondary" icon={BookOpen} onClick={() => setSampleOpen(true)}>Open fictional margin case</Button>
-            <p className="empty-main-sample-note">Read-only example. Nothing is added to your cases.</p>
+            <h3>See an example</h3>
+            <p>Why did our profit margin fall from 40% to 37% in Q3? Follow a finding back to its source before you take it to your team.</p>
+            <Button ref={sampleButton} variant="secondary" icon={BookOpen} onClick={() => setSampleOpen(true)}>Open the margin example</Button>
+            <p className="empty-main-sample-note">Read-only and made up. Nothing is added to your questions.</p>
           </div>
         </div>
       )}

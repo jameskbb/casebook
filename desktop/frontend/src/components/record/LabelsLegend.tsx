@@ -1,26 +1,22 @@
-// What the labels mean (plain-reader round 1): one sentence per label a
-// claim, hypothesis or piece of evidence shows in the reading column, so a
-// person can defend a line without knowing the engine's words for it.
-// Confidence and Current follow the verification rows so a reader can tell
-// "who checked it" apart from "how sure" and "still stands on it".
-import { claimStatusLabels, confidenceHelp, confidenceLabels, hypothesisStatusLabels, statusHelp, verificationHelp } from '../../lib/labels'
+// What the labels mean: one sentence per label a finding or source shows in
+// the reading column, so a person can defend a line without knowing the
+// engine's words for it. Current follows the checking rows so a reader can
+// tell "who checked it" apart from "still stands on it".
+import { claimStatusLabels, hypothesisStatusLabels, statusHelp, verificationHelp, verificationLabels } from '../../lib/labels'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import './LabelsLegend.css'
 
 const ROWS: [string, string][] = [
-  ['AI generated', verificationHelp.ai_generated],
-  ['Source verified', verificationHelp.source_verified],
-  ['Human verified', verificationHelp.human_verified],
-  ['Disputed', verificationHelp.disputed],
-  ['High, Medium, Low confidence', confidenceHelp.rated],
-  [confidenceLabels.unknown, confidenceHelp.notAssessed],
+  [verificationLabels.ai_generated, verificationHelp.ai_generated],
+  [verificationLabels.source_verified, verificationHelp.source_verified],
+  [verificationLabels.human_verified, verificationHelp.human_verified],
+  [verificationLabels.disputed, verificationHelp.disputed],
   [claimStatusLabels.active, statusHelp.current],
   [hypothesisStatusLabels.open, statusHelp.open],
   [hypothesisStatusLabels.supported, statusHelp.supported],
-  [hypothesisStatusLabels.disproven, statusHelp.disproven],
-  ['Superseded', verificationHelp.superseded],
-  ['Rejected', statusHelp.rejected],
+  [hypothesisStatusLabels.disproven, statusHelp.ruledOut],
+  [verificationLabels.superseded, verificationHelp.superseded],
 ]
 
 export function LabelsLegend({ onClose }: { onClose: () => void }) {
@@ -34,7 +30,7 @@ export function LabelsLegend({ onClose }: { onClose: () => void }) {
           </div>
         ))}
       </dl>
-      <p className="labels-legend-note">Only a person can mark a finding Human verified.</p>
+      <p className="labels-legend-note">Only a person can mark a finding "{verificationLabels.human_verified}".</p>
     </Dialog>
   )
 }

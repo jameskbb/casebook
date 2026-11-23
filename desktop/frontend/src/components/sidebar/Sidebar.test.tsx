@@ -69,22 +69,24 @@ describe('Sidebar', () => {
 
   it('marks the selected, active and archived rows', async () => {
     renderSidebar()
-    const nav = await screen.findByRole('navigation', { name: 'Cases' })
+    const nav = await screen.findByRole('navigation', { name: 'Questions' })
     const first = await within(nav).findByRole('button', { current: true })
     expect(first).toHaveTextContent('September cloud bill up 38%')
-    expect(first).toHaveTextContent("Your AI's current case")
+    expect(first).toHaveTextContent("Your AI's current question")
     expect(first).toHaveTextContent('INV-0001')
-    expect(within(first).getByRole('img', { name: 'Confidence: High' })).toBeInTheDocument()
+    // No status and no confidence on a row: the title, the ref and when it changed.
+    expect(within(first).queryByRole('img')).toBeNull()
+    expect(first).not.toHaveTextContent(/Investigating|Resolved|High/)
 
     const archived = within(nav).getByText('31 former employees still have active SSO accounts').closest('button')!
     expect(archived).toHaveTextContent('Archived')
     expect(archived).not.toHaveAttribute('aria-current')
-    expect(archived).not.toHaveTextContent("Your AI's current case")
+    expect(archived).not.toHaveTextContent("Your AI's current question")
     expect(archived).toHaveClass('is-archived')
 
     const blocked = within(nav).getByText('Checkout p99 doubled after the region move').closest('button')!
-    expect(blocked).toHaveTextContent('Blocked')
-    expect(within(blocked).getByText('Not assessed')).toBeInTheDocument()
+    expect(blocked).toHaveTextContent('INV-0002')
+    expect(blocked).not.toHaveTextContent(/Blocked|Not assessed/)
   })
 
   it('asks for the engine maximum, not the default 100, and says when the list is capped', async () => {
@@ -97,7 +99,7 @@ describe('Sidebar', () => {
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => many }))
     renderSidebar()
     expect(await screen.findByText(LIST_CAPPED_COPY)).toBeInTheDocument()
-    expect(LIST_CAPPED_COPY).toBe('Showing the 1,000 most recently updated cases. Search to find older ones.')
+    expect(LIST_CAPPED_COPY).toBe('Showing the 1,000 most recently updated questions. Search to find older ones.')
     expect(mocks.api.listInvestigations).toHaveBeenCalledWith({ include_archived: false, limit: LIST_LIMIT })
   })
 
@@ -110,6 +112,6 @@ describe('Sidebar', () => {
   it('says so when there are no investigations', async () => {
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => [] }))
     renderSidebar()
-    expect(await screen.findByText('No cases yet.')).toBeInTheDocument()
+    expect(await screen.findByText('No questions yet.')).toBeInTheDocument()
   })
 })

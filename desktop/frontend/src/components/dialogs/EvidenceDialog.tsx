@@ -271,10 +271,10 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
 
   return (
     <Dialog
-      title={existing ? `Edit evidence ${existing.ref}` : 'Add evidence'}
+      title={existing ? `Edit source ${existing.ref}` : 'Add source'}
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel={existing ? 'Save changes' : 'Add evidence'}
+      submitLabel={existing ? 'Save changes' : 'Add source'}
       busyLabel={existing ? 'Saving...' : 'Adding...'}
       busy={busy}
       dirty={dirty}
@@ -295,7 +295,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
       <div className="dialog-fields" ref={fieldsRef}>
         <TextField
           label="Title"
-          hint="What is this evidence, in a few words?"
+          hint="What is this source, in a few words?"
           value={values.title}
           onChange={set('title')}
           error={fieldErrors.title}
@@ -312,7 +312,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
         />
         <div className="evidence-dialog-row">
           <Select
-            label="Source type"
+            label="Kind of source"
             value={values.source_type}
             onChange={(v) => set('source_type')(v as SourceType)}
             options={typeOptions.map((t) => ({ value: t, label: sourceTypeLabels[t] }))}
@@ -328,8 +328,8 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
           />
         </div>
         <TextField
-          label="Source (optional)"
-          hint="Where it came from, like Billing export query"
+          label="Where it came from (optional)"
+          hint="Like Billing export query"
           value={values.source_label}
           onChange={set('source_label')}
           error={fieldErrors.source_label}

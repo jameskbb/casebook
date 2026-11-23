@@ -13,10 +13,10 @@ const preview = (patch: Partial<SharePreview> = {}): SharePreview => ({
   html: '<h1>INV-0001: Margin</h1>\n<h2>Question</h2>\n<p>Why?</p>\n',
   snapshot_id: 'reviewed-original', investigation_ref: 'INV-0001', mode: 'brief',
   candidates: [
-    { ref: 'C-001', text: 'Selected cost change', label: 'Current; High confidence; AI generated', group: 'claims', required: false, selected: true },
+    { ref: 'C-001', text: 'Selected cost change', label: 'Current; High confidence; Not checked', group: 'claims', required: false, selected: true },
     { ref: 'C-002', text: 'Material dispute', label: 'Disputed; Low confidence', group: 'claims', required: true, selected: true },
-    { ref: 'H-003', text: 'Policy change explains it', label: 'Supported; High confidence; AI generated', group: 'hypotheses', required: false, selected: true },
-    { ref: 'H-004', text: 'Travel is growing', label: 'Open; Medium confidence; AI generated', group: 'hypotheses', required: false, selected: false },
+    { ref: 'H-003', text: 'Policy change explains it', label: 'Supported; High confidence; Not checked', group: 'hypotheses', required: false, selected: true },
+    { ref: 'H-004', text: 'Travel is growing', label: 'Open; Medium confidence; Not checked', group: 'hypotheses', required: false, selected: false },
   ], omitted: { claims: 0, hypotheses: 1, questions: 1, evidence: 2, claim_refs: [], hypothesis_refs: ['H-004'], question_refs: ['Q-001'], evidence_refs: ['E-002', 'E-003'] }, ...patch,
 })
 function renderDialog(invRef = 'INV-0001') {
@@ -56,7 +56,7 @@ describe('ShareSummaryDialog', () => {
   it('keeps mandatory caveats selected and requires reviewing selection changes', async () => {
     renderDialog()
     await screen.findByRole('heading', { level: 1 })
-    await userEvent.click(screen.getByText('Choose findings and questions'))
+    await userEvent.click(screen.getByText('Choose what to include'))
     expect(screen.getByRole('checkbox', { name: /Material dispute/ })).toBeDisabled()
     await userEvent.click(screen.getByRole('checkbox', { name: /Selected cost change/ }))
     expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled()
@@ -71,13 +71,13 @@ describe('ShareSummaryDialog', () => {
   it('offers open or supported explanations as their own group and requires reviewing changes to it', async () => {
     renderDialog()
     await screen.findByRole('heading', { level: 1 })
-    await userEvent.click(screen.getByText('Choose findings and questions'))
-    const group = screen.getByRole('group', { name: 'Explanations still open or supported' })
+    await userEvent.click(screen.getByText('Choose what to include'))
+    const group = screen.getByRole('group', { name: 'Findings not tested yet or supported' })
     const supported = within(group).getByRole('checkbox', { name: /Policy change explains it/ })
     const open = within(group).getByRole('checkbox', { name: /Travel is growing/ })
     expect(supported).toBeChecked()
     expect(open).not.toBeChecked()
-    expect(within(group).getByText('Open; Medium confidence; AI generated')).toBeInTheDocument()
+    expect(within(group).getByText('Open; Medium confidence; Not checked')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled()
     await userEvent.click(open)
     expect(open).toBeChecked()
@@ -93,8 +93,8 @@ describe('ShareSummaryDialog', () => {
   it('lists the groups in the order the brief prints them', async () => {
     renderDialog()
     await screen.findByRole('heading', { level: 1 })
-    await userEvent.click(screen.getByText('Choose findings and questions'))
-    expect(Array.from(document.querySelectorAll('.share-summary-choices legend'), l => l.textContent)).toEqual(['Claims', 'Explanations still open or supported', 'Questions', 'Ruled out'])
+    await userEvent.click(screen.getByText('Choose what to include'))
+    expect(Array.from(document.querySelectorAll('.share-summary-choices legend'), l => l.textContent)).toEqual(['Findings', 'Findings not tested yet or supported', 'Follow-up questions', 'Ruled out'])
   })
   it('keeps the complete report available and refreshes explicitly', async () => {
     renderDialog()
@@ -103,7 +103,7 @@ describe('ShareSummaryDialog', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'report')
     await waitFor(() => expect(mocked.sharePreview).toHaveBeenLastCalledWith('INV-0001', { mode: 'report' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh preview' })).toBeEnabled())
-    expect(screen.queryByText('Choose findings and questions')).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose what to include')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Refresh preview' }))
     await waitFor(() => expect(mocked.sharePreview).toHaveBeenCalledTimes(3))
   })
@@ -130,14 +130,14 @@ describe('ShareSummaryDialog', () => {
   it('builds the example request from the case and the chosen format', async () => {
     renderDialog('INV-0002')
     await screen.findByRole('heading', { level: 1 })
-    const brief = 'Save the leadership brief for case INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its verification labels, evidence references and caveats.'
+    const brief = 'Save the leadership brief for INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its labels, source references and caveats.'
     expect(exampleRequest('brief', 'INV-0002', 'Northeast margin review')).toBe(brief)
     expect(screen.getByText(brief)).toBeInTheDocument()
     expect(screen.getByText(ELSEWHERE_COPY)).toBeInTheDocument()
     expect(screen.getByText(ELSEWHERE_NOTE)).toBeInTheDocument()
     mocked.sharePreview.mockResolvedValue(preview({ mode: 'report', snapshot_id: 'reviewed-report' }))
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'report')
-    expect(await screen.findByText('Save the complete report for case INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its verification labels, evidence references and caveats.')).toBeInTheDocument()
+    expect(await screen.findByText('Save the complete report for INV-0002 in my connected notes app as a new note titled "Northeast margin review". Keep its labels, source references and caveats.')).toBeInTheDocument()
   })
   it('copies the exact example request as text and sends nothing else', async () => {
     renderDialog('INV-0002')

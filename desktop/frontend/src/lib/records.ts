@@ -8,6 +8,7 @@ import type {
   Question,
   Relation,
 } from '../api/types'
+import { statementMarks } from './recordState'
 
 /** Records that always show, and records collapsed under a disclosure. */
 export interface Partition<T> {
@@ -21,16 +22,6 @@ function split<T>(list: T[], ruledOut: (x: T) => boolean): Partition<T> {
   return p
 }
 
-/** Active and disputed claims show; superseded and rejected collapse. */
-export function partitionClaims(claims: Claim[]): Partition<Claim> {
-  return split(claims, (c) => c.status === 'superseded' || c.status === 'rejected')
-}
-
-/** Open and supported hypotheses show; disproven and superseded collapse. */
-export function partitionHypotheses(hypotheses: Hypothesis[]): Partition<Hypothesis> {
-  return split(hypotheses, (h) => h.status === 'disproven' || h.status === 'superseded')
-}
-
 /**
  * Open questions show, then deferred ones (each in ref order): a deferred
  * question is still unanswered. Only resolved questions collapse.
@@ -41,9 +32,59 @@ export function partitionQuestions(questions: Question[]): Partition<Question> {
   return p
 }
 
-/** Hypotheses still being tested (status Open), listed again under Still open. */
-export function openHypotheses(hypotheses: Hypothesis[]): Hypothesis[] {
-  return hypotheses.filter((h) => h.status === 'open')
+/** A claim or a hypothesis: on screen both are a finding. */
+export type Finding = { kind: 'claim'; record: Claim } | { kind: 'hypothesis'; record: Hypothesis }
+
+/** Findings sorted by what happened to them, claims before hypotheses, each in ref order. */
+export interface FindingGroups {
+  /** Current claims and supported hypotheses: what the answer can stand on. */
+  backing: Finding[]
+  /** A source contradicts it and nobody has decided yet. */
+  disagree: Finding[]
+  /** Hypotheses no source has backed or ruled out. */
+  notTested: Finding[]
+  /** Rejected claims and disproven hypotheses. */
+  ruledOut: Finding[]
+  /** Superseded by a newer finding. */
+  replaced: Finding[]
+}
+
+export function groupFindings(claims: Claim[], hypotheses: Hypothesis[]): FindingGroups {
+  const g: FindingGroups = { backing: [], disagree: [], notTested: [], ruledOut: [], replaced: [] }
+  for (const record of claims) {
+    const marks = statementMarks('claim', record)
+    const group = marks.superseded ? g.replaced : record.status === 'rejected' ? g.ruledOut : marks.disputed ? g.disagree : g.backing
+    group.push({ kind: 'claim', record })
+  }
+  for (const record of hypotheses) {
+    const marks = statementMarks('hypothesis', record)
+    const group = marks.superseded
+      ? g.replaced
+      : record.status === 'disproven'
+        ? g.ruledOut
+        : marks.disputed
+          ? g.disagree
+          : record.status === 'open'
+            ? g.notTested
+            : g.backing
+    group.push({ kind: 'hypothesis', record })
+  }
+  return g
+}
+
+/** How many of a question's sources each party has checked. Replaced sources are not counted. */
+export interface SourceChecks {
+  total: number
+  byYou: number
+  byAi: number
+  notChecked: number
+}
+
+export function sourceChecks(evidence: Evidence[]): SourceChecks {
+  const live = evidence.filter((e) => e.verification !== 'superseded')
+  const byYou = live.filter((e) => e.verification === 'human_verified').length
+  const byAi = live.filter((e) => e.verification === 'source_verified').length
+  return { total: live.length, byYou, byAi, notChecked: live.length - byYou - byAi }
 }
 
 export function evidenceByRef(detail: InvestigationDetail): Map<string, Evidence> {

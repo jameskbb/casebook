@@ -68,11 +68,11 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
 
   return (
     <Dialog
-      title="New case"
+      title="New question"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Create case"
-      busyLabel="Creating..."
+      submitLabel="Add question"
+      busyLabel="Adding..."
       busy={busy}
       dirty={title !== '' || question !== ''}
       summary={
@@ -85,8 +85,8 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
     >
       <div className="dialog-fields" ref={fieldsRef}>
         <TextField
-          label="Title"
-          hint="A short name you'll recognize, like Northeast margin down 6 points in Q3"
+          label="Question"
+          hint="What do you want to know? For example: Why did our profit margin fall in Q3?"
           value={title}
           onChange={setTitle}
           error={fieldErrors.title}
@@ -95,15 +95,15 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
           spellCheck
         />
         <TextArea
-          label="Primary question (optional)"
-          hint="What are we trying to figure out?"
+          label="Background (optional)"
+          hint="The period, the numbers, and where the data lives."
           value={question}
           onChange={setQuestion}
           error={fieldErrors.problem_statement}
           note={nearLimit(question, LIMITS.problemStatement)}
           spellCheck
         />
-        <Checkbox label="Make this your AI's current case" checked={makeActive} onChange={setMakeActive} />
+        <Checkbox label="Make this your AI's current question" checked={makeActive} onChange={setMakeActive} />
       </div>
     </Dialog>
   )

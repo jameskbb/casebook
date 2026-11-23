@@ -32,7 +32,7 @@ export function ArchivedBanner({ investigationRef }: { investigationRef: string 
         </Button>
       }
     >
-      This case is archived. It is hidden from the list and nothing was deleted.
+      This question is archived. It is hidden from the list and nothing was deleted.
     </Banner>
   )
 }

@@ -41,13 +41,13 @@ function renderDetail(d: InvestigationDetail = detail, overrides: Partial<Api> =
 
 async function openEvidence(ref: string) {
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: new RegExp(`^Open evidence ${ref}:`) }))
-  return { user, drawer: screen.getByRole('dialog', { name: `Evidence ${ref}` }) }
+  await user.click(await screen.findByRole('button', { name: new RegExp(`^Open source ${ref}:`) }))
+  return { user, drawer: screen.getByRole('dialog', { name: `Source ${ref}` }) }
 }
 
 /** The definition list rows of the Source group as [label, value] pairs. */
 function sourceRows(drawer: HTMLElement): [string, string][] {
-  const source = within(drawer).getByRole('region', { name: 'Source' })
+  const source = within(drawer).getByRole('region', { name: 'Where it came from' })
   return Array.from(source.querySelectorAll('dt')).map((dt) => [
     dt.textContent ?? '',
     dt.nextElementSibling?.textContent ?? '',
@@ -69,7 +69,7 @@ describe('EvidenceDrawer', () => {
     expect(within(drawer).getByText('Log ingestion is 71% of the September increase')).toHaveClass('evidence-drawer-title')
     expect(within(drawer).getByText(/In the billing export, log ingestion rose/)).toBeInTheDocument()
     const rows = sourceRows(drawer)
-    expect(rows.map(([label]) => label)).toEqual(['Source type', 'Source', 'Captured'])
+    expect(rows.map(([label]) => label)).toEqual(['Kind of source', 'From', 'Captured'])
     expect(rows[0][1]).toBe('SQL query')
     expect(rows[1][1]).toBe('Billing export query')
   })
@@ -85,10 +85,10 @@ describe('EvidenceDrawer', () => {
   it('omits the source rows, raw detail and metadata controls a bare record does not have', async () => {
     renderDetail(detailWithBareEvidence())
     const { drawer } = await openEvidence('E-009')
-    expect(sourceRows(drawer).map(([l]) => l)).toEqual(['Source type'])
+    expect(sourceRows(drawer).map(([l]) => l)).toEqual(['Kind of source'])
     expect(within(drawer).queryByRole('button', { name: 'Show raw detail' })).toBeNull()
     expect(within(drawer).queryByRole('button', { name: 'Show metadata' })).toBeNull()
-    expect(within(drawer).getByText('No claim or hypothesis uses this evidence yet.')).toBeInTheDocument()
+    expect(within(drawer).getByText('No finding uses this source yet.')).toBeInTheDocument()
   })
 
   it('fetches raw detail on demand with include_raw_detail and hides it again', async () => {
@@ -179,14 +179,14 @@ describe('EvidenceDrawer', () => {
     const items = within(usedBy).getAllByRole('button')
     expect(items.map((b) => b.textContent)).toEqual([
       'C-002SupportsLog ingestion, billed per GB, is $96,400 of the $135,800 increase; compute and network are flat.',
-      'C-003ContradictsSuperseded by C-002The increase comes from the August autoscaling change adding compute nodes.',
+      'C-003ContradictsReplaced by C-002The increase comes from the August autoscaling change adding compute nodes.',
       "C-004ContradictsThe payments team's own debug logs are most of the $96,400.",
       'H-002ContradictsDisprovenData transfer from the region move doubled the network line.',
     ])
     expect(items[1].querySelector('.used-by-statement')).toHaveClass('is-retired')
     expect(items[0].querySelector('.used-by-statement')).not.toHaveClass('is-retired')
     await user.click(items[0])
-    expect(screen.getByRole('dialog', { name: 'Claim C-002' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Finding C-002' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to E-003' })).toBeInTheDocument()
   })
 })
@@ -199,42 +199,42 @@ describe('EvidenceDrawer actions', () => {
   it('Verify sets human_verified and Dispute sets disputed', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
-    await user.click(within(drawer).getByRole('button', { name: 'Verify' }))
+    await user.click(within(drawer).getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'human_verified')
-    await user.click(within(drawer).getByRole('button', { name: 'Dispute' }))
+    await user.click(within(drawer).getByRole('button', { name: 'Sources disagree' }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'disputed')
   })
 
   it('shows Verified disabled when the evidence is already verified', async () => {
     renderDetail()
     const { drawer } = await openEvidence('E-004')
-    expect(within(drawer).getByRole('button', { name: 'Verified' })).toBeDisabled()
+    expect(within(drawer).getByRole('button', { name: 'You checked this' })).toBeDisabled()
   })
 
-  it('offers Mark superseded (after a confirmation) and Mark source verified in the More menu', async () => {
+  it('offers Mark replaced (after a confirmation) and Mark as checked by AI in the More menu', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Mark superseded' }))
-    let confirm = screen.getByRole('dialog', { name: 'Mark E-003 superseded?' })
+    await user.click(screen.getByRole('menuitem', { name: 'Mark replaced' }))
+    let confirm = screen.getByRole('dialog', { name: 'Mark E-003 replaced?' })
     expect(confirm).toHaveTextContent(supersedeEvidenceBody('E-003'))
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }))
     expect(mocks.api.setEvidenceVerification).not.toHaveBeenCalled()
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Mark superseded' }))
-    confirm = screen.getByRole('dialog', { name: 'Mark E-003 superseded?' })
-    await user.click(within(confirm).getByRole('button', { name: 'Mark superseded' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Mark replaced' }))
+    confirm = screen.getByRole('dialog', { name: 'Mark E-003 replaced?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Mark replaced' }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'superseded')
     await user.click(within(drawer).getByRole('button', { name: 'More actions' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Mark source verified' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Mark as checked by AI' }))
     expect(mocks.api.setEvidenceVerification).toHaveBeenCalledWith('INV-0001', 'E-003', 'source_verified')
   })
 
-  it('Edit evidence opens the edit dialog over the drawer', async () => {
+  it('Edit source opens the edit dialog over the drawer', async () => {
     renderDetail()
     const { user, drawer } = await openEvidence('E-003')
-    await user.click(within(drawer).getByRole('button', { name: 'Edit evidence' }))
-    expect(screen.getByRole('dialog', { name: 'Edit evidence E-003' })).toBeInTheDocument()
+    await user.click(within(drawer).getByRole('button', { name: 'Edit source' }))
+    expect(screen.getByRole('dialog', { name: 'Edit source E-003' })).toBeInTheDocument()
     expect(mocks.api.getEvidence).toHaveBeenCalledWith('INV-0001', 'E-003', { include_raw_detail: true })
   })
 })

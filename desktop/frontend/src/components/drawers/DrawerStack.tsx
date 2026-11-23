@@ -42,9 +42,9 @@ export function drawerKind(ref: string): DrawerKind | null {
 }
 
 const KIND_META: Record<DrawerKind, { noun: string; icon: LucideIcon }> = {
-  claim: { noun: 'Claim', icon: Quote },
-  hypothesis: { noun: 'Hypothesis', icon: Lightbulb },
-  evidence: { noun: 'Evidence', icon: FileText },
+  claim: { noun: 'Finding', icon: Quote },
+  hypothesis: { noun: 'Finding', icon: Lightbulb },
+  evidence: { noun: 'Source', icon: FileText },
 }
 
 interface StackState {

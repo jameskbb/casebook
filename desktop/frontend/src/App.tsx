@@ -57,7 +57,7 @@ function Shell() {
   } else if (listStatus === 'ready' && investigations.length === 0) {
     content = <EmptyMain onNew={openNew} onImport={() => void dataOps.importInvestigation()} />
   } else if (listStatus === 'ready') {
-    content = <p className="main-quiet">Choose a case from the list.</p>
+    content = <p className="main-quiet">Choose a question from the list.</p>
   }
 
   return (

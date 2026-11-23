@@ -50,7 +50,7 @@ describe('LinkEvidenceDialog', () => {
 
   it('lists the evidence with already linked items disabled and labelled', () => {
     renderDialog(claims[0])
-    const dialog = screen.getByRole('dialog', { name: 'Link evidence to C-001' })
+    const dialog = screen.getByRole('dialog', { name: 'Link a source to C-001' })
     const e1 = within(dialog).getByRole('radio', { name: /E-001/ })
     expect(e1).toBeDisabled()
     expect(e1.closest('label')).toHaveTextContent('Already linked as supporting')
@@ -73,7 +73,7 @@ describe('LinkEvidenceDialog', () => {
     const user = userEvent.setup()
     const { onClose } = renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-002', 'supports')
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
@@ -81,18 +81,18 @@ describe('LinkEvidenceDialog', () => {
   it('links contradicting evidence to a hypothesis', async () => {
     const user = userEvent.setup()
     renderDialog(hypotheses[0])
-    expect(screen.getByRole('dialog', { name: 'Link evidence to H-001' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Link a source to H-001' })).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /E-003/ }))
     await user.click(screen.getByRole('radio', { name: 'Contradicts' }))
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', 'E-003', 'contradicts')
   })
 
   it('asks for a choice before linking', async () => {
     const user = userEvent.setup()
     renderDialog(claims[0])
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
-    expect(screen.getByText('Choose the evidence to link.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
+    expect(screen.getByText('Choose the source to link.')).toBeInTheDocument()
     expect(mocks.api.linkEvidenceToClaim).not.toHaveBeenCalled()
   })
 
@@ -101,7 +101,7 @@ describe('LinkEvidenceDialog', () => {
     Object.assign(mocks.api, mockApi({ linkEvidenceToClaim: () => new Promise<Claim>(() => {}) }))
     renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
     expect(screen.getByRole('button', { name: 'Linking...' })).toBeDisabled()
   })
 
@@ -117,23 +117,23 @@ describe('LinkEvidenceDialog', () => {
     )
     renderDialog(claims[0])
     await user.click(screen.getByRole('radio', { name: /E-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
     expect(await screen.findByText('Evidence E-002 belongs to another investigation')).toBeInTheDocument()
   })
 
-  it('says so when the investigation has no evidence and offers Add evidence', async () => {
+  it('says so when the investigation has no evidence and offers Add source', async () => {
     const user = userEvent.setup()
     const onAddEvidence = vi.fn()
     renderDialog(claim({ links: [] }), [], { onAddEvidence })
-    expect(screen.getByText('This case has no evidence yet. Add evidence first.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    expect(screen.getByText('This question has no sources yet. Add a source first.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(onAddEvidence).toHaveBeenCalled()
   })
 
   it('says so when every piece of evidence is already linked', () => {
     renderDialog(claims[0], evidence.filter((e) => e.ref === 'E-001' || e.ref === 'E-004'))
-    expect(screen.getByText('Every piece of evidence is already linked to C-001.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Link evidence' })).toBeNull()
+    expect(screen.getByText('Every source is already linked to C-001.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Link a source' })).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2)
   })
 })

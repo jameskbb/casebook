@@ -1,28 +1,22 @@
-// Status labels. Investigations: New muted, Investigating accent, Blocked
-// brick, Resolved green, Archived as a pill tag. Records:
-// claim, hypothesis and question statuses per the Record kind visual
-// language table. The text is always present; color is never the only
-// signal.
+// Status labels. A question reads Answered (green) or No answer yet (muted),
+// worked out from whether it has an answer; an archived one shows the
+// Archived pill tag. Records: finding and follow-up question statuses per
+// the Record kind visual language table. The text is always present; color
+// is never the only signal.
 import { CircleCheck, CirclePause, Lightbulb } from 'lucide-react'
-import type { ClaimStatus, HypothesisStatus, InvestigationStatus, QuestionStatus } from '../../api/types'
-import { investigationStatusLabels } from '../../lib/labels'
+import type { ClaimStatus, HypothesisStatus, QuestionStatus } from '../../api/types'
+import { claimStatusLabels, hypothesisStatusLabels } from '../../lib/labels'
 import { DisputedMark } from './VerificationBadge'
 import './StatusLabel.css'
 
-export interface StatusLabelProps {
-  status: InvestigationStatus
-  /** Shows the Archived tag instead of the status. */
-  archived?: boolean
-  className?: string
-}
+export const ANSWERED = 'Answered'
+export const NO_ANSWER_YET = 'No answer yet'
 
-export function StatusLabel({ status, archived = false, className }: StatusLabelProps) {
-  if (archived || status === 'archived') return <ArchivedTag className={className} />
-  return (
-    <span className={['status-label', `status-${status}`, className ?? ''].filter(Boolean).join(' ')}>
-      {investigationStatusLabels[status] ?? status}
-    </span>
-  )
+/** Answered or No answer yet. Nobody sets it: it follows the answer text. */
+export function AnswerState({ answer, archived = false }: { answer: string; archived?: boolean }) {
+  if (archived) return <ArchivedTag />
+  const answered = answer.trim() !== ''
+  return <span className={`status-label ${answered ? 'status-resolved' : 'status-new'}`}>{answered ? ANSWERED : NO_ANSWER_YET}</span>
 }
 
 export function ArchivedTag({ className }: { className?: string }) {
@@ -35,9 +29,9 @@ export type RecordStatusLabelProps =
   | { kind: 'question'; status: QuestionStatus }
 
 /**
- * The status of a claim, hypothesis or question. Default states render
- * nothing (an active claim, an open question); a hypothesis always says Open
- * or Supported because tentative versus established is the point.
+ * The status of a finding or follow-up question. Default states render
+ * nothing (a current claim, an open question); a hypothesis always says Not
+ * tested yet or Supported because tentative versus established is the point.
  */
 export function RecordStatusLabel(props: RecordStatusLabelProps) {
   const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true as const, className: 'record-status-icon' }
@@ -49,7 +43,7 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
       return (
         <span className="record-status record-status-open">
           <Lightbulb {...icon} />
-          Open
+          {hypothesisStatusLabels.open}
         </span>
       )
     case 'disputed':
@@ -63,12 +57,11 @@ export function RecordStatusLabel(props: RecordStatusLabelProps) {
       )
     case 'superseded': {
       const by = props.supersededBy
-      return <span className="record-status">{by ? `Superseded by ${by}` : 'Superseded'}</span>
+      return <span className="record-status">{by ? `Replaced by ${by}` : claimStatusLabels.superseded}</span>
     }
     case 'rejected':
-      return <span className="record-status">Rejected</span>
     case 'disproven':
-      return <span className="record-status">Disproven</span>
+      return <span className="record-status">{claimStatusLabels.rejected}</span>
     case 'resolved':
       return (
         <span className="record-status record-status-resolved">

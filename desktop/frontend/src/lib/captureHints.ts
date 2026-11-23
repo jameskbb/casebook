@@ -71,9 +71,9 @@ export const captureHints: Partial<Record<SourceType, CaptureHints>> = {
     exampleDetail: 'The dashboard displayed a lower margin for Q3 than Q2. The filters and denominator were not visible, so the size of the change is unconfirmed.',
   },
   casebook_artifact: {
-    reference: 'Case reference, record reference and artifact version or date',
-    detail: 'A concise excerpt with its verification label and source references',
+    reference: 'Question reference, record reference and artifact version or date',
+    detail: 'A concise excerpt with its label and source references',
     exampleReference: 'INV-0002, E-004, export dated 2026-10-02',
-    exampleDetail: 'The source record states margin is gross profit / net revenue and is labelled AI generated. The imported excerpt still needs checking in this case.',
+    exampleDetail: 'The source record states margin is gross profit / net revenue and is labelled Not checked. The imported excerpt still needs checking in this question.',
   },
 }

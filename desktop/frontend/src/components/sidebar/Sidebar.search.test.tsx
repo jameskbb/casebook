@@ -41,7 +41,7 @@ function renderSidebar() {
 
 async function typeQuery(text: string) {
   const user = userEvent.setup()
-  const field = await screen.findByRole('searchbox', { name: 'Search cases' })
+  const field = await screen.findByRole('searchbox', { name: 'Search' })
   await user.type(field, text)
   return { user, field }
 }
@@ -60,7 +60,7 @@ describe('Sidebar search', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
-    const field = screen.getByRole('searchbox', { name: 'Search cases' })
+    const field = screen.getByRole('searchbox', { name: 'Search' })
     fireEvent.change(field, { target: { value: 'deb' } })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100)
@@ -92,9 +92,9 @@ describe('Sidebar search', () => {
     const groups = within(results).getAllByRole('group')
     expect(groups).toHaveLength(2)
     expect(groups[0]).toHaveAccessibleName('September cloud bill up 38% INV-0001')
-    expect(within(groups[0]).getByText("Your AI's current case")).toBeInTheDocument()
+    expect(within(groups[0]).getByText("Your AI's current question")).toBeInTheDocument()
     expect(groups[1]).toHaveAccessibleName('Checkout p99 doubled after the region move INV-0002')
-    expect(within(groups[1]).queryByText("Your AI's current case")).not.toBeInTheDocument()
+    expect(within(groups[1]).queryByText("Your AI's current question")).not.toBeInTheDocument()
 
     const first = within(groups[0]).getAllByRole('button')
     expect(first).toHaveLength(2)
@@ -124,7 +124,7 @@ describe('Sidebar search', () => {
     await typeQuery('debug')
     expect(await screen.findByText('No matches for "debug"')).toBeInTheDocument()
     expect(
-      screen.getByText('Try fewer or different words. Archived cases are searched only when Show archived is on.'),
+      screen.getByText('Try fewer or different words. Archived questions are searched only when Show archived is on.'),
     ).toBeInTheDocument()
   })
 
@@ -181,7 +181,7 @@ describe('Sidebar search', () => {
     expect(container.querySelector('.sidebar-search-kbd')).toHaveTextContent('/')
     expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument()
     const user = userEvent.setup()
-    await user.type(screen.getByRole('searchbox', { name: 'Search cases' }), 'c')
+    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'c')
     expect(container.querySelector('.sidebar-search-kbd')).toBeNull()
     expect(screen.getByRole('button', { name: 'Clear search' })).toBeInTheDocument()
   })
@@ -197,7 +197,7 @@ describe('Sidebar search', () => {
     await waitFor(() =>
       expect(mocks.api.listInvestigations).toHaveBeenCalledWith(expect.objectContaining({ include_archived: true })),
     )
-    await user.type(screen.getByRole('searchbox', { name: 'Search cases' }), 'debug')
+    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'debug')
     await waitFor(() => expect(mocks.api.search).toHaveBeenCalledWith('debug', { include_archived: true, limit: 50 }))
     const group = await screen.findByRole('group', { name: /INV-0003/ })
     expect(within(group).getByText('Archived')).toBeInTheDocument()
@@ -210,10 +210,10 @@ describe('Sidebar search', () => {
     )
     renderSidebar()
     expect(
-      await screen.findByText('No open cases. Turn on Show archived to see archived ones.'),
+      await screen.findByText('Nothing here. Turn on Show archived to see archived questions.'),
     ).toBeInTheDocument()
     expect(mocks.api.listInvestigations).toHaveBeenCalledWith({ include_archived: true, limit: 1 })
-    expect(screen.queryByText('No cases yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No questions yet.')).not.toBeInTheDocument()
   })
 
   it('reruns the search when the data changes and keeps the old results meanwhile', async () => {

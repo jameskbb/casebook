@@ -36,12 +36,12 @@ export function VerificationBadge({ verification }: { verification: Verification
   }
 }
 
-/** CircleAlert plus "Disputed" in the disputed hue, 14/600. */
+/** CircleAlert plus "Sources disagree" in the disputed hue, 14/600. */
 export function DisputedMark({ title = verificationHelp.disputed }: { title?: string }) {
   return (
     <span className="badge badge-disputed" title={title}>
       <CircleAlert className="badge-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
-      Disputed
+      {verificationLabels.disputed}
     </span>
   )
 }

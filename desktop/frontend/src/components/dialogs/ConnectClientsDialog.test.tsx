@@ -145,8 +145,8 @@ describe('ConnectClientsDialog', () => {
     await user.click(within(finding).getByRole('button', { name: 'Copy first finding prompt' }))
     expect(mocks.api.copyText).toHaveBeenCalledWith(FIRST_FINDING_PROMPT)
     expect(FIRST_FINDING_PROMPT).toMatch(/First ask me which period, region and source data to use/)
-    expect(FIRST_FINDING_PROMPT).toMatch(/supporting evidence and source details/)
-    expect(within(finding).getByText(/Choose Verify myself only after you have checked it/)).toHaveTextContent(/Share summary/)
+    expect(FIRST_FINDING_PROMPT).toMatch(/with the source it came from/)
+    expect(within(finding).getByText(/Choose I checked this only after you have checked it/)).toHaveTextContent(/Share the answer/)
   })
 
   it('reports a clipboard failure', async () => {

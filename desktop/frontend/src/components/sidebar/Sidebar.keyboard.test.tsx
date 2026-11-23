@@ -31,9 +31,9 @@ function renderSidebar() {
 }
 
 async function rows() {
-  const nav = await screen.findByRole('navigation', { name: 'Cases' })
+  const nav = await screen.findByRole('navigation', { name: 'Questions' })
   await within(nav).findByRole('button', { current: true })
-  const list = within(nav).getByRole('list', { name: 'Case list' })
+  const list = within(nav).getByRole('list', { name: 'Question list' })
   return within(list).getAllByRole('button')
 }
 
@@ -76,7 +76,7 @@ describe('Sidebar keyboard', () => {
     const user = userEvent.setup()
     renderSidebar()
     await rows()
-    const field = screen.getByRole('searchbox', { name: 'Search cases' })
+    const field = screen.getByRole('searchbox', { name: 'Search' })
     await user.type(field, 'debug')
     const results = await screen.findByRole('region', { name: 'Search results' })
     const buttons = within(results).getAllByRole('button')

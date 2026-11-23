@@ -131,3 +131,18 @@
 .conclusion-basis { width: 100%; }
 .conclusion-basis summary { cursor: pointer; }
 .conclusion-basis > p { margin-top: var(--space-3); }
+
+/* "1 of 3 sources checked by you": a count of checks, where a rating used to be. */
+.conclusion-checked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+}
+
+.conclusion-checked-rest {
+  color: var(--ink-muted);
+}

@@ -13,13 +13,13 @@ describe('restore copy', () => {
 
   it('describes a backup with plural counts', () => {
     expect(restoreSummary('casebook-backup-2026-10-02.db', backupInfo)).toBe(
-      `casebook-backup-2026-10-02.db, saved ${formatAbsolute(backupInfo.created_at)}, contains 3 cases, 7 pieces of evidence, 6 claims, 3 hypotheses and 5 questions.`,
+      `casebook-backup-2026-10-02.db, saved ${formatAbsolute(backupInfo.created_at)}, contains 3 questions, 7 sources, 9 findings and 5 follow-up questions.`,
     )
   })
 
   it('describes a backup with one of everything', () => {
     expect(restoreSummary('one.db', singleBackup)).toBe(
-      `one.db, saved ${formatAbsolute(singleBackup.created_at)}, contains 1 case, 1 piece of evidence, 1 claim, 1 hypothesis and 1 question.`,
+      `one.db, saved ${formatAbsolute(singleBackup.created_at)}, contains 1 question, 1 source, 2 findings and 1 follow-up question.`,
     )
   })
 })

@@ -1,14 +1,13 @@
-// Add a claim or hypothesis: the statement, a confidence picker (Not assessed
-// by default), the rationale, and one row per piece of evidence with None,
-// Supports or Contradicts, so the record and its links land in one call.
-// An error on links[i] shows on the row of the i-th linked evidence.
+// Add a finding (a claim, or a hypothesis to test): the statement, why, and
+// one row per source with None, Supports or Contradicts, so the record and
+// its links land in one call. An error on links[i] shows on the row of the
+// i-th linked source.
 import { useRef, useState } from 'react'
 import { api } from '../../api/api'
 import { toApiError } from '../../api/errors'
-import type { Claim, Confidence, Evidence, EvidenceLinkInput, Hypothesis, Relation } from '../../api/types'
+import type { Claim, Evidence, EvidenceLinkInput, Hypothesis, Relation } from '../../api/types'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
-import { confidenceLabels, confidenceOptions } from '../../lib/labels'
 import { useWrite } from '../../state/useWrite'
 import { Dialog } from '../ui/Dialog'
 import { SegmentedControl } from '../ui/SegmentedControl'
@@ -38,7 +37,7 @@ export interface StatementDialogProps {
 export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: StatementDialogProps) {
   const write = useWrite()
   const [statement, setStatement] = useState('')
-  const [confidence, setConfidence] = useState<Confidence>('unknown')
+
   const [rationale, setRationale] = useState('')
   const [choices, setChoices] = useState<Record<string, Choice>>({})
   const [busy, setBusy] = useState(false)
@@ -46,12 +45,14 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const rationaleField = kind === 'claim' ? 'confidence_rationale' : 'rationale'
-  const noun = kind === 'claim' ? 'claim' : 'hypothesis'
+  const noun = kind === 'claim' ? 'finding' : 'finding to test'
+  // Confidence is stored but never shown: a new record carries none.
+  const confidence = 'unknown' as const
 
   const links: EvidenceLinkInput[] = evidence
     .filter((e) => (choices[e.ref] ?? 'none') !== 'none')
     .map((e) => ({ evidence_ref: e.ref, relation: choices[e.ref] as Relation }))
-  const dirty = statement !== '' || rationale !== '' || confidence !== 'unknown' || links.length > 0
+  const dirty = statement !== '' || rationale !== '' || links.length > 0
 
   // Retry toasts call the latest submit, so a retry sends what the form
   // holds now and sees whether a submit is already running.
@@ -82,7 +83,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
       if (row) {
         setRowErrors({ [row.evidence_ref]: err.message })
       } else {
-        const split = splitFieldErrors(err, ['statement', 'confidence', rationaleField])
+        const split = splitFieldErrors(err, ['statement', rationaleField])
         setFieldErrors(split.fieldErrors)
         setSummary(split.summary)
       }
@@ -113,7 +114,7 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
       <div className="dialog-fields">
         <TextArea
           label="Statement"
-          hint={kind === 'claim' ? 'What do we believe? One clear sentence.' : 'What might explain it?'}
+          hint={kind === 'claim' ? 'What did you find? One clear sentence.' : 'What might explain it? One clear sentence.'}
           value={statement}
           onChange={setStatement}
           error={fieldErrors.statement}
@@ -121,15 +122,8 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
           className="statement-input"
           spellCheck
         />
-        <SegmentedControl<Confidence>
-          label="Confidence"
-          options={confidenceOptions.map((c) => ({ value: c, label: confidenceLabels[c] }))}
-          value={confidence}
-          onChange={setConfidence}
-          error={fieldErrors.confidence}
-        />
         <TextArea
-          label="Why this confidence (optional)"
+          label="Why (optional)"
           value={rationale}
           onChange={setRationale}
           error={fieldErrors[rationaleField]}
@@ -137,9 +131,9 @@ export function StatementDialog({ kind, invRef, evidence, onClose, onCreated }: 
           spellCheck
         />
         <fieldset className="statement-links">
-          <legend className="field-label">Evidence</legend>
+          <legend className="field-label">Sources</legend>
           {evidence.length === 0 ? (
-            <p className="statement-links-empty">No evidence to link yet. You can link it later.</p>
+            <p className="statement-links-empty">No sources to link yet. You can link one later.</p>
           ) : (
             <ul className="statement-link-list">
               {evidence.map((e) => (

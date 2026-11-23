@@ -23,12 +23,12 @@ export const CLI_ON_PATH_COPY =
   'This development build uses the command-line tool found on PATH.'
 
 export const CLAUDE_AFTER_COPY =
-  "Then restart Claude Code (or run /mcp). Use /casebook to work with your cases."
+  "Then restart Claude Code (or run /mcp). Use /casebook to work with your questions."
 export const CODEX_AFTER_COPY = 'Then start a new Codex session and ask it to use Casebook.'
 export const OTHER_MCP_COPY =
   'casebook setup mcp prints the server command and a configuration block to paste into any other MCP client.'
 
-export const FIRST_FINDING_PROMPT = 'Help me understand why our margin changed. First ask me which period, region and source data to use. Save one finding in Casebook with its supporting evidence and source details, and note what we still need to check.'
+export const FIRST_FINDING_PROMPT = 'Help me understand why our margin changed. First ask me which period, region and source data to use. Save one finding in Casebook with the source it came from, and note what we still need to check.'
 
 type ClientChoice = 'claude' | 'codex' | 'other'
 
@@ -113,7 +113,7 @@ function ClientSection({ name, shell, client, cliKnown, after, onCopy }: ClientS
           <p className="connect-muted connect-wrap">Settings: <BreakablePath text={client.config_path} /></p>
           <p className="connect-muted">This checks local settings, not a running AI session. Choose Check again after running setup.</p>
           {client.hooks.length > 0 && <p className="connect-muted">Session hooks: {client.hooks.join(', ')}</p>}
-          {name === 'Claude Code' && <p className="connect-muted">--hooks loads your AI's current case when a session starts and reminds Claude to save findings. --skill adds the /casebook skill.</p>}
+          {name === 'Claude Code' && <p className="connect-muted">--hooks loads your AI's current question when a session starts and reminds Claude to save findings. --skill adds the /casebook skill.</p>}
           {name === 'Codex' && <p className="connect-muted">--skill adds the /casebook skill.</p>}
         </div>
       </details>
@@ -218,7 +218,7 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
           <p className="connect-muted">In {client === 'claude' ? 'Claude Code' : client === 'codex' ? 'Codex' : 'your connected AI client'}, start with this prompt and adapt the question to your business.</p>
           <p className="connect-prompt">{FIRST_FINDING_PROMPT}</p>
           <Button variant="secondary" icon={Copy} onClick={() => void copy(FIRST_FINDING_PROMPT)}>Copy first finding prompt</Button>
-          <p className="connect-muted">Then open the case here, select the claim and read its linked evidence. Choose Verify myself only after you have checked it. Write a conclusion and use Share summary to review what you send to your team.</p>
+          <p className="connect-muted">Then open the question here, select the finding and read its sources. Choose I checked this only after you have checked it. Write the answer and use Share the answer to review what you send to your team.</p>
         </section>
         <details className="connect-disclosure">
           <summary>Command-line tool and data file</summary>

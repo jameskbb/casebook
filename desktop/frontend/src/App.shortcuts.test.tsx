@@ -18,7 +18,7 @@ async function renderApp() {
   const user = userEvent.setup()
   render(<App />)
   await screen.findByRole('heading', { level: 1, name: 'September cloud bill up 38%' })
-  const search = screen.getByRole('searchbox', { name: 'Search cases' })
+  const search = screen.getByRole('searchbox', { name: 'Search' })
   return { user, search }
 }
 
@@ -60,7 +60,7 @@ describe('global shortcuts', () => {
   it('opens New investigation with Ctrl+N', async () => {
     const { user } = await renderApp()
     await user.keyboard('{Control>}n{/Control}')
-    expect(await screen.findByRole('dialog', { name: 'New case' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'New question' })).toBeInTheDocument()
   })
 
   it('copies context with Ctrl+Shift+C and shows Copied', async () => {
@@ -73,8 +73,8 @@ describe('global shortcuts', () => {
   it('stands down while a dialog is open', async () => {
     const { user, search } = await renderApp()
     await user.keyboard('{Control>}n{/Control}')
-    const dialog = await screen.findByRole('dialog', { name: 'New case' })
-    const title = within(dialog).getByLabelText('Title')
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    const title = within(dialog).getByLabelText('Question')
     expect(title).toHaveFocus()
     await user.keyboard('{Control>}n{/Control}')
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
@@ -93,18 +93,18 @@ describe('global shortcuts', () => {
     await user.keyboard('/')
     expect(search).not.toHaveFocus()
     await user.keyboard('{Control>}n{/Control}')
-    expect(screen.queryByRole('dialog', { name: 'New case' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New question' })).not.toBeInTheDocument()
   })
 
   it('uses Cmd instead of Ctrl on macOS', async () => {
     setPlatform('MacIntel')
     const { user, search } = await renderApp()
     await user.keyboard('{Control>}n{/Control}')
-    expect(screen.queryByRole('dialog', { name: 'New case' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New question' })).not.toBeInTheDocument()
     await user.keyboard('{Meta>}f{/Meta}')
     expect(search).toHaveFocus()
     search.blur()
     await user.keyboard('{Meta>}n{/Meta}')
-    expect(await screen.findByRole('dialog', { name: 'New case' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'New question' })).toBeInTheDocument()
   })
 })

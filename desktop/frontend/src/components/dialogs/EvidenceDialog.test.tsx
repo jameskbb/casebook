@@ -52,10 +52,10 @@ describe('EvidenceDialog add', () => {
 
   it('opens with the title field focused and Manual observation as the source type', () => {
     renderAdd()
-    expect(screen.getByRole('dialog', { name: 'Add evidence' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Add source' })).toBeInTheDocument()
     expect(screen.getByLabelText('Title')).toHaveFocus()
-    expect(screen.getByLabelText('Source type')).toHaveValue('manual_observation')
-    const options = Array.from((screen.getByLabelText('Source type') as HTMLSelectElement).options).map((o) => o.text)
+    expect(screen.getByLabelText('Kind of source')).toHaveValue('manual_observation')
+    const options = Array.from((screen.getByLabelText('Kind of source') as HTMLSelectElement).options).map((o) => o.text)
     expect(options).toEqual([
       'SQL query',
       'Code',
@@ -78,8 +78,8 @@ describe('EvidenceDialog add', () => {
     const { onClose, onSaved } = renderAdd()
     await user.type(screen.getByLabelText('Title'), 'Log volume by service query')
     await user.type(screen.getByLabelText('Summary'), 'Debug log volume for each service in September.')
-    await user.selectOptions(screen.getByLabelText('Source type'), 'sql_query')
-    await user.type(screen.getByLabelText('Source (optional)'), 'Billing export')
+    await user.selectOptions(screen.getByLabelText('Kind of source'), 'sql_query')
+    await user.type(screen.getByLabelText('Where it came from (optional)'), 'Billing export')
     await user.type(screen.getByLabelText('Reference (optional)'), 'finops/queries/log_volume_by_service.sql')
     fireEvent.change(screen.getByLabelText('Captured (optional)'), { target: { value: '2026-09-28T13:05' } })
     await user.click(screen.getByRole('button', { name: 'Add raw detail' }))
@@ -87,7 +87,7 @@ describe('EvidenceDialog add', () => {
     await user.click(screen.getByRole('button', { name: 'Advanced' }))
     await user.click(screen.getByLabelText('Metadata (optional)'))
     await user.paste('{"affected_records": 22}')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.addEvidence).toHaveBeenCalledWith('INV-0001', {
       title: 'Log volume by service query',
       summary: 'Debug log volume for each service in September.',
@@ -108,7 +108,7 @@ describe('EvidenceDialog add', () => {
     await user.type(screen.getByLabelText('Title'), 'A title')
     await user.type(screen.getByLabelText('Summary'), 'A summary.')
     fireEvent.change(screen.getByLabelText('Captured (optional)'), { target: { value: '20255-09-28T13:05' } })
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.addEvidence).not.toHaveBeenCalled()
     expect(screen.getByText(CAPTURED_INVALID_COPY)).toBeInTheDocument()
   })
@@ -118,7 +118,7 @@ describe('EvidenceDialog add', () => {
     renderAdd()
     await user.type(screen.getByLabelText('Title'), 'Screenshot')
     await user.type(screen.getByLabelText('Summary'), 'The console shows debug level.')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.addEvidence).toHaveBeenCalledWith('INV-0001', {
       title: 'Screenshot',
       summary: 'The console shows debug level.',
@@ -131,7 +131,7 @@ describe('EvidenceDialog add', () => {
     renderAdd()
     await user.click(screen.getByRole('button', { name: 'Capture details guide' }))
     expect(screen.getByText(/observations do not need numerical context/)).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Source type'), 'file')
+    await user.selectOptions(screen.getByLabelText('Kind of source'), 'file')
     expect(screen.getByLabelText('Reference (optional)')).toHaveAccessibleDescription(/sheet and cell range/)
     expect(screen.getByText('margin-2026-Q3.xlsx, Northeast!B4:F8, saved 2026-10-02')).toBeInTheDocument()
     expect(screen.getByText(/Illustrative file example. Nothing is added/)).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('EvidenceDialog add', () => {
     expect(screen.getByLabelText('Reference (optional)')).toHaveValue('')
     await user.type(screen.getByLabelText('Title'), 'Workbook review')
     await user.type(screen.getByLabelText('Summary'), 'The workbook is available for review.')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(mocks.api.addEvidence).toHaveBeenCalledWith('INV-0001', {
       title: 'Workbook review',
       summary: 'The workbook is available for review.',
@@ -155,10 +155,10 @@ describe('EvidenceDialog add', () => {
     await user.click(screen.getByRole('button', { name: 'Add raw detail' }))
     await user.type(screen.getByLabelText('Reference (optional)'), 'My existing reference')
     await user.type(screen.getByLabelText('Raw detail (optional)'), 'My concise source excerpt')
-    await user.selectOptions(screen.getByLabelText('Source type'), 'sql_query')
+    await user.selectOptions(screen.getByLabelText('Kind of source'), 'sql_query')
     expect(screen.getByLabelText('Reference (optional)')).toHaveAccessibleDescription(/database or dataset/)
     expect(screen.getByLabelText('Raw detail (optional)')).toHaveAccessibleDescription(/Exact query/)
-    await user.selectOptions(screen.getByLabelText('Source type'), 'documentation')
+    await user.selectOptions(screen.getByLabelText('Kind of source'), 'documentation')
     expect(screen.getByLabelText('Reference (optional)')).toHaveAccessibleDescription(/page or section/)
     expect(screen.getByLabelText('Reference (optional)')).toHaveValue('My existing reference')
     expect(screen.getByLabelText('Raw detail (optional)')).toHaveValue('My concise source excerpt')
@@ -170,7 +170,7 @@ describe('EvidenceDialog add', () => {
     renderAdd()
     await user.type(screen.getByLabelText('Title'), 'T')
     await user.type(screen.getByLabelText('Summary'), 'S')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
 
@@ -186,7 +186,7 @@ describe('EvidenceDialog add', () => {
     )
     renderAdd()
     await user.type(screen.getByLabelText('Title'), 'T')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(await screen.findByText('is required')).toBeInTheDocument()
     expect(screen.getByLabelText('Summary')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('Summary')).toHaveFocus()
@@ -205,7 +205,7 @@ describe('EvidenceDialog add', () => {
     renderAdd()
     await user.type(screen.getByLabelText('Title'), 'T')
     await user.type(screen.getByLabelText('Summary'), 'S')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(await screen.findByText('must be a JSON object')).toBeInTheDocument()
     expect(screen.getByLabelText('Metadata (optional)')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('button', { name: 'Advanced' })).toHaveAttribute('aria-expanded', 'true')
@@ -224,7 +224,7 @@ describe('EvidenceDialog add', () => {
     renderAdd()
     await user.type(screen.getByLabelText('Title'), 'T')
     await user.type(screen.getByLabelText('Summary'), 'S')
-    await user.click(screen.getByRole('button', { name: 'Add evidence' }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
     expect(await screen.findByText('Check this entry: verification: is not a verification')).toBeInTheDocument()
   })
 
@@ -262,10 +262,10 @@ describe('EvidenceDialog edit', () => {
   it('loads the record with its raw detail and sends only the changed fields', async () => {
     const user = userEvent.setup()
     const { onClose } = renderEdit()
-    expect(screen.getByRole('dialog', { name: 'Edit evidence E-003' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Edit source E-003' })).toBeInTheDocument()
     expect(mocks.api.getEvidence).toHaveBeenCalledWith('INV-0001', 'E-003', { include_raw_detail: true })
     expect(screen.getByLabelText('Title')).toHaveValue('Log ingestion is 71% of the September increase')
-    expect(screen.getByLabelText('Source type')).toHaveValue('sql_query')
+    expect(screen.getByLabelText('Kind of source')).toHaveValue('sql_query')
     expect(screen.getByLabelText('Captured (optional)')).toHaveValue(toLocalInputValue(evidenceWith('E-003').captured_at))
     await waitFor(() => expect(screen.getByLabelText('Raw detail (optional)')).toHaveValue(E003_RAW))
     expect(screen.getByLabelText('Metadata (optional)')).toHaveValue('{\n  "affected_records": 214\n}')
@@ -280,7 +280,7 @@ describe('EvidenceDialog edit', () => {
 
   it('keeps a source type kept only for existing records when editing one', async () => {
     renderEdit({ ...evidenceWith('E-002'), source_type: 'evernote_note' })
-    const select = screen.getByLabelText('Source type') as HTMLSelectElement
+    const select = screen.getByLabelText('Kind of source') as HTMLSelectElement
     expect(select).toHaveValue('evernote_note')
     expect(Array.from(select.options).map((o) => o.text)).toContain('Evernote note')
   })
@@ -331,7 +331,7 @@ describe('EvidenceDialog edit', () => {
     renderEdit({ ...evidenceWith('E-002'), metadata })
     const original = (screen.getByLabelText('Metadata (optional)') as HTMLTextAreaElement).value
     await user.click(screen.getByRole('button', { name: 'Capture details guide' }))
-    await user.selectOptions(screen.getByLabelText('Source type'), 'file')
+    await user.selectOptions(screen.getByLabelText('Kind of source'), 'file')
     await user.click(screen.getByRole('button', { name: 'Capture details guide' }))
     expect(screen.getByLabelText('Metadata (optional)')).toHaveValue(original)
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -349,7 +349,7 @@ describe('EvidenceDialog edit changed elsewhere', () => {
     const e = evidenceWith('E-001')
     const ui = (ev: Evidence) => providers(<EvidenceDialog mode="edit" evidence={ev} invRef="INV-0001" onClose={vi.fn()} />)
     const { rerender } = render(ui(e))
-    const dialog = screen.getByRole('dialog', { name: 'Edit evidence E-001' })
+    const dialog = screen.getByRole('dialog', { name: 'Edit source E-001' })
     await user.type(within(dialog).getByLabelText('Title'), ' (mine)')
     rerender(ui({ ...e, summary: 'Rewritten by Claude Code.' }))
     expect(within(dialog).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()

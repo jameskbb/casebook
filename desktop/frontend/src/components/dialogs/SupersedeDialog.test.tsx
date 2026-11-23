@@ -40,9 +40,9 @@ describe('SupersedeDialog', () => {
 
   it('explains the change and lists the other claims that are not superseded', () => {
     renderClaim(claims[3])
-    expect(screen.getByRole('dialog', { name: 'Supersede C-004' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Replace C-004' })).toBeInTheDocument()
     expect(
-      screen.getByText('Choose the claim that replaces it. C-004 stays in the history, marked as superseded.'),
+      screen.getByText('Choose the finding that replaces it. C-004 stays in the history, marked as replaced.'),
     ).toBeInTheDocument()
     const options = screen.getAllByRole('radio').map((r) => r.closest('label')?.textContent)
     expect(options).toEqual([`C-001${claims[0].statement}`, `C-002${claims[1].statement}`])
@@ -52,7 +52,7 @@ describe('SupersedeDialog', () => {
     const user = userEvent.setup()
     const { onClose } = renderClaim(claims[3])
     await user.click(screen.getByRole('radio', { name: /C-002/ }))
-    await user.click(screen.getByRole('button', { name: 'Supersede claim' }))
+    await user.click(screen.getByRole('button', { name: 'Replace finding' }))
     expect(mocks.api.supersedeClaim).toHaveBeenCalledWith('INV-0001', 'C-004', 'C-002')
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
@@ -60,27 +60,27 @@ describe('SupersedeDialog', () => {
   it('asks for a replacement before superseding', async () => {
     const user = userEvent.setup()
     renderClaim(claims[3])
-    await user.click(screen.getByRole('button', { name: 'Supersede claim' }))
-    expect(screen.getByText('Choose the claim that replaces it.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Replace finding' }))
+    expect(screen.getByText('Choose the finding that replaces it.')).toBeInTheDocument()
     expect(mocks.api.supersedeClaim).not.toHaveBeenCalled()
   })
 
-  it('shows Superseding... while the call runs', async () => {
+  it('shows Replacing... while the call runs', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ supersedeClaim: () => new Promise<Claim>(() => {}) }))
     renderClaim(claims[3])
     await user.click(screen.getByRole('radio', { name: /C-001/ }))
-    await user.click(screen.getByRole('button', { name: 'Supersede claim' }))
-    expect(screen.getByRole('button', { name: 'Superseding...' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Replace finding' }))
+    expect(screen.getByRole('button', { name: 'Replacing...' })).toBeDisabled()
   })
 
   it('says there is no other claim when none can replace it', async () => {
     const user = userEvent.setup()
     const { onClose } = renderClaim(claims[0], [claims[0], claims[2]])
     expect(
-      screen.getByText('There is no other claim to replace it with. Add the new claim first, then supersede this one.'),
+      screen.getByText('There is no other finding to replace it with. Add the new finding first, then replace this one.'),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Supersede claim' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Replace finding' })).toBeNull()
     await user.click(screen.getAllByRole('button', { name: 'Close' }).at(-1) as HTMLElement)
     expect(onClose).toHaveBeenCalled()
   })
@@ -88,12 +88,12 @@ describe('SupersedeDialog', () => {
   it('uses the hypothesis copy and call', async () => {
     const user = userEvent.setup()
     renderHypothesis(hypotheses[0])
-    expect(screen.getByRole('dialog', { name: 'Supersede H-001' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Replace H-001' })).toBeInTheDocument()
     expect(
-      screen.getByText('Choose the hypothesis that replaces it. H-001 stays in the history, marked as superseded.'),
+      screen.getByText('Choose the finding that replaces it. H-001 stays in the history, marked as replaced.'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /H-003/ }))
-    await user.click(screen.getByRole('button', { name: 'Supersede hypothesis' }))
+    await user.click(screen.getByRole('button', { name: 'Replace finding' }))
     expect(mocks.api.supersedeHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', 'H-003')
   })
 
@@ -101,7 +101,7 @@ describe('SupersedeDialog', () => {
     renderHypothesis(hypotheses[0], [hypotheses[0]])
     expect(
       screen.getByText(
-        'There is no other hypothesis to replace it with. Add the new hypothesis first, then supersede this one.',
+        'There is no other finding to replace it with. Add the new finding first, then replace this one.',
       ),
     ).toBeInTheDocument()
   })

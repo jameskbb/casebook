@@ -43,7 +43,7 @@ const group = (name: string) => screen.getByRole('region', { name })
 
 /** Opens More options in the status group and returns the group. */
 async function statusSelects(user: ReturnType<typeof userEvent.setup>) {
-  const g = group('Status and verification')
+  const g = group('Check this finding')
   await user.click(within(g).getByRole('button', { name: MORE_OPTIONS_LABEL }))
   return g
 }
@@ -58,12 +58,12 @@ describe('StatementDrawer statement', () => {
     const renderSnapshot = (basis: string) => providers(<StatementDrawer kind="claim" record={C002}
       detail={{ ...detail, review_bases: [{ ref: C002.ref, basis }] }} onOpenRef={vi.fn()} />)
     const view = render(renderSnapshot('sources-read'))
-    expect(screen.getByRole('button', { name: 'Verify myself' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'I checked this' })).toBeEnabled()
     view.rerender(renderSnapshot('sources-changed'))
-    expect(screen.getByRole('button', { name: 'Verify myself' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'I checked this' })).toBeDisabled()
     expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Use latest for review' }))
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref,
       expect.objectContaining({ basis: 'sources-changed', verification: 'human_verified' }))
   })
@@ -122,82 +122,84 @@ describe('StatementDrawer statement', () => {
   })
 })
 
-describe('StatementDrawer confidence', () => {
+describe('StatementDrawer why', () => {
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('enables Save confidence only after a change and sends confidence and confidence_rationale for claims', async () => {
+  it('shows no confidence control', () => {
+    renderDrawer(C001)
+    expect(within(group('Why')).queryByRole('radio')).toBeNull()
+    expect(screen.queryByText(/confidence/i)).toBeNull()
+  })
+
+  it('enables Save only after a change and sends the rationale with the stored confidence for claims', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    const g = group('How sure are we')
-    const save = within(g).getByRole('button', { name: 'Save confidence' })
+    const g = group('Why')
+    const save = within(g).getByRole('button', { name: 'Save' })
     expect(save).toBeDisabled()
-    await user.click(within(g).getByRole('radio', { name: 'Medium' }))
-    expect(save).toBeEnabled()
-    const why = within(g).getByLabelText('Why this confidence (optional)')
+    const why = within(g).getByLabelText('Why (optional)')
     await user.clear(why)
     await user.type(why, 'Only the code agrees.')
+    expect(save).toBeEnabled()
     await user.click(save)
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-001', {
-      confidence: 'medium',
+      confidence: C001.confidence,
       confidence_rationale: 'Only the code agrees.',
     })
   })
 
-  it('sends confidence and rationale for hypotheses', async () => {
+  it('sends rationale for hypotheses', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    const g = group('How sure are we')
-    await user.click(within(g).getByRole('radio', { name: 'High' }))
-    await user.type(within(g).getByLabelText('Why this confidence (optional)'), 'Two sources.')
-    await user.click(within(g).getByRole('button', { name: 'Save confidence' }))
+    const g = group('Why')
+    const why = within(g).getByLabelText('Why (optional)')
+    await user.clear(why)
+    await user.type(why, 'Two sources.')
+    await user.click(within(g).getByRole('button', { name: 'Save' }))
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', {
-      confidence: 'high',
+      confidence: H001.confidence,
       rationale: 'Two sources.',
     })
   })
 
-  it('shows Saving... while the confidence save is pending', async () => {
+  it('shows Saving... while the save is pending', async () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ updateClaim: () => new Promise<Claim>(() => {}) }))
     renderDrawer(C001)
-    const g = group('How sure are we')
-    await user.click(within(g).getByRole('radio', { name: 'Low' }))
-    await user.click(within(g).getByRole('button', { name: 'Save confidence' }))
+    const g = group('Why')
+    await user.type(within(g).getByLabelText('Why (optional)'), ' More.')
+    await user.click(within(g).getByRole('button', { name: 'Save' }))
     expect(within(g).getByRole('button', { name: 'Saving...' })).toBeDisabled()
   })
 
   it('keeps dirty input when the record changes elsewhere and offers Show latest (backstop)', async () => {
     const user = userEvent.setup()
     const { rerenderWith } = renderDrawer(C001)
-    const g = () => group('How sure are we')
-    await user.click(within(g()).getByRole('radio', { name: 'Low' }))
-    await user.type(within(g()).getByLabelText('Why this confidence (optional)'), ' Mine.')
+    const g = () => group('Why')
+    await user.type(within(g()).getByLabelText('Why (optional)'), ' Mine.')
 
     rerenderWith({
       ...C001,
-      confidence: 'medium',
-      confidence_rationale: 'Codex re-rated it.',
+      confidence_rationale: 'Codex rewrote it.',
       updated_at: '2026-10-02T10:00:00.000Z',
     })
-    expect(within(g()).getByRole('radio', { name: 'Low' })).toHaveAttribute('aria-checked', 'true')
-    expect(within(g()).getByLabelText('Why this confidence (optional)')).toHaveValue(
+    expect(within(g()).getByLabelText('Why (optional)')).toHaveValue(
       `${C001.confidence_rationale} Mine.`,
     )
     expect(within(g()).getByText('This changed in another app.')).toBeInTheDocument()
 
     await user.click(within(g()).getByRole('button', { name: 'Show latest' }))
-    expect(within(g()).getByRole('radio', { name: 'Medium' })).toHaveAttribute('aria-checked', 'true')
-    expect(within(g()).getByLabelText('Why this confidence (optional)')).toHaveValue('Codex re-rated it.')
+    expect(within(g()).getByLabelText('Why (optional)')).toHaveValue('Codex rewrote it.')
     expect(within(g()).queryByText('This changed in another app.')).toBeNull()
   })
 
   it('follows the latest values while the form is clean', async () => {
     const { rerenderWith } = renderDrawer(C001)
-    rerenderWith({ ...C001, confidence: 'low', confidence_rationale: 'Re-rated.' })
-    expect(within(group('How sure are we')).getByRole('radio', { name: 'Low' })).toHaveAttribute('aria-checked', 'true')
-    expect(within(group('How sure are we')).queryByText('This changed in another app.')).toBeNull()
+    rerenderWith({ ...C001, confidence_rationale: 'Rewritten.' })
+    expect(within(group('Why')).getByLabelText('Why (optional)')).toHaveValue('Rewritten.')
+    expect(within(group('Why')).queryByText('This changed in another app.')).toBeNull()
   })
 })
 
@@ -209,18 +211,18 @@ describe('StatementDrawer status and verification', () => {
   it('Verify sets human_verified; a verified record shows Verified disabled', async () => {
     const user = userEvent.setup()
     const { unmount } = renderDrawer(C002)
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Verify myself' }))
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-002', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: false })
     unmount()
     renderDrawer(C001)
-    expect(within(group('Status and verification')).getByRole('button', { name: 'Verified' })).toBeDisabled()
+    expect(within(group('Check this finding')).getByRole('button', { name: 'You checked this' })).toBeDisabled()
   })
 
   it('keeps source checked findings available for a person to verify', async () => {
     const user = userEvent.setup()
     renderDrawer({ ...C002, verification: 'source_verified' })
-    expect(within(group('Status and verification')).getByRole('button', { name: 'Verify myself' })).toBeEnabled()
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Verify myself' }))
+    expect(within(group('Check this finding')).getByRole('button', { name: 'I checked this' })).toBeEnabled()
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ verification: 'human_verified', basis: 'displayed-review-basis' }))
     expect(mocks.api.setClaimVerification).not.toHaveBeenCalled()
   })
@@ -229,7 +231,7 @@ describe('StatementDrawer status and verification', () => {
     const user = userEvent.setup()
     renderDrawer(C002)
     const g = await statusSelects(user)
-    await user.selectOptions(within(g).getByLabelText('Verification'), 'human_verified')
+    await user.selectOptions(within(g).getByLabelText('Label'), 'human_verified')
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ verification: 'human_verified', basis: 'displayed-review-basis' }))
     expect(mocks.api.setClaimVerification).not.toHaveBeenCalled()
   })
@@ -237,14 +239,14 @@ describe('StatementDrawer status and verification', () => {
   it('Dispute on a claim sets status and verification in one patch', async () => {
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Dispute' }))
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'Sources disagree' }))
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-002', { status: 'disputed', verification: 'disputed' })
   })
 
   it('Dispute on a hypothesis sets its verification', async () => {
     const user = userEvent.setup()
     renderDrawer(H001)
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Dispute' }))
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'Sources disagree' }))
     expect(mocks.api.setHypothesisVerification).toHaveBeenCalledWith('INV-0001', 'H-001', 'disputed')
   })
 
@@ -253,13 +255,13 @@ describe('StatementDrawer status and verification', () => {
     renderDrawer(C002)
     const g = await statusSelects(user)
     const status = within(g).getByLabelText('Status')
-    expect(Array.from((status as HTMLSelectElement).options).map((o) => o.text)).toEqual(['Current', 'Disputed', 'Rejected'])
-    const verification = within(g).getByLabelText('Verification')
+    expect(Array.from((status as HTMLSelectElement).options).map((o) => o.text)).toEqual(['Current', 'Sources disagree', 'Ruled out'])
+    const verification = within(g).getByLabelText('Label')
     expect(Array.from((verification as HTMLSelectElement).options).map((o) => o.text)).toEqual([
-      'AI generated',
-      'Human verified',
-      'Source verified',
-      'Disputed',
+      'Not checked',
+      'You checked this',
+      'AI checked the source',
+      'Sources disagree',
     ])
     await user.selectOptions(status, 'rejected')
     expect(mocks.api.updateClaim).toHaveBeenCalledWith('INV-0001', 'C-002', { status: 'rejected' })
@@ -271,7 +273,7 @@ describe('StatementDrawer status and verification', () => {
     const user = userEvent.setup()
     renderDrawer(H001)
     const status = within(await statusSelects(user)).getByLabelText('Status') as HTMLSelectElement
-    expect(Array.from(status.options).map((o) => o.text)).toEqual(['Open', 'Supported', 'Disproven'])
+    expect(Array.from(status.options).map((o) => o.text)).toEqual(['Not tested yet', 'Supported', 'Ruled out'])
     await user.selectOptions(status, 'supported')
     expect(mocks.api.updateHypothesis).toHaveBeenCalledWith('INV-0001', 'H-001', { status: 'supported' })
   })
@@ -281,7 +283,7 @@ describe('StatementDrawer status and verification', () => {
     const C003 = claims[2]
     renderDrawer(C003)
     const g = await statusSelects(user)
-    expect(g).toHaveTextContent('Superseded by C-002')
+    expect(g).toHaveTextContent('Replaced by C-002')
     const status = within(g).getByLabelText('Status') as HTMLSelectElement
     expect(status.value).toBe('superseded')
     await user.selectOptions(status, 'active')
@@ -292,9 +294,9 @@ describe('StatementDrawer status and verification', () => {
     const user = userEvent.setup()
     renderDrawer(claims[2])
     const g = await statusSelects(user)
-    expect(within(g).getByRole('button', { name: 'Verify myself' })).toBeDisabled()
-    expect(within(g).getByRole('button', { name: 'Dispute' })).toBeDisabled()
-    const verification = within(g).getByLabelText('Verification') as HTMLSelectElement
+    expect(within(g).getByRole('button', { name: 'I checked this' })).toBeDisabled()
+    expect(within(g).getByRole('button', { name: 'Sources disagree' })).toBeDisabled()
+    const verification = within(g).getByLabelText('Label') as HTMLSelectElement
     expect(verification).toBeDisabled()
     expect(verification.value).toBe('superseded')
     expect(g).toHaveTextContent(SUPERSEDED_HINT)
@@ -308,14 +310,14 @@ describe('StatementDrawer status and verification', () => {
     renderDrawer(claims[3])
     const g = await statusSelects(user)
     expect((within(g).getByLabelText('Status') as HTMLSelectElement).value).toBe('disputed')
-    expect((within(g).getByLabelText('Verification') as HTMLSelectElement).value).toBe('disputed')
-    expect(within(g).getByRole('button', { name: 'Dispute' })).toBeDisabled()
-    await user.click(within(g).getByRole('button', { name: 'Verify myself' }))
+    expect((within(g).getByLabelText('Label') as HTMLSelectElement).value).toBe('disputed')
+    expect(within(g).getByRole('button', { name: 'Sources disagree' })).toBeDisabled()
+    await user.click(within(g).getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
-    await user.click(within(g).getByRole('button', { name: 'Verify and settle dispute' }))
+    await user.click(within(g).getByRole('button', { name: 'I checked this, settle it' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'displayed-review-basis', verification: 'human_verified', settle_dispute: true })
     // The meta line shows one Disputed mark, not a badge plus a status.
-    expect(screen.getAllByText('Disputed', { selector: '.badge' })).toHaveLength(1)
+    expect(screen.getAllByText('Sources disagree', { selector: '.badge' })).toHaveLength(1)
   })
 
   it('an older contradicting pair still shows one state: the status wins', async () => {
@@ -323,7 +325,7 @@ describe('StatementDrawer status and verification', () => {
     renderDrawer(claim({ ref: 'C-009', status: 'rejected', verification: 'superseded' }))
     const g = await statusSelects(user)
     expect((within(g).getByLabelText('Status') as HTMLSelectElement).value).toBe('rejected')
-    expect(screen.queryByText('Superseded', { selector: '.badge' })).toBeNull()
+    expect(screen.queryByText('Replaced', { selector: '.badge' })).toBeNull()
   })
 
   it('shows a refused change in plain words next to the controls', async () => {
@@ -337,8 +339,8 @@ describe('StatementDrawer status and verification', () => {
     )
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Verify myself' }))
-    expect(await within(group('Status and verification')).findByRole('alert')).toHaveTextContent(
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'I checked this' }))
+    expect(await within(group('Check this finding')).findByRole('alert')).toHaveTextContent(
       'C-002 is superseded; set its status first',
     )
   })
@@ -354,19 +356,19 @@ describe('StatementDrawer status and verification', () => {
     )
     const user = userEvent.setup()
     renderDrawer(C002)
-    const g = group('Status and verification')
-    expect(within(g).queryByLabelText('Verification')).toBeNull()
-    await user.click(within(g).getByRole('button', { name: 'Verify myself' }))
+    const g = group('Check this finding')
+    expect(within(g).queryByLabelText('Label')).toBeNull()
+    await user.click(within(g).getByRole('button', { name: 'I checked this' }))
     expect(await within(g).findByText('verification is not allowed here')).toBeInTheDocument()
-    expect(within(g).getByLabelText('Verification')).toBeInTheDocument()
+    expect(within(g).getByLabelText('Label')).toBeInTheDocument()
     expect(within(g).getByRole('button', { name: 'Fewer options', expanded: true })).toBeInTheDocument()
   })
 
-  it('Supersede by... opens the supersede dialog', async () => {
+  it('Replace with... opens the supersede dialog', async () => {
     const user = userEvent.setup()
     renderDrawer(C002)
-    await user.click(within(group('Status and verification')).getByRole('button', { name: 'Supersede by...' }))
-    expect(screen.getByRole('dialog', { name: 'Supersede C-002' })).toBeInTheDocument()
+    await user.click(within(group('Check this finding')).getByRole('button', { name: 'Replace with...' }))
+    expect(screen.getByRole('dialog', { name: 'Replace C-002' })).toBeInTheDocument()
   })
 })
 
@@ -378,7 +380,7 @@ describe('StatementDrawer links', () => {
   it('flips a supporting link to contradicting', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    const supporting = group('Supporting evidence')
+    const supporting = group('Sources that support it')
     const block = supporting.querySelector('[data-ref="E-001"]') as HTMLElement
     await user.click(within(block).getByRole('button', { name: 'Mark as contradicting' }))
     expect(mocks.api.linkEvidenceToClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-001', 'contradicts')
@@ -387,7 +389,7 @@ describe('StatementDrawer links', () => {
   it('flips a contradicting hypothesis link to supporting', async () => {
     const user = userEvent.setup()
     renderDrawer(hypotheses[1])
-    const block = group('Contradicting evidence').querySelector('[data-ref="E-003"]') as HTMLElement
+    const block = group('Sources that contradict it').querySelector('[data-ref="E-003"]') as HTMLElement
     await user.click(within(block).getByRole('button', { name: 'Mark as supporting' }))
     expect(mocks.api.linkEvidenceToHypothesis).toHaveBeenCalledWith('INV-0001', 'H-002', 'E-003', 'supports')
   })
@@ -395,7 +397,7 @@ describe('StatementDrawer links', () => {
   it('unlinks with an Undo toast that relinks with the previous relation', async () => {
     const user = userEvent.setup()
     renderDrawer(C001)
-    const block = group('Supporting evidence').querySelector('[data-ref="E-004"]') as HTMLElement
+    const block = group('Sources that support it').querySelector('[data-ref="E-004"]') as HTMLElement
     await user.click(within(block).getByRole('button', { name: 'Unlink' }))
     expect(mocks.api.unlinkEvidenceFromClaim).toHaveBeenCalledWith('INV-0001', 'C-001', 'E-004')
     const toast = await screen.findByText('Unlinked E-004 from C-001.')
@@ -406,16 +408,16 @@ describe('StatementDrawer links', () => {
   it('unlinks hypothesis evidence through the hypothesis call', async () => {
     const user = userEvent.setup()
     renderDrawer(hypothesis({ ref: 'H-003', links: hypotheses[2].links }))
-    const block = group('Supporting evidence').querySelector('[data-ref="E-002"]') as HTMLElement
+    const block = group('Sources that support it').querySelector('[data-ref="E-002"]') as HTMLElement
     await user.click(within(block).getByRole('button', { name: 'Unlink' }))
     expect(mocks.api.unlinkEvidenceFromHypothesis).toHaveBeenCalledWith('INV-0001', 'H-003', 'E-002')
     expect(await screen.findByText('Unlinked E-002 from H-003.')).toBeInTheDocument()
   })
 
-  it('Link evidence opens the link dialog for this record', async () => {
+  it('Link a source opens the link dialog for this record', async () => {
     const user = userEvent.setup()
     renderDrawer(claim({ ref: 'C-001' }))
-    await user.click(screen.getByRole('button', { name: 'Link evidence' }))
-    expect(screen.getByRole('dialog', { name: 'Link evidence to C-001' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Link a source' }))
+    expect(screen.getByRole('dialog', { name: 'Link a source to C-001' })).toBeInTheDocument()
   })
 })

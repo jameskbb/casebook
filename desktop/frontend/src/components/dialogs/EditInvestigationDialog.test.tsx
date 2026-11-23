@@ -22,7 +22,7 @@ function renderDialog(onClose = vi.fn()) {
       </AppDataProvider>
     </ToastProvider>,
   )
-  return { onClose, dialog: screen.getByRole('dialog', { name: 'Edit title and question' }) }
+  return { onClose, dialog: screen.getByRole('dialog', { name: 'Edit question' }) }
 }
 
 describe('EditInvestigationDialog', () => {
@@ -32,17 +32,17 @@ describe('EditInvestigationDialog', () => {
 
   it('prefills the title and primary question', () => {
     const { dialog } = renderDialog()
-    expect(within(dialog).getByLabelText('Title')).toHaveValue('September cloud bill up 38%')
-    expect(within(dialog).getByLabelText('Primary question (optional)')).toHaveValue(
+    expect(within(dialog).getByLabelText('Question')).toHaveValue('September cloud bill up 38%')
+    expect(within(dialog).getByLabelText('Background (optional)')).toHaveValue(
       investigation.problem_statement,
     )
-    expect(within(dialog).getByLabelText('Title')).toHaveFocus()
+    expect(within(dialog).getByLabelText('Question')).toHaveFocus()
   })
 
   it('sends only the changed fields and closes', async () => {
     const user = userEvent.setup()
     const { dialog, onClose } = renderDialog()
-    const title = within(dialog).getByLabelText('Title')
+    const title = within(dialog).getByLabelText('Question')
     await user.clear(title)
     await user.type(title, 'September cloud bill jump')
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
@@ -66,7 +66,7 @@ describe('EditInvestigationDialog', () => {
       mockApi({ updateInvestigation: () => new Promise<Investigation>((r) => (resolve = r)) }),
     )
     const { dialog } = renderDialog()
-    await user.type(within(dialog).getByLabelText('Primary question (optional)'), ' Really?')
+    await user.type(within(dialog).getByLabelText('Background (optional)'), ' Really?')
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
     expect(within(dialog).getByRole('button', { name: 'Saving...' })).toBeDisabled()
     expect(mocks.api.updateInvestigation).toHaveBeenCalledWith('INV-0001', {
@@ -86,9 +86,9 @@ describe('EditInvestigationDialog', () => {
       }),
     )
     const { dialog } = renderDialog()
-    await user.clear(within(dialog).getByLabelText('Title'))
+    await user.clear(within(dialog).getByLabelText('Question'))
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
-    const title = within(dialog).getByLabelText('Title')
+    const title = within(dialog).getByLabelText('Question')
     expect(await within(dialog).findByText('is required')).toBeInTheDocument()
     expect(title).toHaveAttribute('aria-invalid', 'true')
     await waitFor(() => expect(title).toHaveFocus())
@@ -97,7 +97,7 @@ describe('EditInvestigationDialog', () => {
   it('asks before discarding edits', async () => {
     const user = userEvent.setup()
     const { dialog } = renderDialog()
-    await user.type(within(dialog).getByLabelText('Title'), ' x')
+    await user.type(within(dialog).getByLabelText('Question'), ' x')
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(screen.getByRole('dialog', { name: 'Discard this draft?' })).toBeInTheDocument()
   })
@@ -118,14 +118,14 @@ describe('EditInvestigationDialog changed elsewhere', () => {
       </ToastProvider>
     )
     const { rerender } = render(ui(investigation))
-    const dialog = screen.getByRole('dialog', { name: 'Edit title and question' })
-    await user.type(within(dialog).getByLabelText('Title'), ' (mine)')
+    const dialog = screen.getByRole('dialog', { name: 'Edit question' })
+    await user.type(within(dialog).getByLabelText('Question'), ' (mine)')
     expect(within(dialog).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
     rerender(ui({ ...investigation, title: 'Renamed by Codex' }))
     expect(within(dialog).getByText(CHANGED_ELSEWHERE_COPY)).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Title')).toHaveValue('September cloud bill up 38% (mine)')
+    expect(within(dialog).getByLabelText('Question')).toHaveValue('September cloud bill up 38% (mine)')
     await user.click(within(dialog).getByRole('button', { name: 'Show latest' }))
-    expect(within(dialog).getByLabelText('Title')).toHaveValue('Renamed by Codex')
+    expect(within(dialog).getByLabelText('Question')).toHaveValue('Renamed by Codex')
     expect(within(dialog).queryByText(CHANGED_ELSEWHERE_COPY)).toBeNull()
   })
 })

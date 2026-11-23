@@ -56,7 +56,7 @@ export function ResolveQuestionDialog({ invRef, question, onClose }: ResolveQues
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Resolve question"
+      submitLabel="Resolve"
       busyLabel="Resolving..."
       busy={busy}
       dirty={text !== ''}

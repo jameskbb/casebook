@@ -54,7 +54,7 @@ export function LinkEvidenceDialog({
   const [choiceError, setChoiceError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
   const firstRef = useRef<HTMLInputElement>(null)
-  const title = `Link evidence to ${record.ref}`
+  const title = `Link a source to ${record.ref}`
 
   if (evidence.length === 0 || available.length === 0) {
     const noEvidence = evidence.length === 0
@@ -69,7 +69,7 @@ export function LinkEvidenceDialog({
             </Button>
             {noEvidence && onAddEvidence && (
               <Button variant="primary" icon={Plus} onClick={onAddEvidence}>
-                Add evidence
+                Add source
               </Button>
             )}
           </>
@@ -77,8 +77,8 @@ export function LinkEvidenceDialog({
       >
         <p className="dialog-text">
           {noEvidence
-            ? 'This case has no evidence yet. Add evidence first.'
-            : `Every piece of evidence is already linked to ${record.ref}.`}
+            ? 'This question has no sources yet. Add a source first.'
+            : `Every source is already linked to ${record.ref}.`}
         </p>
       </Dialog>
     )
@@ -90,7 +90,7 @@ export function LinkEvidenceDialog({
   const submit = async () => {
     if (busy) return
     if (!chosen) {
-      setChoiceError('Choose the evidence to link.')
+      setChoiceError('Choose the source to link.')
       firstRef.current?.focus()
       return
     }
@@ -121,7 +121,7 @@ export function LinkEvidenceDialog({
       title={title}
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Link evidence"
+      submitLabel="Link a source"
       busyLabel="Linking..."
       busy={busy}
       initialFocus={firstRef}
@@ -137,7 +137,7 @@ export function LinkEvidenceDialog({
         className={['choice-field', choiceError ? 'is-invalid' : ''].filter(Boolean).join(' ')}
         aria-describedby={choiceError ? errorId : undefined}
       >
-        <legend className="field-label">Evidence</legend>
+        <legend className="field-label">Source</legend>
         <div className="choice-list">
           {evidence.map((e) => {
             const as = linked.get(e.ref)

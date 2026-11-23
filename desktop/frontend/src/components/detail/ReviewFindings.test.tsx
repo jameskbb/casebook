@@ -23,8 +23,8 @@ describe('focused human review', () => {
     const user = userEvent.setup()
     mount()
     expect(await screen.findByText(reviewFinding.statement)).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Supporting evidence' })).toHaveTextContent(reviewFinding.evidence[0].evidence.title)
-    expect(screen.getByRole('region', { name: 'Contradicting evidence' })).toHaveTextContent(reviewFinding.evidence[1].evidence.title)
+    expect(screen.getByRole('region', { name: 'Sources that support it' })).toHaveTextContent(reviewFinding.evidence[0].evidence.title)
+    expect(screen.getByRole('region', { name: 'Sources that contradict it' })).toHaveTextContent(reviewFinding.evidence[1].evidence.title)
     await user.click(screen.getByText('Source detail', { selector: 'summary' }))
     expect(screen.getByText('Source detail inspected by the person')).toBeVisible()
     expect(screen.queryByText(/verify all/i)).not.toBeInTheDocument()
@@ -33,11 +33,11 @@ describe('focused human review', () => {
     const user = userEvent.setup()
     mount()
     await screen.findByText(reviewFinding.statement)
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref, {
       kind: 'claim', ref: reviewFinding.ref, basis: reviewFinding.basis, verification: 'human_verified', settle_dispute: false,
     })
-    expect(await screen.findByText(`You verified ${reviewFinding.ref}.`)).toBeInTheDocument()
+    expect(await screen.findByText(`You checked ${reviewFinding.ref}.`)).toBeInTheDocument()
     expect(screen.getByText(reviewFinding.statement)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
     expect(screen.getByText('No more findings in this filter')).toBeInTheDocument()
@@ -50,8 +50,8 @@ describe('focused human review', () => {
     await user.click(screen.getByRole('button', { name: 'Skip' }))
     expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
     await user.selectOptions(screen.getByLabelText('Findings to review'), 'source_checked')
-    expect(screen.getByRole('button', { name: 'Verify myself' })).toBeEnabled()
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    expect(screen.getByRole('button', { name: 'I checked this' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref, expect.objectContaining({ ref: 'C-010', verification: 'human_verified' }))
   })
   it('requires an explicit dispute settlement', async () => {
@@ -60,9 +60,9 @@ describe('focused human review', () => {
     mount()
     await waitFor(() => expect(screen.queryByText('Loading latest findings...')).not.toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText('Findings to review'), 'disputed')
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Verify and settle dispute' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this, settle it' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref, expect.objectContaining({ settle_dispute: true }))
   })
   it('holds the visible snapshot on external edits until Show latest', async () => {
@@ -71,11 +71,11 @@ describe('focused human review', () => {
     await screen.findByText(reviewFinding.statement)
     vi.mocked(mocks.api.getReviewFindings).mockResolvedValue([{ ...reviewFinding, statement: 'An AI changed the finding', basis: 'new-snapshot' }])
     view.rerender(<ReviewFindings detail={{ ...detail }} onClose={vi.fn()} />)
-    await screen.findByText('This finding or its evidence changed. Read the latest version before reviewing.')
-    expect(screen.getByRole('button', { name: 'Verify myself' })).toBeDisabled()
+    await screen.findByText('This finding or its sources changed. Read the latest version before checking it.')
+    expect(screen.getByRole('button', { name: 'I checked this' })).toBeDisabled()
     expect(screen.getByText(reviewFinding.statement)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Show latest' }))
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith(detail.investigation.ref, expect.objectContaining({ basis: 'new-snapshot' }))
   })
   it('reports a concurrent edit refusal without advancing or retrying verification', async () => {
@@ -83,7 +83,7 @@ describe('focused human review', () => {
     vi.mocked(mocks.api.reviewStatement).mockRejectedValue(new ApiError('conflict', 'This finding changed; show latest.'))
     mount()
     await screen.findByText(reviewFinding.statement)
-    await user.click(screen.getByRole('button', { name: 'Verify myself' }))
+    await user.click(screen.getByRole('button', { name: 'I checked this' }))
     expect(await screen.findByText('This finding changed; show latest.')).toBeInTheDocument()
     expect(screen.getByText(reviewFinding.statement)).toBeInTheDocument()
     expect(mocks.write).toHaveBeenCalledWith(expect.any(Function), { rethrowConflict: true, retry: false })
@@ -94,21 +94,21 @@ describe('focused human review', () => {
     expect(await screen.findByText('The case could not be loaded')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reload findings' })).toBeInTheDocument()
     expect(screen.queryByText('No more findings in this filter')).not.toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Review findings' })).queryByRole('button', { name: 'Verify myself' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Review findings' })).queryByRole('button', { name: 'I checked this' })).not.toBeInTheDocument()
   })
-  it('names each filter after the label it selects and explains Support needs attention', async () => {
+  it('names each filter after the label it selects and explains Sources need attention', async () => {
     const user = userEvent.setup()
     mount()
     await screen.findByText(reviewFinding.statement)
     const filter = screen.getByLabelText('Findings to review')
     expect(within(filter).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'AI generated, not yet checked by you',
-      'Source verified, not yet checked by you',
-      'Disputed',
-      'Support needs attention',
+      'Not checked',
+      'AI checked the source, you have not',
+      'Sources disagree',
+      'Sources need attention',
       'All current findings',
     ])
-    const gloss = 'Findings with no supporting evidence, or whose supporting evidence is disputed or superseded.'
+    const gloss = 'Findings with no supporting source, or whose supporting source is contradicted or replaced.'
     expect(screen.queryByText(gloss)).not.toBeInTheDocument()
     await user.selectOptions(filter, 'support_attention')
     expect(screen.getByText(gloss)).toBeInTheDocument()
@@ -120,7 +120,7 @@ describe('focused human review', () => {
     Object.assign(mocks.api, mockApi({ getReviewFindings: async () => [] }))
     mount()
     expect(await screen.findByRole('heading', { name: 'Nothing to review yet' })).toBeInTheDocument()
-    expect(screen.getByText('Findings your AI saves, and claims you add, appear here for you to check against their evidence.')).toBeInTheDocument()
+    expect(screen.getByText('Findings your AI saves, and ones you add, appear here for you to check against their sources.')).toBeInTheDocument()
     expect(screen.queryByText('No more findings in this filter')).not.toBeInTheDocument()
   })
 })

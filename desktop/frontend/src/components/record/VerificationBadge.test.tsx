@@ -6,14 +6,14 @@ import { VerificationBadge } from './VerificationBadge'
 describe('VerificationBadge', () => {
   it('explains the label in a tooltip', () => {
     render(<VerificationBadge verification="ai_generated" />)
-    expect(screen.getByText('AI generated')).toHaveAttribute('title', verificationHelp.ai_generated)
+    expect(screen.getByText('Not checked')).toHaveAttribute('title', verificationHelp.ai_generated)
   })
   it('explains Disputed too', () => {
     render(<VerificationBadge verification="disputed" />)
-    expect(screen.getByText('Disputed')).toHaveAttribute('title', verificationHelp.disputed)
+    expect(screen.getByText('Sources disagree')).toHaveAttribute('title', verificationHelp.disputed)
   })
   it('explains superseded, the value the engine returns for a replaced record', () => {
     render(<VerificationBadge verification="superseded" />)
-    expect(screen.getByText('Superseded')).toHaveAttribute('title', verificationHelp.superseded)
+    expect(screen.getByText('Replaced')).toHaveAttribute('title', verificationHelp.superseded)
   })
 })

@@ -83,7 +83,7 @@ export function EditInvestigationDialog({ investigation: inv, onClose }: EditInv
 
   return (
     <Dialog
-      title="Edit title and question"
+      title="Edit question"
       onClose={onClose}
       onSubmit={() => void submit()}
       submitLabel="Save changes"
@@ -105,7 +105,7 @@ export function EditInvestigationDialog({ investigation: inv, onClose }: EditInv
     >
       <div className="dialog-fields" ref={fieldsRef}>
         <TextField
-          label="Title"
+          label="Question"
           value={title}
           onChange={setTitle}
           error={fieldErrors.title}
@@ -114,7 +114,7 @@ export function EditInvestigationDialog({ investigation: inv, onClose }: EditInv
           spellCheck
         />
         <TextArea
-          label="Primary question (optional)"
+          label="Background (optional)"
           value={question}
           onChange={setQuestion}
           error={fieldErrors.problem_statement}

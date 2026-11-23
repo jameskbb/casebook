@@ -8,9 +8,9 @@ import { Menu, type MenuItem } from './Menu'
 
 function items(onSelect: (name: string) => void): MenuItem[] {
   return [
-    { label: 'Edit title and question...', icon: Pencil, onSelect: () => onSelect('edit') },
+    { label: 'Edit question...', icon: Pencil, onSelect: () => onSelect('edit') },
     { label: 'Export as JSON...', icon: Download, onSelect: () => onSelect('export'), disabled: true },
-    { label: 'Archive case', icon: Archive, onSelect: () => onSelect('archive') },
+    { label: 'Archive question', icon: Archive, onSelect: () => onSelect('archive') },
   ]
 }
 
@@ -39,7 +39,7 @@ describe('Menu', () => {
     await user.click(button)
     expect(screen.getByRole('menu', { name: 'More actions' })).toBeInTheDocument()
     expect(button).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('menuitem', { name: 'Edit title and question...' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Edit question...' })).toHaveFocus()
     expect(screen.getByRole('menuitem', { name: 'Export as JSON...' })).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -48,13 +48,13 @@ describe('Menu', () => {
     const onSelect = renderMenu()
     screen.getByRole('button', { name: 'More' }).focus()
     await user.keyboard('{Enter}')
-    expect(screen.getByRole('menuitem', { name: 'Edit title and question...' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Edit question...' })).toHaveFocus()
     await user.keyboard('{ArrowDown}')
-    expect(screen.getByRole('menuitem', { name: 'Archive case' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Archive question' })).toHaveFocus()
     await user.keyboard('{ArrowDown}')
-    expect(screen.getByRole('menuitem', { name: 'Edit title and question...' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Edit question...' })).toHaveFocus()
     await user.keyboard('{ArrowUp}')
-    expect(screen.getByRole('menuitem', { name: 'Archive case' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Archive question' })).toHaveFocus()
     await user.keyboard('{Enter}')
     expect(onSelect).toHaveBeenCalledWith('archive')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()

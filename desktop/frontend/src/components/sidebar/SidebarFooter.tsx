@@ -1,6 +1,6 @@
 // The sidebar footer, kept to one
 // quiet row so the investigation list keeps the height, even at the 960 by
-// 640 minimum window: a "Data" menu with Import case..., Back up
+// 640 minimum window: a "Data" menu with Import question..., Back up
 // all data..., Restore from backup... and the data file location
 // (middle-truncated, the full path in title and the accessible name;
 // choosing it copies the path), and the System, Light and Dark switch as
@@ -64,7 +64,7 @@ export function SidebarFooter() {
   }
 
   const items: MenuItem[] = [
-    { label: 'Import case...', icon: Upload, onSelect: () => void ops.importInvestigation() },
+    { label: 'Import question...', icon: Upload, onSelect: () => void ops.importInvestigation() },
     { label: 'Back up all data...', icon: DatabaseBackup, onSelect: () => void ops.backUp() },
     { label: 'Restore from backup...', icon: RotateCcw, onSelect: () => void ops.restore() },
   ]

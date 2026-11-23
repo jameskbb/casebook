@@ -53,7 +53,7 @@ export function DeferQuestionDialog({ invRef, question, onClose }: DeferQuestion
       size="confirm"
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel="Defer question"
+      submitLabel="Defer"
       busyLabel="Deferring..."
       busy={busy}
       dirty={note !== ''}

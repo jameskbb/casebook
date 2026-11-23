@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api/api'
 import { cleanMessage, toApiError } from '../../api/errors'
 import type { ClaimStatus, HypothesisStatus, InvestigationDetail, ReviewFinding } from '../../api/types'
-import { claimStatusLabels, confidenceLabels, hypothesisStatusLabels, sourceTypeLabels } from '../../lib/labels'
+import { claimStatusLabels, hypothesisStatusLabels, sourceTypeLabels, verificationLabels } from '../../lib/labels'
+import { CHECKED_ACTION, CONTRADICTING_TITLE, SETTLE_ACTION, SETTLE_COPY, SUPPORTING_TITLE } from '../drawers/StatementDrawer'
 import { useWrite } from '../../state/useWrite'
 import { VerificationBadge } from '../record/VerificationBadge'
 import { Banner } from '../ui/Banner'
@@ -11,15 +12,15 @@ import { Select } from '../ui/Select'
 import './ReviewFindings.css'
 
 const FILTERS = [
-  { value: 'unchecked', label: 'AI generated, not yet checked by you' },
-  { value: 'source_checked', label: 'Source verified, not yet checked by you' },
-  { value: 'disputed', label: 'Disputed' },
-  { value: 'support_attention', label: 'Support needs attention' },
+  { value: 'unchecked', label: 'Not checked' },
+  { value: 'source_checked', label: 'AI checked the source, you have not' },
+  { value: 'disputed', label: 'Sources disagree' },
+  { value: 'support_attention', label: 'Sources need attention' },
   { value: 'all', label: 'All current findings' },
 ]
 
-/** The engine's rule for the Support needs attention filter (review.go). */
-const SUPPORT_ATTENTION_GLOSS = 'Findings with no supporting evidence, or whose supporting evidence is disputed or superseded.'
+/** The engine's rule for the Sources need attention filter (review.go). */
+const SUPPORT_ATTENTION_GLOSS = 'Findings with no supporting source, or whose supporting source is contradicted or replaced.'
 
 /** A deliberate, individual check of a statement beside its source material. */
 export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetail; onClose: () => void }) {
@@ -88,7 +89,7 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
         setCurrent(saved)
         setRows((rs) => rs.map((r) => r.ref === saved.ref && r.kind === saved.kind ? saved : r))
         setSettle(false)
-        setResult(verification === 'human_verified' ? `You verified ${saved.ref}.` : `You disputed ${saved.ref}.`)
+        setResult(verification === 'human_verified' ? `You checked ${saved.ref}.` : `Marked ${saved.ref}: sources disagree.`)
       }
     } catch (e) {
       setError(cleanMessage(toApiError(e).message))
@@ -100,9 +101,9 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
     <section className="review-findings" aria-label="Review findings">
       <div className="review-toolbar">
         <h2>Review findings</h2>
-        <Button variant="secondary" onClick={onClose} disabled={busy}>Back to case</Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>Back to the question</Button>
       </div>
-      <p className="review-intro">Check one statement against its evidence. Only your own check marks it as verified by a person.</p>
+      <p className="review-intro">Check one finding against its sources. Only your own check marks it "{verificationLabels.human_verified}".</p>
       <Select label="Findings to review" value={filter} options={FILTERS} disabled={busy} note={filter === 'support_attention' ? SUPPORT_ATTENTION_GLOSS : undefined} onChange={(value) => {
         setFilter(value)
         select(rows.find((r) => value === 'all' || r.filters.includes(value)) ?? null)
@@ -113,30 +114,30 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
       {current ? (
         <>
           {changed && <Banner tone="warning" action={<Button variant="secondary" disabled={busy || loading} onClick={() => select(latest || queue[0] || null)}>Show latest</Button>}>
-            This finding or its evidence changed. Read the latest version before reviewing.
+            This finding or its sources changed. Read the latest version before checking it.
           </Banner>}
           <div className="review-comparison" aria-busy={busy || undefined}>
             <div className="review-statement">
-              <h3 ref={heading} tabIndex={-1}>{current.kind === 'claim' ? 'Claim' : 'Hypothesis'} {current.ref}</h3>
+              <h3 ref={heading} tabIndex={-1}>Finding {current.ref}</h3>
               <div className="review-labels"><VerificationBadge verification={current.verification} /><span>{current.kind === 'claim' ? claimStatusLabels[current.status as ClaimStatus] : hypothesisStatusLabels[current.status as HypothesisStatus]}</span></div>
               <p className="review-statement-text">{current.statement}</p>
-              <p className="review-confidence">Confidence: {confidenceLabels[current.confidence]}</p>
+
               {current.rationale && <p className="review-rationale">{current.rationale}</p>}
-              {current.warnings.length > 0 && <div className="review-warnings"><h4>Support needs attention</h4><ul>{current.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>}
+              {current.warnings.length > 0 && <div className="review-warnings"><h4>Sources need attention</h4><ul>{current.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>}
           {result && <p className="review-result" role="status">{result}</p>}
-          {settle && <Banner tone="warning" action={<><Button variant="ghost" onClick={() => setSettle(false)}>Cancel</Button><Button variant="secondary" disabled={busy || changed || loading} onClick={() => void review('human_verified', true)}>Verify and settle dispute</Button></>}>Verifying this finding will settle its dispute. Confirm only after checking the statement and evidence.</Banner>}
+          {settle && <Banner tone="warning" action={<><Button variant="ghost" onClick={() => setSettle(false)}>Cancel</Button><Button variant="secondary" disabled={busy || changed || loading} onClick={() => void review('human_verified', true)}>{SETTLE_ACTION}</Button></>}>{SETTLE_COPY}</Banner>}
           <div className="review-actions">
-            <Button variant="primary" disabled={busy || loading || changed || current.verification === 'human_verified'} onClick={() => current.verification === 'disputed' ? setSettle(true) : void review('human_verified')}>Verify myself</Button>
-            <Button variant="secondary" disabled={busy || loading || changed || current.verification === 'disputed'} onClick={() => void review('disputed')}>Dispute</Button>
+            <Button variant="primary" disabled={busy || loading || changed || current.verification === 'human_verified'} onClick={() => current.verification === 'disputed' ? setSettle(true) : void review('human_verified')}>{CHECKED_ACTION}</Button>
+            <Button variant="secondary" disabled={busy || loading || changed || current.verification === 'disputed'} onClick={() => void review('disputed')}>{verificationLabels.disputed}</Button>
             <Button variant="ghost" disabled={busy} onClick={next}>{result ? 'Next' : 'Skip'}</Button>
           </div>
             </div>
             <div className="review-sources">
               {(['supports', 'contradicts'] as const).map((relation) => {
                 const evidence = current.evidence.filter((e) => e.relation === relation)
-                return <section key={relation} aria-label={relation === 'supports' ? 'Supporting evidence' : 'Contradicting evidence'}>
-                  <h3>{relation === 'supports' ? 'Supporting evidence' : 'Contradicting evidence'}</h3>
-                  {evidence.length === 0 ? <p className="review-empty">{relation === 'supports' ? 'No supporting evidence is linked.' : 'No contradicting evidence is linked.'}</p> : evidence.map(({ evidence: e }) => <article className="review-evidence" key={e.ref}>
+                return <section key={relation} aria-label={relation === 'supports' ? SUPPORTING_TITLE : CONTRADICTING_TITLE}>
+                  <h3>{relation === 'supports' ? SUPPORTING_TITLE : CONTRADICTING_TITLE}</h3>
+                  {evidence.length === 0 ? <p className="review-empty">{relation === 'supports' ? 'No supporting source is linked.' : 'No contradicting source is linked.'}</p> : evidence.map(({ evidence: e }) => <article className="review-evidence" key={e.ref}>
                     <div className="review-labels"><span className="tabular">{e.ref}</span><VerificationBadge verification={e.verification} /></div>
                     <h4>{e.title}</h4>
                     <p>{e.summary}</p>
@@ -150,7 +151,7 @@ export function ReviewFindings({ detail, onClose }: { detail: InvestigationDetai
           </div>
 
         </>
-      ) : !loading && loaded && (rows.length === 0 ? <div className="review-finished"><h3>Nothing to review yet</h3><p>Findings your AI saves, and claims you add, appear here for you to check against their evidence.</p></div> : <div className="review-finished"><h3>No more findings in this filter</h3><p>Skipped findings keep their verification. Choose another filter or return to the case.</p>{queue.length > 0 && <Button variant="secondary" onClick={() => select(queue[0])}>Start again</Button>}</div>)}
+      ) : !loading && loaded && (rows.length === 0 ? <div className="review-finished"><h3>Nothing to review yet</h3><p>Findings your AI saves, and ones you add, appear here for you to check against their sources.</p></div> : <div className="review-finished"><h3>No more findings in this filter</h3><p>Skipped findings keep their label. Choose another filter or go back to the question.</p>{queue.length > 0 && <Button variant="secondary" onClick={() => select(queue[0])}>Start again</Button>}</div>)}
     </section>
   )
 }

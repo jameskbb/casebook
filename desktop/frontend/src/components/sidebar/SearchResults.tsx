@@ -17,15 +17,15 @@ import { ActiveMarker } from './InvestigationRow'
 import './SearchResults.css'
 
 const KIND: Record<RecordType, { icon: LucideIcon; label: string }> = {
-  investigation: { icon: Folder, label: 'Case' },
-  evidence: { icon: FileText, label: 'Evidence' },
-  claim: { icon: Quote, label: 'Claim' },
-  hypothesis: { icon: Lightbulb, label: 'Hypothesis' },
-  question: { icon: CircleQuestionMark, label: 'Question' },
+  investigation: { icon: Folder, label: 'Question' },
+  evidence: { icon: FileText, label: 'Source' },
+  claim: { icon: Quote, label: 'Finding' },
+  hypothesis: { icon: Lightbulb, label: 'Finding' },
+  question: { icon: CircleQuestionMark, label: 'Follow-up question' },
 }
 
 export const NO_MATCHES_HINT =
-  'Try fewer or different words. Archived cases are searched only when Show archived is on.'
+  'Try fewer or different words. Archived questions are searched only when Show archived is on.'
 
 export interface SearchResultsHandle {
   /** Moves focus into the results (the hit holding the Tab stop). */

@@ -1,4 +1,4 @@
-// History: newest first, each row a
+// How we got here (the history): newest first, each row a
 // plain sentence with the actor kind and client, the engine summary on a
 // second line as text (common shapes rewritten in plain words by
 // activitySummary, the stored text kept in its title), and a relative time with the absolute
@@ -35,8 +35,8 @@ export function ActivityList({ activities, onOpenRef, conclusionReviewedAt }: Ac
       id="history"
       icon={ScrollText}
       kind="history"
-      heading="History"
-      emptyText="No history yet."
+      heading="How we got here"
+      emptyText="Nothing has happened yet."
       items={activities}
       itemKey={(a) => String(a.id)}
       renderItem={(a) => <ActivityRow activity={a} onOpenRef={onOpenRef} now={now} conclusionReviewedAt={conclusionReviewedAt} />}
@@ -44,7 +44,7 @@ export function ActivityList({ activities, onOpenRef, conclusionReviewedAt }: Ac
         more ? (
           <div className="activity-more">
             <Button variant="ghost" onClick={() => setActivityLimit(MAX_ACTIVITY_LIMIT)}>
-              Show more history
+              Show more
             </Button>
           </div>
         ) : null

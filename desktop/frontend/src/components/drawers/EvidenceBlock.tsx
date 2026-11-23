@@ -28,7 +28,7 @@ export function EvidenceBlock({ evidence: e, onOpen, actions }: EvidenceBlockPro
       <button
         type="button"
         className="row-hit evidence-block-hit"
-        aria-label={`Open evidence ${e.ref}: ${e.title}`}
+        aria-label={`Open source ${e.ref}: ${e.title}`}
         onClick={() => onOpen(e.ref)}
       />
       <div className="evidence-block-content">

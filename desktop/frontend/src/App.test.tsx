@@ -38,17 +38,17 @@ describe('App tracer flow', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const nav = await screen.findByRole('navigation', { name: 'Cases' })
-    expect(await within(nav).findByText('No cases yet.')).toBeInTheDocument()
+    const nav = await screen.findByRole('navigation', { name: 'Questions' })
+    expect(await within(nav).findByText('No questions yet.')).toBeInTheDocument()
 
-    await user.click(within(nav).getByRole('button', { name: 'New case' }))
-    const dialog = await screen.findByRole('dialog', { name: 'New case' })
-    const title = within(dialog).getByLabelText('Title')
+    await user.click(within(nav).getByRole('button', { name: 'New question' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    const title = within(dialog).getByLabelText('Question')
     expect(title).toHaveFocus()
-    expect(within(dialog).getByLabelText("Make this your AI's current case")).toBeChecked()
+    expect(within(dialog).getByLabelText("Make this your AI's current question")).toBeChecked()
 
     await user.type(title, 'Cloud bill up in September')
-    await user.click(within(dialog).getByRole('button', { name: 'Create case' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Add question' }))
 
     expect(mocks.api.createInvestigation).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Cloud bill up in September', make_active: true }),
@@ -71,17 +71,17 @@ describe('App main pane states', () => {
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => [] }))
     render(<App />)
     const main = await screen.findByRole('main')
-    expect(await within(main).findByRole('heading', { name: 'Start your first case' })).toBeInTheDocument()
+    expect(await within(main).findByRole('heading', { name: 'Check what your AI tells you' })).toBeInTheDocument()
     expect(
       within(main).getByText(
-        'Connect your AI, then ask it a question that needs digging. What it finds lands here for you to check and share.',
+        'You ask your AI why a number moved, and it gives you an answer. This app keeps what it found, where each finding came from, and which ones you have checked yourself.',
       ),
     ).toBeInTheDocument()
     expect(within(main).getByRole('button', { name: 'Connect your AI' })).toHaveClass('btn-primary')
-    expect(within(main).getByRole('button', { name: 'New case' })).toHaveClass('btn-secondary')
-    expect(within(main).getByRole('button', { name: 'New case' })).toBeInTheDocument()
-    expect(within(main).getByRole('button', { name: 'Import case...' })).toBeInTheDocument()
-    expect(await screen.findByText('No cases yet.')).toBeInTheDocument()
+    expect(within(main).getByRole('button', { name: 'New question' })).toHaveClass('btn-secondary')
+    expect(within(main).getByRole('button', { name: 'New question' })).toBeInTheDocument()
+    expect(within(main).getByRole('button', { name: 'Import question...' })).toBeInTheDocument()
+    expect(await screen.findByText('No questions yet.')).toBeInTheDocument()
   })
 
   it('opens the New investigation dialog from the empty state', async () => {
@@ -89,14 +89,14 @@ describe('App main pane states', () => {
     const user = userEvent.setup()
     render(<App />)
     const main = await screen.findByRole('main')
-    await user.click(await within(main).findByRole('button', { name: 'New case' }))
-    expect(await screen.findByRole('dialog', { name: 'New case' })).toBeInTheDocument()
+    await user.click(await within(main).findByRole('button', { name: 'New question' }))
+    expect(await screen.findByRole('dialog', { name: 'New question' })).toBeInTheDocument()
   })
 
   it('asks to choose an investigation when none is selected', async () => {
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => [summaries[2]] }))
     render(<App />)
-    expect(await screen.findByText('Choose a case from the list.')).toBeInTheDocument()
+    expect(await screen.findByText('Choose a question from the list.')).toBeInTheDocument()
   })
 
   it('opens the active investigation at launch', async () => {

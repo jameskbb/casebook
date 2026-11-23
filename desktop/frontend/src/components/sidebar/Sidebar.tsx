@@ -30,9 +30,9 @@ import './Sidebar.css'
 export const SEARCH_DEBOUNCE_MS = 200
 export const SEARCH_LIMIT = 50
 export const SEARCH_FIELD_ID = 'sidebar-search'
-const SEARCH_LABEL = 'Search cases'
+const SEARCH_LABEL = 'Search'
 export const LIST_ERROR_COPY = 'Casebook could not load the list.'
-export const LIST_CAPPED_COPY = `Showing the ${LIST_LIMIT.toLocaleString('en-US')} most recently updated cases. Search to find older ones.`
+export const LIST_CAPPED_COPY = `Showing the ${LIST_LIMIT.toLocaleString('en-US')} most recently updated questions. Search to find older ones.`
 
 export interface SidebarProps {
   onNew: () => void
@@ -156,16 +156,16 @@ export function Sidebar({ onNew }: SidebarProps) {
 
   let emptyLine: string | null = null
   if (listEmpty) {
-    if (includeArchived || archivedExist === false) emptyLine = 'No cases yet.'
-    else if (archivedExist) emptyLine = 'No open cases. Turn on Show archived to see archived ones.'
+    if (includeArchived || archivedExist === false) emptyLine = 'No questions yet.'
+    else if (archivedExist) emptyLine = 'Nothing here. Turn on Show archived to see archived questions.'
   }
 
   return (
-    <nav className="sidebar" aria-label="Cases">
+    <nav className="sidebar" aria-label="Questions">
       <div className="sidebar-header">
         <p className="sidebar-wordmark">Casebook</p>
         <Button variant="secondary" icon={Plus} fullWidth onClick={onNew}>
-          New case
+          New question
         </Button>
       </div>
       <div className="sidebar-tools">
@@ -232,7 +232,7 @@ export function Sidebar({ onNew }: SidebarProps) {
             )}
             {investigations.length >= LIST_LIMIT && <p className="sidebar-empty">{LIST_CAPPED_COPY}</p>}
             {investigations.length > 0 && (
-              <ul className="sidebar-rows" aria-label="Case list" onKeyDown={roving.onKeyDown}>
+              <ul className="sidebar-rows" aria-label="Question list" onKeyDown={roving.onKeyDown}>
                 {investigations.map((inv, i) => (
                   <InvestigationRow
                     key={inv.ref}

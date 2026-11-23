@@ -7,7 +7,7 @@ const sources = import.meta.glob<string>(
   { query: '?raw', import: 'default', eager: true },
 )
 
-// Visible copy says case, never investigation. Identifiers,
+// Visible copy says question, never investigation. Identifiers,
 // imports and comments are not checked here: only string literals.
 describe('people-facing copy', () => {
   it('reads the source files', () => {
@@ -62,6 +62,29 @@ describe('people-facing copy', () => {
       for (const m of src.matchAll(/(['"`])((?:(?!\1).)*?)\1|>([^<>{}]*?)</g)) {
         const text = m[2] ?? m[3] ?? ''
         if (banned.some((re) => re.test(text))) offenders.push(`${file.slice(2)}: ${text.trim()}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  // The screen says question, answer, finding and source, and one verb,
+  // check. The engine's nouns, the old labels and confidence never reach a
+  // person. Checked in string literals and JSX text, one line at a time.
+  // Code inside ${...} is skipped, and so is a string with no spaces (a
+  // field name, a class name, an enum value or an action key).
+  it('never shows a retired noun, label or confidence', () => {
+    const banned = /\b(cases?|claims?|evidence|hypothes[ie]s|conclusions?|disput\w*|verif\w*|confiden\w*|supersed\w*)\b/i
+    const offenders: string[] = []
+    for (const [file, src] of Object.entries(sources)) {
+      if (/\.test\./.test(file) || /fixtures|mockApi/.test(file)) continue
+      for (const line of src.split('\n')) {
+        if (/^\s*(\/\/|\*|\/\*|import )/.test(line)) continue
+        for (const m of line.matchAll(/(['"`])((?:(?!\1).)*?)\1|>([^<>{}]*?)</g)) {
+          const text = (m[2] ?? m[3] ?? '').replace(/\$\{[^}]*\}/g, '').trim()
+          // No spaces, or only lowercase words and hyphens: an identifier or a class list.
+          if ((!text.includes(' ') && !/^[A-Z]/.test(text)) || /^[a-z0-9 -]+$/.test(text) && /-/.test(text)) continue
+          if (banned.test(text)) offenders.push(`${file.slice(2)}: ${text}`)
+        }
       }
     }
     expect(offenders).toEqual([])

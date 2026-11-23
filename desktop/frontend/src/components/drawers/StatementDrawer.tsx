@@ -1,11 +1,12 @@
-// Claim and hypothesis drawer body:
-//   1. the statement in Literata 20 under its verification badge and status,
+// Finding drawer body (a claim or a hypothesis):
+//   1. the statement in Literata 20 under its label and status,
 //      with "Edit statement" opening an inline editor;
-//   2. "How sure are we": confidence and rationale, saved together;
-//   3. "Status and verification": Verify, Dispute, Supersede by..., with the
-//      Status and Verification selects behind "More options";
-//   4. supporting and contradicting evidence blocks (each opens the evidence
-//      drawer) with Mark as ... and Unlink, then Link evidence.
+//   2. "Why": the rationale. Confidence is stored and passed through
+//      unchanged, never shown;
+//   3. "Check this finding": I checked this, Sources disagree, Replace
+//      with..., with the Status and Label selects behind "More options";
+//   4. supporting and contradicting source blocks (each opens the source
+//      drawer) with Mark as ... and Unlink, then Link a source.
 //
 // Every write goes through useWrite. Saves show no toast; the group simply
 // shows the saved value. Edit-in-place safety: the statement editor and the
@@ -33,7 +34,7 @@ import type {
 import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
 import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
-import { claimStatusLabels, confidenceLabels, confidenceOptions, hypothesisStatusLabels, verificationLabels } from '../../lib/labels'
+import { claimStatusLabels, confidenceOptions, hypothesisStatusLabels, verificationLabels } from '../../lib/labels'
 import { pushLayer } from '../../lib/layers'
 import { STATEMENT_VERIFICATIONS, statementMarks } from '../../lib/recordState'
 import { useDirtyEditor } from '../../state/dirtyGuard'
@@ -47,7 +48,7 @@ import { LinkEvidenceDialog } from '../dialogs/LinkEvidenceDialog'
 import { SupersedeDialog } from '../dialogs/SupersedeDialog'
 import { Banner } from '../ui/Banner'
 import { Button } from '../ui/Button'
-import { SegmentedControl } from '../ui/SegmentedControl'
+
 import { Select, type SelectOption } from '../ui/Select'
 import { TextArea } from '../ui/TextArea'
 import { useToast } from '../ui/Toaster'
@@ -62,6 +63,12 @@ export type StatementDrawerProps = {
   onDeleted?: () => void
 } & ({ kind: 'claim'; record: Claim } | { kind: 'hypothesis'; record: Hypothesis })
 
+/** The one act a person records: they compared the finding with its sources. */
+export const CHECKED_ACTION = 'I checked this'
+export const SETTLE_ACTION = 'I checked this, settle it'
+export const SETTLE_COPY = 'Checking this finding settles the disagreement between its sources. Confirm only after reading the statement and its sources.'
+export const SUPPORTING_TITLE = 'Sources that support it'
+export const CONTRADICTING_TITLE = 'Sources that contradict it'
 export const MORE_OPTIONS_LABEL = 'More options'
 export const FEWER_OPTIONS_LABEL = 'Fewer options'
 
@@ -105,11 +112,11 @@ export function DrawerGroup({
   )
 }
 
-/** "Superseded by C-002" where the ref is a text button that opens the replacement. */
+/** "Replaced by C-002" where the ref is a text button that opens the replacement. */
 export function SupersededBy({ refText, onOpen }: { refText: string; onOpen: (ref: string) => void }) {
   return (
     <p className="superseded-by">
-      Superseded by{' '}
+      Replaced by{' '}
       <button type="button" className="text-button tabular" title={`Open ${refText}`} onClick={() => onOpen(refText)}>
         {refText}
       </button>
@@ -126,7 +133,7 @@ function useRecordCalls(kind: Kind, invRef: string, ref: string, basis?: string)
         : api.updateHypothesis(invRef, ref, patch as HypothesisPatch),
     setVerification: async (v: Verification, settleDispute = false): Promise<StatementRecord> => {
       if (v === 'human_verified') {
-        if (!basis) throw new ApiError('conflict', 'Reload this case before verifying the finding.')
+        if (!basis) throw new ApiError('conflict', 'Reload this question before checking the finding.')
         await api.reviewStatement(invRef, { kind, ref, basis, verification: v, settle_dispute: settleDispute })
         return kind === 'claim' ? api.getClaim(invRef, ref) : api.getHypothesis(invRef, ref)
       }
@@ -180,7 +187,7 @@ export function StatementDrawer(props: StatementDrawerProps) {
       <StatementGroup kind={kind} record={r} calls={calls} />
       <ConfidenceGroup kind={kind} record={r} calls={calls} />
       {reviewChanged && <Banner tone="warning" action={<Button variant="secondary" onClick={() => setReviewSnapshot({ key: reviewKey, basis: latestBasis })}>Use latest for review</Button>}>
-        This finding or its evidence changed. Inspect the latest version before verifying it.
+        This finding or its sources changed. Read the latest version before checking it.
       </Banner>}
       <StatusGroup
         kind={kind}
@@ -464,7 +471,7 @@ function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: State
       const saved = await write(() => calls.update(patch))
       if (saved) setSnapshot(sent)
     } catch (e) {
-      const split = splitFieldErrors(e, ['confidence', rationaleField])
+      const split = splitFieldErrors(e, [rationaleField])
       setErrors(split.fieldErrors)
       setSummary(split.summary)
     } finally {
@@ -473,7 +480,7 @@ function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: State
   }
 
   return (
-    <DrawerGroup title="How sure are we">
+    <DrawerGroup title="Why">
       <div
         className="confidence-form"
         onKeyDown={(e) => {
@@ -489,15 +496,8 @@ function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: State
             {summary}
           </p>
         )}
-        <SegmentedControl<Confidence>
-          label="Confidence"
-          options={confidenceOptions.map((c) => ({ value: c, label: confidenceLabels[c] }))}
-          value={draft.confidence}
-          onChange={(confidence) => setDraft((d) => ({ ...d, confidence }))}
-          error={errors.confidence}
-        />
         <TextArea
-          label="Why this confidence (optional)"
+          label="Why (optional)"
           value={draft.rationale}
           onChange={(rationale) => setDraft((d) => ({ ...d, rationale }))}
           error={errors[rationaleField]}
@@ -512,7 +512,7 @@ function ConfidenceGroup({ kind, record: r, calls }: { kind: Kind; record: State
             disabled={!changed}
             onClick={() => void save()}
           >
-            Save confidence
+            Save
           </Button>
         </div>
       </div>
@@ -526,7 +526,7 @@ const CLAIM_STATUSES: ClaimStatus[] = ['active', 'disputed', 'rejected']
 const HYPOTHESIS_STATUSES: HypothesisStatus[] = ['open', 'supported', 'disproven']
 
 export const SUPERSEDED_HINT =
-  'Superseded records keep their verification. To change it, choose a status to bring this one back first.'
+  'A replaced finding keeps its label. To change it, choose a status to bring this one back first.'
 
 function StatusGroup({
   kind,
@@ -585,7 +585,7 @@ function StatusGroup({
     kind === 'claim'
       ? CLAIM_STATUSES.map((s) => ({ value: s, label: claimStatusLabels[s] }))
       : HYPOTHESIS_STATUSES.map((s) => ({ value: s, label: hypothesisStatusLabels[s] }))
-  if (r.status === 'superseded') statusOptions.unshift({ value: 'superseded', label: 'Superseded', disabled: true })
+  if (r.status === 'superseded') statusOptions.unshift({ value: 'superseded', label: claimStatusLabels.superseded, disabled: true })
   const verificationOptions: SelectOption[] = STATEMENT_VERIFICATIONS.map((v) => ({ value: v, label: verificationLabels[v] }))
   // The selects show the one coherent state: a disputed claim reads Disputed
   // in both, a superseded record Superseded in both.
@@ -599,12 +599,12 @@ function StatusGroup({
   }
 
   return (
-    <DrawerGroup title="Status and verification">
+    <DrawerGroup title="Check this finding">
       {r.status === 'superseded' && r.superseded_by && <SupersededBy refText={r.superseded_by} onOpen={onOpenRef} />}
       <div className="drawer-actions">
         {verified ? (
           <Button variant="secondary" icon={BadgeCheck} disabled>
-            Verified
+            {verificationLabels.human_verified}
           </Button>
         ) : (
           <Button
@@ -612,7 +612,7 @@ function StatusGroup({
             disabled={busy || superseded || reviewChanged}
             onClick={() => disputed ? setSettleDispute(true) : void run(() => calls.setVerification('human_verified'))}
           >
-            Verify myself
+            {CHECKED_ACTION}
           </Button>
         )}
         <Button
@@ -626,16 +626,16 @@ function StatusGroup({
             )
           }
         >
-          Dispute
+          {verificationLabels.disputed}
         </Button>
         <Button variant="secondary" icon={Replace} disabled={busy} onClick={onSupersede}>
-          Supersede by...
+          Replace with...
         </Button>
       </div>
       {settleDispute && disputed && <Banner tone="warning" action={<>
         <Button variant="ghost" onClick={() => setSettleDispute(false)}>Cancel</Button>
-        <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void run(() => calls.setVerification('human_verified', true))}>Verify and settle dispute</Button>
-      </>}>Verifying this finding will settle its dispute. Confirm after checking its evidence.</Banner>}
+        <Button variant="secondary" disabled={busy || reviewChanged} onClick={() => void run(() => calls.setVerification('human_verified', true))}>{SETTLE_ACTION}</Button>
+      </>}>{SETTLE_COPY}</Banner>}
       {summary && (
         <p className="drawer-summary" role="alert">
           {summary}
@@ -662,7 +662,7 @@ function StatusGroup({
             }}
           />
           <Select
-            label="Verification"
+            label="Label"
             value={verificationValue}
             options={verificationOptions}
             disabled={busy || superseded || reviewChanged}
@@ -681,11 +681,10 @@ function StatusGroup({
 /* Deleting: permanent, confirmed, and refused while another record
    names this one as its replacement. */
 
-export const deleteStatementBody = (kind: Kind, r: StatementRecord) => {
-  const noun = kind === 'claim' ? 'claim' : 'hypothesis'
+export const deleteStatementBody = (r: StatementRecord) => {
   const links = r.links.length
-  const linkText = links === 0 ? '' : ` and its ${links === 1 ? 'evidence link' : `${links} evidence links`}`
-  return `${r.ref} will be removed from this case${linkText}. The evidence itself stays. Use this for a ${noun} entered by mistake; to retire one, change its status or supersede it instead.`
+  const linkText = links === 0 ? '' : ` and its ${links === 1 ? 'source link' : `${links} source links`}`
+  return `${r.ref} will be removed from this question${linkText}. The sources themselves stay. Use this for a finding entered by mistake; to retire one, change its status or replace it instead.`
 }
 
 export const replacesBlocker = (ref: string, replaced: string[]) =>
@@ -705,7 +704,7 @@ function DeleteStatement({
   const write = useWrite()
   const toast = useToast()
   const [open, setOpen] = useState(false)
-  const noun = kind === 'claim' ? 'claim' : 'hypothesis'
+  const noun = 'finding'
   const peers: StatementRecord[] = kind === 'claim' ? detail.claims : detail.hypotheses
   const replaced = peers.filter((p) => p.superseded_by === r.ref).map((p) => p.ref)
   const invRef = detail.investigation.ref
@@ -717,7 +716,7 @@ function DeleteStatement({
       {open && (
         <DeleteDialog
           title={`Delete ${noun} ${r.ref}?`}
-          body={deleteStatementBody(kind, r)}
+          body={deleteStatementBody(r)}
           blocker={replaced.length > 0 ? replacesBlocker(r.ref, replaced) : null}
           confirmLabel={`Delete ${noun}`}
           onConfirm={async () => {
@@ -736,7 +735,7 @@ function DeleteStatement({
   )
 }
 
-/* Group 4: the evidence for and against it. */
+/* Group 4: the sources for and against it. */
 
 function EvidenceGroups({
   record: r,
@@ -841,15 +840,15 @@ function EvidenceGroups({
 
   return (
     <div className="evidence-groups" ref={containerRef}>
-      <DrawerGroup title="Supporting evidence">
+      <DrawerGroup title={SUPPORTING_TITLE}>
         {supporting.length > 0 ? (
           list(supporting, 'supports')
         ) : (
-          <p className="drawer-empty">{none ? 'No evidence is linked yet.' : 'Nothing supports this yet.'}</p>
+          <p className="drawer-empty">{none ? 'No source is linked yet.' : 'Nothing supports this yet.'}</p>
         )}
       </DrawerGroup>
       {!none && (
-        <DrawerGroup title="Contradicting evidence">
+        <DrawerGroup title={CONTRADICTING_TITLE}>
           {contradicting.length > 0 ? (
             list(contradicting, 'contradicts')
           ) : (
@@ -859,7 +858,7 @@ function EvidenceGroups({
       )}
       <div className="drawer-link-actions">
         <Button variant="secondary" icon={LinkIcon} ref={linkButtonRef} onClick={onLink}>
-          Link evidence
+          Link a source
         </Button>
       </div>
     </div>

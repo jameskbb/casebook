@@ -42,13 +42,13 @@ describe('DetailHeader actions', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('orders the right cluster: the AI toggle, Copy for your AI, Share summary, More actions', () => {
+  it('orders the right cluster: the AI toggle, Copy for your AI, Share the answer, More actions', () => {
     const { container } = renderHeader(investigation)
     const right = container.querySelector('.detail-header-right') as HTMLElement
     const names = within(right)
       .getAllByRole('button')
       .map((b) => b.getAttribute('aria-label') ?? b.textContent)
-    expect(names).toEqual(["Your AI's current case", 'Copy for your AI', 'Share summary', 'More actions'])
+    expect(names).toEqual(["Your AI's current question", 'Copy for your AI', 'Share the answer', 'More actions'])
   })
 
   it('sets an inactive investigation active', async () => {
@@ -56,34 +56,34 @@ describe('DetailHeader actions', () => {
     renderHeader(inactive)
     const toggle = screen.getByRole('button', { name: 'Use with my AI' })
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
-    expect(toggle).toHaveAttribute('title', 'Click so your AI tools start from this case.')
+    expect(toggle).toHaveAttribute('title', 'Click so your AI tools start from this question.')
     await user.click(toggle)
     expect(mocks.api.setActiveInvestigation).toHaveBeenCalledWith('INV-0003')
-    expect(await screen.findByText("INV-0003 is now your AI's current case.")).toBeInTheDocument()
+    expect(await screen.findByText("INV-0003 is now your AI's current question.")).toBeInTheDocument()
   })
 
   it('clears the active investigation', async () => {
     const user = userEvent.setup()
     renderHeader(investigation)
-    const toggle = screen.getByRole('button', { name: "Your AI's current case" })
+    const toggle = screen.getByRole('button', { name: "Your AI's current question" })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
-    expect(toggle).toHaveAttribute('title', 'Your AI tools start from this case. Click to stop.')
+    expect(toggle).toHaveAttribute('title', 'Your AI tools start from this question. Click to stop.')
     await user.click(toggle)
     expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledTimes(1)
     expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledWith(investigation.ref)
-    expect(await screen.findByText("No case is your AI's current case now.")).toBeInTheDocument()
+    expect(await screen.findByText("No question is your AI's current question now.")).toBeInTheDocument()
   })
 
   it('does not claim to clear when another investigation became active elsewhere', async () => {
     Object.assign(mocks.api, mockApi({ clearActiveInvestigation: async () => false }))
     const user = userEvent.setup()
     renderHeader(investigation)
-    await user.click(screen.getByRole('button', { name: "Your AI's current case" }))
+    await user.click(screen.getByRole('button', { name: "Your AI's current question" }))
     expect(mocks.api.clearActiveInvestigation).toHaveBeenCalledWith(investigation.ref)
     expect(
-      await screen.findByText(`${investigation.ref} was no longer your AI's current case, so nothing changed.`),
+      await screen.findByText(`${investigation.ref} was no longer your AI's current question, so nothing changed.`),
     ).toBeInTheDocument()
-    expect(screen.queryByText("No case is your AI's current case now.")).not.toBeInTheDocument()
+    expect(screen.queryByText("No question is your AI's current question now.")).not.toBeInTheDocument()
   })
 
   it('is busy while the call runs', async () => {
@@ -107,10 +107,10 @@ describe('DetailHeader actions', () => {
     renderHeader(investigation)
     const menu = await openMore(user)
     expect(within(menu).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
-      'Edit title and question...',
-      'Copy case as text',
+      'Edit question...',
+      'Copy question as text',
       'Export as JSON...',
-      'Archive case',
+      'Archive question',
     ])
   })
 
@@ -118,26 +118,26 @@ describe('DetailHeader actions', () => {
     const user = userEvent.setup()
     renderHeader(investigation)
     const menu = await openMore(user)
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit title and question...' }))
-    expect(await screen.findByRole('dialog', { name: 'Edit title and question' })).toBeInTheDocument()
+    await user.click(within(menu).getByRole('menuitem', { name: 'Edit question...' }))
+    expect(await screen.findByRole('dialog', { name: 'Edit question' })).toBeInTheDocument()
   })
 
   it('copies the case as text from the menu', async () => {
     const user = userEvent.setup()
     renderHeader(investigation)
     const menu = await openMore(user)
-    await user.click(within(menu).getByRole('menuitem', { name: 'Copy case as text' }))
+    await user.click(within(menu).getByRole('menuitem', { name: 'Copy question as text' }))
     expect(mocks.api.copyContextPlain).toHaveBeenCalledWith('INV-0001')
     expect(mocks.api.copyContext).not.toHaveBeenCalled()
-    expect(await screen.findByText('Copied the case as text.')).toBeInTheDocument()
+    expect(await screen.findByText('Copied the question as text.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })
 
-  it('opens Share summary from the header and copies the summary', async () => {
+  it('opens Share the answer from the header and copies the summary', async () => {
     const user = userEvent.setup()
     renderHeader(investigation)
-    await user.click(screen.getByRole('button', { name: 'Share summary' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Share summary' })
+    await user.click(screen.getByRole('button', { name: 'Share the answer' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Share the answer' })
     expect(mocks.api.sharePreview).toHaveBeenCalledWith('INV-0001', { mode: 'brief' })
     await user.click(within(dialog).getByRole('button', { name: 'Copy' }))
     expect(mocks.api.copySharePreview).toHaveBeenCalledWith('reviewed-1')
@@ -194,7 +194,7 @@ describe('DetailHeader actions', () => {
     const user = userEvent.setup()
     renderHeader(inactive)
     const menu = await openMore(user)
-    await user.click(within(menu).getByRole('menuitem', { name: 'Archive case' }))
+    await user.click(within(menu).getByRole('menuitem', { name: 'Archive question' }))
     expect(mocks.api.archiveInvestigation).toHaveBeenCalledWith('INV-0003')
     const toast = (await screen.findByText(
       'Archived INV-0003. It is hidden from the list and nothing was deleted.',
@@ -207,7 +207,7 @@ describe('DetailHeader actions', () => {
     const user = userEvent.setup()
     renderHeader({ ...inactive, status: 'archived', archived: true, archived_at: '2026-09-30T11:00:00.000Z' })
     const menu = await openMore(user)
-    await user.click(within(menu).getByRole('menuitem', { name: 'Unarchive case' }))
+    await user.click(within(menu).getByRole('menuitem', { name: 'Unarchive question' }))
     expect(mocks.api.unarchiveInvestigation).toHaveBeenCalledWith('INV-0003')
     expect(await screen.findByText('Unarchived INV-0003.')).toBeInTheDocument()
   })

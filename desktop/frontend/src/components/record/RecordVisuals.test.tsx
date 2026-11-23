@@ -34,27 +34,27 @@ describe('kindRuleClass', () => {
 })
 
 describe('VerificationBadge', () => {
-  it('renders BadgeCheck with Human verified', () => {
+  it('renders BadgeCheck with You checked this', () => {
     const { container } = render(<VerificationBadge verification="human_verified" />)
-    expect(screen.getByText('Human verified')).toBeInTheDocument()
+    expect(screen.getByText('You checked this')).toBeInTheDocument()
     expect(container.querySelector('.lucide-badge-check')).not.toBeNull()
   })
 
-  it('renders BadgeCheck with Source verified', () => {
+  it('renders BadgeCheck with AI checked the source', () => {
     const { container } = render(<VerificationBadge verification="source_verified" />)
-    expect(screen.getByText('Source verified')).toBeInTheDocument()
+    expect(screen.getByText('AI checked the source')).toBeInTheDocument()
     expect(container.querySelector('.lucide-badge-check')).not.toBeNull()
   })
 
-  it('renders Bot with AI generated', () => {
+  it('renders Bot with Not checked', () => {
     const { container } = render(<VerificationBadge verification="ai_generated" />)
-    expect(screen.getByText('AI generated')).toBeInTheDocument()
+    expect(screen.getByText('Not checked')).toBeInTheDocument()
     expect(container.querySelector('.lucide-bot')).not.toBeNull()
   })
 
   it('renders CircleAlert with Disputed', () => {
     const { container } = render(<VerificationBadge verification="disputed" />)
-    expect(screen.getByText('Disputed')).toBeInTheDocument()
+    expect(screen.getByText('Sources disagree')).toBeInTheDocument()
     expect(container.querySelector('.lucide-circle-alert')).not.toBeNull()
   })
 })
@@ -63,13 +63,13 @@ describe('RecordStatusLabel', () => {
   it('names every record status', () => {
     const cases: [Parameters<typeof RecordStatusLabel>[0], string | null][] = [
       [{ kind: 'claim', status: 'active' }, null],
-      [{ kind: 'claim', status: 'disputed' }, 'Disputed'],
-      [{ kind: 'claim', status: 'superseded', supersededBy: 'C-002' }, 'Superseded by C-002'],
-      [{ kind: 'claim', status: 'rejected' }, 'Rejected'],
-      [{ kind: 'hypothesis', status: 'open' }, 'Open'],
+      [{ kind: 'claim', status: 'disputed' }, 'Sources disagree'],
+      [{ kind: 'claim', status: 'superseded', supersededBy: 'C-002' }, 'Replaced by C-002'],
+      [{ kind: 'claim', status: 'rejected' }, 'Ruled out'],
+      [{ kind: 'hypothesis', status: 'open' }, 'Not tested yet'],
       [{ kind: 'hypothesis', status: 'supported' }, 'Supported'],
-      [{ kind: 'hypothesis', status: 'disproven' }, 'Disproven'],
-      [{ kind: 'hypothesis', status: 'superseded', supersededBy: 'H-004' }, 'Superseded by H-004'],
+      [{ kind: 'hypothesis', status: 'disproven' }, 'Ruled out'],
+      [{ kind: 'hypothesis', status: 'superseded', supersededBy: 'H-004' }, 'Replaced by H-004'],
       [{ kind: 'question', status: 'open' }, null],
       [{ kind: 'question', status: 'resolved' }, 'Resolved'],
       [{ kind: 'question', status: 'deferred' }, 'Deferred'],
@@ -121,13 +121,13 @@ describe('EvidenceChip', () => {
 })
 
 describe('RecordRow', () => {
-  it('shows a claim with its badge, statement, long confidence label and chips', () => {
+  it('shows a claim with its badge, statement and chips, and no confidence', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} />)
     const row = container.querySelector('[data-ref="C-001"]')!
     expect(row).not.toBeNull()
     expect(row.className).toContain('kind-rule-claim')
-    expect(within(row as HTMLElement).getByText('Human verified')).toBeInTheDocument()
-    expect(within(row as HTMLElement).getByText('High confidence')).toBeInTheDocument()
+    expect(within(row as HTMLElement).getByText('You checked this')).toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText(/confidence/i)).toBeNull()
     expect(
       within(row as HTMLElement).getByLabelText('E-001 supports this: Service chart default log level set to debug'),
     ).toBeInTheDocument()
@@ -138,7 +138,7 @@ describe('RecordRow', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-004')} />)
     const row = container.querySelector('[data-ref="C-004"]')!
     expect(row.className).toContain('kind-rule-disputed')
-    expect(within(row as HTMLElement).getAllByText('Disputed')).toHaveLength(1)
+    expect(within(row as HTMLElement).getAllByText('Sources disagree')).toHaveLength(1)
   })
 
   it('shows Disputed for a claim whose verification alone is disputed', () => {
@@ -147,7 +147,7 @@ describe('RecordRow', () => {
     )
     const row = container.querySelector('[data-ref="C-009"]')!
     expect(row.className).toContain('kind-rule-disputed')
-    expect(within(row as HTMLElement).getByText('Disputed')).toBeInTheDocument()
+    expect(within(row as HTMLElement).getByText('Sources disagree')).toBeInTheDocument()
   })
 
   it('never shows two contradicting marks on a row', () => {
@@ -160,24 +160,24 @@ describe('RecordRow', () => {
     const stray = container.querySelector('[data-ref="C-010"]') as HTMLElement
     expect(within(stray).queryByText(/Superseded/)).toBeNull()
     const disputed = container.querySelector('[data-ref="C-011"]') as HTMLElement
-    expect(within(disputed).getAllByText('Disputed')).toHaveLength(1)
-    expect(within(disputed).queryByText('Human verified')).toBeNull()
+    expect(within(disputed).getAllByText('Sources disagree')).toHaveLength(1)
+    expect(within(disputed).queryByText('You checked this')).toBeNull()
   })
 
   it('strikes through a superseded claim and names its replacement', () => {
     const { container } = render(<RecordRow kind="claim" record={byRef(claims, 'C-003')} />)
     const row = container.querySelector('[data-ref="C-003"]')!
     expect(row.className).toContain('kind-rule-retired')
-    expect(within(row as HTMLElement).getByText('Superseded by C-002')).toBeInTheDocument()
+    expect(within(row as HTMLElement).getByText('Replaced by C-002')).toBeInTheDocument()
     expect(row.querySelector('.record-statement')?.className).toContain('is-retired')
   })
 
-  it('shows an open hypothesis with the dashed rule and the label Open', () => {
+  it('shows an open hypothesis with the dashed rule and the label Not tested yet', () => {
     const { container } = render(<RecordRow kind="hypothesis" record={byRef(hypotheses, 'H-001')} />)
     const row = container.querySelector('[data-ref="H-001"]')!
     expect(row.className).toContain('kind-rule-hypothesis-open')
-    expect(within(row as HTMLElement).getByText('Open')).toBeInTheDocument()
-    expect(within(row as HTMLElement).getByText('Medium confidence')).toBeInTheDocument()
+    expect(within(row as HTMLElement).getByText('Not tested yet')).toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText(/confidence/i)).toBeNull()
   })
 
   it('shows a supported hypothesis with CircleCheck and Supported', () => {
@@ -195,11 +195,11 @@ describe('RecordRow', () => {
     const row = container.querySelector('[data-ref="H-002"]') as HTMLElement
     expect(row.querySelector('.record-ruled-out-by')).toHaveTextContent(`Ruled out by E-003: ${title}`)
     expect(within(row).queryByText('Low confidence')).toBeNull()
-    expect(within(row).getByText('Disproven')).toBeInTheDocument()
+    expect(within(row).getByText('Ruled out')).toBeInTheDocument()
     expect(row.querySelector('.record-statement')!.className).toContain('is-retired')
   })
 
-  it('names the first contradicting evidence on a rejected claim, and keeps the meter without one', () => {
+  it('names the first contradicting source on a rejected claim, and shows no foot without links', () => {
     const contra = byRef(hypotheses, 'H-002').links[0]
     const support = byRef(hypotheses, 'H-003').links[0]
     const { container } = render(
@@ -213,30 +213,20 @@ describe('RecordRow', () => {
     expect(within(rejected).queryByText('High confidence')).toBeNull()
     const bare = container.querySelector('[data-ref="H-020"]') as HTMLElement
     expect(bare.querySelector('.record-ruled-out-by')).toBeNull()
-    expect(within(bare).getByText('Low confidence')).toBeInTheDocument()
+    expect(bare.querySelector('.record-foot')).toBeNull()
   })
 
-  it('keeps the meter on a superseded claim', () => {
+  it('does not explain a replaced claim as ruled out', () => {
     const { container } = render(<RecordRow kind="claim" record={claimWith({ ref: 'C-021', status: 'superseded', confidence: 'medium', links: [byRef(hypotheses, 'H-002').links[0]] })} />)
     expect(container.querySelector('.record-ruled-out-by')).toBeNull()
-    expect(screen.getByText('Medium confidence')).toBeInTheDocument()
-  })
-
-  it('stops a compact row after the statement and still opens the record', async () => {
-    const onOpen = vi.fn()
-    const user = userEvent.setup()
-    const { container } = render(<RecordRow kind="hypothesis" record={byRef(hypotheses, 'H-001')} onOpen={onOpen} compact />)
-    expect(container.querySelector('.record-foot')).toBeNull()
-    expect(screen.getByText('Open')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Open hypothesis H-001:/ }))
-    expect(onOpen).toHaveBeenLastCalledWith('H-001')
+    expect(screen.queryByText(/confidence/i)).toBeNull()
   })
 
   it('opens the record and its chips when onOpen is passed', async () => {
     const onOpen = vi.fn()
     const user = userEvent.setup()
     render(<RecordRow kind="claim" record={byRef(claims, 'C-001')} onOpen={onOpen} />)
-    await user.click(screen.getByRole('button', { name: /^Open claim C-001/ }))
+    await user.click(screen.getByRole('button', { name: /^Open finding C-001/ }))
     expect(onOpen).toHaveBeenLastCalledWith('C-001')
     await user.click(screen.getByRole('button', { name: 'E-004 supports this: Head of platform: debug was requested for payments only' }))
     expect(onOpen).toHaveBeenLastCalledWith('E-004')

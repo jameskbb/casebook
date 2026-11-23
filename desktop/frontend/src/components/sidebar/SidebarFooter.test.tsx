@@ -53,7 +53,7 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => cancelledImport) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import case...')
+    await choose(user, 'Import question...')
     await waitFor(() => expect(mocks.api.importInvestigation).toHaveBeenCalled())
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importSameRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import case...')
+    await choose(user, 'Import question...')
     expect(await screen.findByText('Imported "September cloud bill up 38%" as INV-0004.')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('INV-0004'))
   })
@@ -74,7 +74,7 @@ describe('SidebarFooter import', () => {
     Object.assign(mocks.api, { importInvestigation: vi.fn(async () => importChangedRef) })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import case...')
+    await choose(user, 'Import question...')
     expect(
       await screen.findByText('Imported "September cloud bill up 38%" as INV-0004 because INV-0001 was already in use.'),
     ).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('SidebarFooter import', () => {
     })
     renderFooter()
     const user = await ready()
-    await choose(user, 'Import case...')
+    await choose(user, 'Import question...')
     const dialog = await screen.findByRole('dialog', { name: "This file can't be imported" })
     expect(dialog).toHaveTextContent('version: unsupported version 2. Nothing was added.')
     await user.click(within(dialog).getByRole('button', { name: 'Choose another file...' }))
@@ -176,7 +176,7 @@ describe('SidebarFooter data file', () => {
       .getAllByRole('menuitem')
       .map((el) => el.textContent)
     expect(names).toEqual([
-      'Import case...',
+      'Import question...',
       'Back up all data...',
       'Restore from backup...',
       `Data file${truncateMiddle(DB_PATH)}`,
@@ -243,7 +243,7 @@ describe('Empty main pane import', () => {
     const user = userEvent.setup()
     render(<App />)
     const main = await screen.findByRole('main')
-    await user.click(await within(main).findByRole('button', { name: 'Import case...' }))
+    await user.click(await within(main).findByRole('button', { name: 'Import question...' }))
     expect(mocks.api.importInvestigation).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Imported "September cloud bill up 38%" as INV-0004.')).toBeInTheDocument()
   })

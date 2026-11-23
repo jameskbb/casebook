@@ -1,6 +1,7 @@
-// The investigation detail: sticky header, then the reading
-// column in this exact order: the question, the current conclusion, What we
-// believe, What might explain it, Evidence, Still open, History.
+// The question page: sticky header, then the reading column in this exact
+// order: the question, the answer, What backs this up, Where sources
+// disagree, Ruled out, Not tested yet, Sources, How we got here. Findings
+// (claims and hypotheses) are grouped by what happened to them.
 //
 // Reloads keep the previous content on screen (the column is never keyed on
 // dataVersion, so scroll position and open editors survive). A first load
@@ -16,12 +17,12 @@
 // action opens its dialog; open questions offer Resolve, Defer and Edit
 // question, resolved and deferred ones Reopen. Focus moves to a new row.
 import { useEffect, useRef, useState } from 'react'
-import { CircleQuestionMark, FileText, Lightbulb, Pencil, Quote, Trash2 } from 'lucide-react'
+import { CircleAlert, CircleQuestionMark, CircleX, FileText, Lightbulb, Pencil, Quote, Trash2 } from 'lucide-react'
 import { api } from '../../api/api'
 import { cleanMessage } from '../../api/errors'
-import type { Claim, Evidence, Hypothesis, InvestigationDetail, Question } from '../../api/types'
+import type { Evidence, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
-import { openHypotheses, partitionClaims, partitionHypotheses, partitionQuestions } from '../../lib/records'
+import { groupFindings, partitionQuestions, type Finding } from '../../lib/records'
 import { useAppData } from '../../state/appData'
 import { useRequestNavigate } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
@@ -91,7 +92,7 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
           {detailStatus === 'error' && <StaleDetailBanner />}
           {inv.archived && <ArchivedBanner investigationRef={inv.ref} />}
           <QuestionBlock investigation={inv} onEdit={() => setEditOpen(true)} actions={<Button variant="secondary" onClick={() => requestNavigate(() => setReviewRef(inv.ref), 'detail')}>Review findings</Button>} />
-          <ConclusionPanel key={inv.ref} investigation={inv} claims={detail.claims} />
+          <ConclusionPanel key={inv.ref} investigation={inv} claims={detail.claims} evidence={detail.evidence} />
           <ReadingSections detail={detail} />
         </div>}
         {editOpen && <EditInvestigationDialog investigation={inv} onClose={() => setEditOpen(false)} />}
@@ -101,11 +102,11 @@ export function DetailView({ focusTitle = false, onTitleFocused }: DetailViewPro
 }
 
 export const deleteQuestionBody = (q: Question) =>
-  `${q.ref} will be removed from this case${q.status === 'resolved' ? ' with its answer' : ''}. Use this for a question asked by mistake; to set one aside, defer it instead.`
+  `${q.ref} will be removed from this question${q.status === 'resolved' ? ' with its resolution' : ''}. Use this for a follow-up question asked by mistake; to set one aside, defer it instead.`
 
 export const DETAIL_GONE_COPY = (ref: string) =>
-  `Casebook could not find ${ref}. It may have changed in another app. Choose a case from the list.`
-export const DETAIL_STALE_COPY = 'Casebook could not reload this case. Showing the last loaded version.'
+  `Casebook could not find ${ref}. It may have changed in another app. Choose a question from the list.`
+export const DETAIL_STALE_COPY = 'Casebook could not reload this question. Showing the last loaded version.'
 
 /** Shown when a background reload failed and the last loaded detail stays on screen. */
 function StaleDetailBanner() {
@@ -217,102 +218,116 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
         <Button variant="ghost" onClick={() => setDialog({ type: 'defer', question: q })}>
           Defer
         </Button>
-        <IconButton icon={Pencil} label="Edit question" onClick={() => setDialog({ type: 'editQuestion', question: q })} />
-        <IconButton icon={Trash2} label={`Delete question ${q.ref}`} onClick={() => setDialog({ type: 'delete', question: q })} />
+        <IconButton icon={Pencil} label="Edit follow-up question" onClick={() => setDialog({ type: 'editQuestion', question: q })} />
+        <IconButton icon={Trash2} label={`Delete follow-up question ${q.ref}`} onClick={() => setDialog({ type: 'delete', question: q })} />
       </>
     ) : (
       <>
         <Button variant="ghost" busy={reopening === q.ref} busyLabel="Reopening..." onClick={() => void reopen(q)}>
           Reopen
         </Button>
-        <IconButton icon={Trash2} label={`Delete question ${q.ref}`} onClick={() => setDialog({ type: 'delete', question: q })} />
+        <IconButton icon={Trash2} label={`Delete follow-up question ${q.ref}`} onClick={() => setDialog({ type: 'delete', question: q })} />
       </>
     )
 
-  const claims = partitionClaims(detail.claims)
-  const hypotheses = partitionHypotheses(detail.hypotheses)
+  const findings = groupFindings(detail.claims, detail.hypotheses)
   const questions = partitionQuestions(detail.questions)
-  const stillOpen = openHypotheses(detail.hypotheses)
   const close = () => setDialog(null)
+  const findingRow = (f: Finding) =>
+    f.kind === 'claim' ? <RecordRow kind="claim" record={f.record} onOpen={open} /> : <RecordRow kind="hypothesis" record={f.record} onOpen={open} />
+  const findingKey = (f: Finding) => f.record.ref
   return (
     <div className="reading-sections" ref={sectionsRef}>
       {caseHasNoRecords(detail) && !detail.investigation.archived && <FirstFindingGuide onAddEvidence={() => setDialog({ type: 'evidence' })} />}
-      <SectionList<Claim>
-        id="claims"
+      <SectionList<Finding>
+        id="findings"
         icon={Quote}
         kind="claim"
-        heading="What we believe"
-        addLabel="Add claim"
+        heading="What backs this up"
+        addLabel="Add finding"
         onAdd={() => setDialog({ type: 'claim' })}
         headingExtra={
           <button type="button" className="text-button" onClick={() => setLegendOpen(true)}>
             What the labels mean
           </button>
         }
-        emptyText="No claims yet. Add one when the evidence supports a clear statement."
-        items={claims.visible}
-        ruledOut={claims.ruledOut}
-        ruledOutNoun={['superseded or rejected claim', 'superseded or rejected claims']}
-        itemKey={(c) => c.ref}
-        renderItem={(c) => <RecordRow kind="claim" record={c} onOpen={open} />}
+        emptyText="No findings yet. Add one when a source backs a clear statement."
+        items={findings.backing}
+        ruledOut={findings.replaced}
+        ruledOutNoun={['replaced finding', 'replaced findings']}
+        itemKey={findingKey}
+        renderItem={findingRow}
       />
-      <SectionList<Hypothesis>
-        id="hypotheses"
-        icon={Lightbulb}
-        kind="hypothesis"
-        heading="What might explain it"
-        addLabel="Add hypothesis"
-        onAdd={() => setDialog({ type: 'hypothesis' })}
-        emptyText="No hypotheses yet. Add one to test a possible explanation."
-        items={hypotheses.visible}
-        ruledOut={hypotheses.ruledOut}
-        ruledOutNoun={['ruled-out hypothesis', 'ruled-out hypotheses']}
-        itemKey={(h) => h.ref}
-        renderItem={(h) => <RecordRow kind="hypothesis" record={h} onOpen={open} />}
-      />
-      <SectionList<Evidence>
-        id="evidence"
-        icon={FileText}
-        kind="evidence"
-        heading="Evidence"
-        addLabel="Add evidence"
-        onAdd={() => setDialog({ type: 'evidence' })}
-        emptyText="No evidence yet. Add what you found and where you found it."
-        items={detail.evidence}
-        itemKey={(e) => e.ref}
-        renderItem={(e) => <EvidenceRow evidence={e} detail={detail} onOpen={open} />}
-      />
+      {findings.disagree.length > 0 && (
+        <SectionList<Finding>
+          id="disagree"
+          icon={CircleAlert}
+          kind="claim"
+          heading="Where sources disagree"
+          emptyText=""
+          items={findings.disagree}
+          itemKey={findingKey}
+          renderItem={findingRow}
+        />
+      )}
+      {findings.ruledOut.length > 0 && (
+        <SectionList<Finding>
+          id="ruled-out"
+          icon={CircleX}
+          kind="hypothesis"
+          heading="Ruled out"
+          emptyText=""
+          items={findings.ruledOut}
+          itemKey={findingKey}
+          renderItem={findingRow}
+        />
+      )}
       <SectionList<Question>
         id="questions"
         icon={CircleQuestionMark}
         kind="question"
-        heading="Still open"
-        addLabel="Add question"
+        heading="Not tested yet"
+        addLabel="Add follow-up question"
         onAdd={() => setDialog({ type: 'question' })}
-        emptyText="Nothing is open. Add a question when something still needs an answer."
+        headingExtra={
+          <Button variant="ghost" icon={Lightbulb} onClick={() => setDialog({ type: 'hypothesis' })}>
+            Add finding to test
+          </Button>
+        }
+        emptyText="Nothing is waiting to be tested."
         emptyWithRuledOut
         lead={
-          stillOpen.length > 0 ? (
+          findings.notTested.length > 0 ? (
             <>
               <div className="section-lead">
-                <h3 className="section-subheading" id="still-open-explanations">Explanations still open</h3>
-                <ul className="section-rows" aria-labelledby="still-open-explanations">
-                  {stillOpen.map((h) => (
-                    <li key={h.ref}>
-                      <RecordRow kind="hypothesis" record={h} onOpen={open} compact />
-                    </li>
+                <h3 className="section-subheading" id="findings-to-test">Findings to test</h3>
+                <ul className="section-rows" aria-labelledby="findings-to-test">
+                  {findings.notTested.map((f) => (
+                    <li key={findingKey(f)}>{findingRow(f)}</li>
                   ))}
                 </ul>
               </div>
-              {questions.visible.length > 0 && <h3 className="section-subheading section-subheading-rows">Questions</h3>}
+              {questions.visible.length > 0 && <h3 className="section-subheading section-subheading-rows">Follow-up questions</h3>}
             </>
           ) : undefined
         }
         items={questions.visible}
         ruledOut={questions.ruledOut}
-        ruledOutNoun={['resolved question', 'resolved questions']}
+        ruledOutNoun={['resolved follow-up question', 'resolved follow-up questions']}
         itemKey={(q) => q.ref}
         renderItem={(q) => <QuestionRow question={q} actions={questionActions(q)} />}
+      />
+      <SectionList<Evidence>
+        id="evidence"
+        icon={FileText}
+        kind="evidence"
+        heading="Sources"
+        addLabel="Add source"
+        onAdd={() => setDialog({ type: 'evidence' })}
+        emptyText="No sources yet. Add what you found and where you found it."
+        items={detail.evidence}
+        itemKey={(e) => e.ref}
+        renderItem={(e) => <EvidenceRow evidence={e} detail={detail} onOpen={open} />}
       />
       <ActivityList activities={detail.recent_activity} onOpenRef={open} conclusionReviewedAt={detail.investigation.conclusion_reviewed_at} />
 
@@ -346,13 +361,13 @@ function ReadingSections({ detail }: { detail: InvestigationDetail }) {
       )}
       {dialog?.type === 'delete' && (
         <DeleteDialog
-          title={`Delete question ${dialog.question.ref}?`}
+          title={`Delete follow-up question ${dialog.question.ref}?`}
           body={deleteQuestionBody(dialog.question)}
-          confirmLabel="Delete question"
+          confirmLabel="Delete follow-up question"
           onConfirm={async () => {
             const ref = dialog.question.ref
             const done = await write(() => api.deleteQuestion(invRef, ref).then(() => true), { rethrowConflict: true })
-            if (done) toast.success(`Deleted question ${ref}.`)
+            if (done) toast.success(`Deleted follow-up question ${ref}.`)
             return Boolean(done)
           }}
           onClose={close}

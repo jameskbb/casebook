@@ -17,12 +17,12 @@ export const SUMMARY_SAVED = (name: string) => `Saved the summary as ${name}.`
 export const EXAMPLE_COPIED = 'Copied the example request. Paste it into your AI client.'
 export const ELSEWHERE_SUMMARY = 'Use this summary in another app'
 export const ELSEWHERE_COPY = 'Use this summary in the tools you already use. Copy it into a note or document, save it as a file, or ask your AI to save it to an app it is already connected to. The connected app has to support creating or updating notes or documents through your AI client.'
-export const ELSEWHERE_NOTE = 'Your AI asks Casebook for the summary, then uses its own connection to that app; Casebook does not send anything itself. The copy your AI fetches is a separate snapshot with the default selection of findings, so it matches this preview only if the case has not changed and you kept that selection.'
+export const ELSEWHERE_NOTE = 'Your AI asks Casebook for the summary, then uses its own connection to that app; Casebook does not send anything itself. The copy your AI fetches is a separate snapshot with the default selection of findings, so it matches this preview only if the question has not changed and you kept that selection.'
 
-/** The request to paste into an AI client, for the chosen format and the open case. */
+/** The request to paste into an AI client, for the chosen format and the open question. */
 export function exampleRequest(mode: ShareOptions['mode'], invRef: string, title: string): string {
   const what = mode === 'report' ? 'the complete report' : 'the leadership brief'
-  return `Save ${what} for case ${invRef} in my connected notes app as a new note titled "${title}". Keep its verification labels, evidence references and caveats.`
+  return `Save ${what} for ${invRef} in my connected notes app as a new note titled "${title}". Keep its labels, source references and caveats.`
 }
 
 type SelectionKey = 'claim_refs' | 'hypothesis_refs' | 'question_refs' | 'ruled_out_refs'
@@ -30,9 +30,9 @@ type SelectionKey = 'claim_refs' | 'hypothesis_refs' | 'question_refs' | 'ruled_
 // The selection groups in the order the brief prints them, with the option
 // each one fills and the legend the sender reads.
 const GROUPS: { group: ShareCandidate['group']; key: SelectionKey; legend: string }[] = [
-  { group: 'claims', key: 'claim_refs', legend: 'Claims' },
-  { group: 'hypotheses', key: 'hypothesis_refs', legend: 'Explanations still open or supported' },
-  { group: 'questions', key: 'question_refs', legend: 'Questions' },
+  { group: 'claims', key: 'claim_refs', legend: 'Findings' },
+  { group: 'hypotheses', key: 'hypothesis_refs', legend: 'Findings not tested yet or supported' },
+  { group: 'questions', key: 'question_refs', legend: 'Follow-up questions' },
   { group: 'ruled_out', key: 'ruled_out_refs', legend: 'Ruled out' },
 ]
 const keyOf = (group: ShareCandidate['group']): SelectionKey => GROUPS.find(g => g.group === group)?.key ?? 'claim_refs'
@@ -123,14 +123,14 @@ export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string;
   }
 
   return (
-    <Dialog title="Share summary" size="form" className="share-summary-dialog" onClose={onClose} busy={sharing}
+    <Dialog title="Share the answer" size="form" className="share-summary-dialog" onClose={onClose} busy={sharing}
       footer={<>
         <Button onClick={onClose} disabled={sharing}>Close</Button>
         <Button icon={Download} disabled={disabled} onClick={() => void save()}>Save as file...</Button>
         <Button variant="primary" icon={ClipboardCopy} disabled={disabled} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
       </>}
     >
-      <p className="share-summary-lede">Share the answer with the evidence behind it, who checked what, and what is still in doubt. A leadership brief uses the findings you choose; the complete report includes everything and the history.</p>
+      <p className="share-summary-lede">Share the answer with the findings and sources behind it, who checked what, and what is still in doubt. A leadership brief uses the findings you choose; the complete report includes everything and the history.</p>
       <div className="share-summary-toolbar">
         <label>Format <select value={draft.mode} disabled={busy || sharing} onChange={e => { const mode = e.target.value as ShareOptions['mode']; setDraft({ mode }); void load({ mode }) }}>
           <option value="brief">Leadership brief</option>
@@ -139,8 +139,8 @@ export function ShareSummaryDialog({ invRef, title, onClose }: { invRef: string;
         <Button icon={RefreshCw} disabled={busy || sharing} onClick={() => void load(draft)}>{dirty ? 'Update preview' : 'Refresh preview'}</Button>
       </div>
       {preview && draft.mode === 'brief' && preview.candidates.length > 0 && <details className="share-summary-selection">
-        <summary>Choose findings and questions</summary>
-        <p>Disputed findings, contradicting evidence and the claims behind the answer are always included. Choose claims, explanations, questions and ruled-out items here.</p>
+        <summary>Choose what to include</summary>
+        <p>Findings where sources disagree, contradicting sources and the findings behind the answer are always included. Choose the other findings, follow-up questions and ruled-out items here.</p>
         <div className="share-summary-choices">
           {GROUPS.map(({ group, key, legend }) => <fieldset key={group}>
             <legend>{legend}</legend>

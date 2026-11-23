@@ -91,6 +91,3 @@
 
 /* Still open repeats an open explanation as a compact row: ref, labels and
    statement only; the full row sits under What might explain it. */
-.detail-row.is-compact {
-  padding-block: var(--space-2);
-}

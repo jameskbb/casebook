@@ -47,9 +47,9 @@ describe('ActivityList', () => {
       row(claude, 'evidence.add', 'E-005', 'Trace store query'),
       row(human, 'question.resolve', 'Q-001', 'Intentional business logic.'),
     ])
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Claude Code (AI) added evidence E-005')
+    expect(items[0]).toHaveTextContent('Claude Code (AI) added source E-005')
     expect(items[1]).toHaveTextContent('You (Casebook) resolved Q-001')
     expect(within(items[0]).getByText('Claude Code (AI)')).toHaveAttribute('title', 'AI, claude-code')
     expect(within(items[1]).getByText('You (Casebook)')).toHaveAttribute('title', 'Human, casebook-ui')
@@ -61,7 +61,7 @@ describe('ActivityList', () => {
       row(human, 'claim.update', 'C-001', 'C-001'),
       row(human, 'conclusion.update', 'INV-0001', ''),
     ])
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
     expect(within(items[0]).getByText('**not markup** <b>x</b>')).toBeInTheDocument()
     expect(items[0].querySelector('b')).toBeNull()
@@ -72,17 +72,17 @@ describe('ActivityList', () => {
   it('rewrites engine summaries in plain words and keeps the stored text in the title', async () => {
     const raw = 'Updated claim C-001: statement, verification; verification reset to ai_generated after AI edit'
     renderList([row(claude, 'claim.update', 'C-001', raw), row(human, 'active.set', 'INV-0001', 'Set active investigation to INV-0001')])
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     const items = within(history).getAllByRole('listitem')
-    const reset = within(items[0]).getByText('Edited claim C-001 (statement). Its verification was reset to AI generated after the edit; it is back in Review findings.')
+    const reset = within(items[0]).getByText('Edited finding C-001 (statement). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
     expect(reset).toHaveAttribute('title', raw)
-    expect(within(items[1]).getByText("Made INV-0001 your AI's current case")).toHaveAttribute('title', 'Set active investigation to INV-0001')
+    expect(within(items[1]).getByText("Made INV-0001 your AI's current question")).toHaveAttribute('title', 'Set active investigation to INV-0001')
     expect(history).not.toHaveTextContent('ai_generated')
   })
 
   it('shows the relative time with the absolute time in the title', async () => {
     renderList([{ ...row(claude, 'evidence.add', 'E-005'), created_at: '2026-01-15T14:00:00.000Z' }])
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     const time = history.querySelector('time') as HTMLElement
     expect(time).toHaveAttribute('dateTime', '2026-01-15T14:00:00.000Z')
     expect(time.getAttribute('title')).toMatch(/January 15, 2026 at/)
@@ -95,7 +95,7 @@ describe('ActivityList', () => {
       [row(claude, 'evidence.add', 'E-005'), row(human, 'question.resolve', 'Q-001'), row(human, 'link.update', 'C-001')],
       onOpenRef,
     )
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     await user.click(within(history).getByRole('button', { name: 'E-005' }))
     expect(onOpenRef).toHaveBeenCalledWith('E-005')
     expect(within(history).getByRole('button', { name: 'C-001' })).toBeInTheDocument()
@@ -104,30 +104,30 @@ describe('ActivityList', () => {
 
   it('renders refs as plain text without onOpenRef', async () => {
     renderList([row(claude, 'evidence.add', 'E-005')])
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     expect(within(history).queryByRole('button')).toBeNull()
   })
 
-  it('offers Show more history at 20 rows and reloads with activity_limit 200', async () => {
+  it('offers Show more at 20 rows and reloads with activity_limit 200', async () => {
     const user = userEvent.setup()
     renderList(manyActivity(20))
-    const history = await screen.findByRole('region', { name: 'History' })
+    const history = await screen.findByRole('region', { name: 'How we got here' })
     expect(within(history).getAllByRole('listitem')).toHaveLength(20)
-    await user.click(within(history).getByRole('button', { name: 'Show more history' }))
+    await user.click(within(history).getByRole('button', { name: 'Show more' }))
     await waitFor(() =>
       expect(mocks.api.getInvestigationDetail).toHaveBeenLastCalledWith('INV-0001', { activity_limit: 200 }),
     )
   })
 
-  it('hides Show more history with fewer than 20 rows', async () => {
+  it('hides Show more with fewer than 20 rows', async () => {
     renderList(manyActivity(19))
-    const history = await screen.findByRole('region', { name: 'History' })
-    expect(within(history).queryByRole('button', { name: 'Show more history' })).toBeNull()
+    const history = await screen.findByRole('region', { name: 'How we got here' })
+    expect(within(history).queryByRole('button', { name: 'Show more' })).toBeNull()
   })
 
-  it('says No history yet. when empty', async () => {
+  it('says Nothing has happened yet. when empty', async () => {
     renderList([])
-    const history = await screen.findByRole('region', { name: 'History' })
-    expect(within(history).getByText('No history yet.')).toBeInTheDocument()
+    const history = await screen.findByRole('region', { name: 'How we got here' })
+    expect(within(history).getByText('Nothing has happened yet.')).toBeInTheDocument()
   })
 })

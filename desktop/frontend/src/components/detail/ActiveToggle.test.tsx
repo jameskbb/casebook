@@ -30,12 +30,12 @@ describe('ActiveToggle', () => {
     renderToggle({ ...inv, is_active: false })
     expect(screen.getByRole('button', { name: 'Use with my AI' })).toHaveAttribute(
       'title',
-      'Click so your AI tools start from this case.',
+      'Click so your AI tools start from this question.',
     )
   })
 
-  it('reads as the current case when on', () => {
+  it('reads as the current question when on', () => {
     renderToggle({ ...inv, is_active: true })
-    expect(screen.getByRole('button', { name: "Your AI's current case", pressed: true })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: "Your AI's current question", pressed: true })).toBeInTheDocument()
   })
 })

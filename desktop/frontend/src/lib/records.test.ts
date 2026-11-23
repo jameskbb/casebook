@@ -1,19 +1,39 @@
 import { describe, expect, it } from 'vitest'
 import { detail, evidence } from '../test/fixtures'
-import { evidenceByRef, openHypotheses, partitionClaims, partitionHypotheses, partitionQuestions, usedBy } from './records'
+import { evidenceByRef, groupFindings, partitionQuestions, sourceChecks, usedBy } from './records'
 import { plural } from './plural'
 
 describe('records', () => {
-  it('keeps active and disputed claims visible and rules out superseded and rejected ones', () => {
-    const p = partitionClaims(detail.claims)
-    expect(p.visible.map((c) => c.ref)).toEqual(['C-001', 'C-002', 'C-004'])
-    expect(p.ruledOut.map((c) => c.ref)).toEqual(['C-003'])
+  it('groups findings by what happened to them, claims before hypotheses', () => {
+    const g = groupFindings(detail.claims, detail.hypotheses)
+    const refs = (list: { record: { ref: string } }[]) => list.map((f) => f.record.ref)
+    expect(refs(g.backing)).toEqual(['C-001', 'C-002', 'H-003'])
+    expect(refs(g.disagree)).toEqual(['C-004'])
+    expect(refs(g.notTested)).toEqual(['H-001'])
+    expect(refs(g.ruledOut)).toEqual(['H-002'])
+    expect(refs(g.replaced)).toEqual(['C-003'])
   })
 
-  it('keeps open and supported hypotheses visible and rules out disproven and superseded ones', () => {
-    const p = partitionHypotheses(detail.hypotheses)
-    expect(p.visible.map((h) => h.ref)).toEqual(['H-001', 'H-003'])
-    expect(p.ruledOut.map((h) => h.ref)).toEqual(['H-002'])
+  it('puts a rejected claim under ruled out and a hypothesis whose sources disagree under disagree', () => {
+    const g = groupFindings(
+      [{ ...detail.claims[0], ref: 'C-009', status: 'rejected' }],
+      [{ ...detail.hypotheses[0], ref: 'H-009', status: 'open', verification: 'disputed' }],
+    )
+    expect(g.ruledOut.map((f) => f.record.ref)).toEqual(['C-009'])
+    expect(g.disagree.map((f) => f.record.ref)).toEqual(['H-009'])
+    expect(g.backing).toEqual([])
+  })
+
+  it('counts who checked each source and leaves replaced sources out', () => {
+    const e = detail.evidence[0]
+    const with_ = (verification: typeof e.verification) => ({ ...e, verification })
+    expect(sourceChecks([with_('human_verified'), with_('source_verified'), with_('ai_generated'), with_('disputed'), with_('superseded')])).toEqual({
+      total: 4,
+      byYou: 1,
+      byAi: 1,
+      notChecked: 2,
+    })
+    expect(sourceChecks([])).toEqual({ total: 0, byYou: 0, byAi: 0, notChecked: 0 })
   })
 
   it('shows open then deferred questions and collapses only resolved ones', () => {
@@ -22,10 +42,6 @@ describe('records', () => {
     expect(p.ruledOut.map((q) => q.ref)).toEqual(['Q-002'])
     const reordered = partitionQuestions([detail.questions[2], detail.questions[1], detail.questions[0]])
     expect(reordered.visible.map((q) => q.ref)).toEqual(['Q-001', 'Q-003'])
-  })
-
-  it('lists only Open hypotheses as still open', () => {
-    expect(openHypotheses(detail.hypotheses).map((h) => h.ref)).toEqual(['H-001'])
   })
 
   it('indexes evidence by ref', () => {

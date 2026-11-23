@@ -1,5 +1,5 @@
 // Copy for your AI: secondary; Share summary is the primary
-// action on the detail screen. Copies the case the way AI tools read it.
+// action on the detail screen. Copies the question and its records the way AI tools read it.
 // Shows "Copied" for 2000 ms only after the Go clipboard call succeeded; it
 // stays enabled while a copy is in flight.
 import { Check, ClipboardCopy } from 'lucide-react'
@@ -14,7 +14,7 @@ export function CopyContextButton({ investigationRef }: { investigationRef: stri
       variant="secondary"
       icon={copied ? Check : ClipboardCopy}
       className="copy-context-btn"
-      title="Copies the case the way your AI tools read it, to paste into a chat."
+      title="Copies the question and its records the way your AI tools read it, to paste into a chat."
       onClick={() => void copy(investigationRef)}
     >
       {copied ? 'Copied' : 'Copy for your AI'}

@@ -3,8 +3,8 @@
 // E-005". Client names are engine data from any surface (an MCP client picks
 // its own), so they are only ever rendered as text; the raw kind and client
 // stay inspectable in the actor tooltip.
-import type { Activity, Actor, ClaimStatus, Confidence, HypothesisStatus, Verification } from '../api/types'
-import { actorKindLabels, claimStatusLabels, confidenceLabels, hypothesisStatusLabels, verificationLabels } from './labels'
+import type { Activity, Actor, ClaimStatus, HypothesisStatus, Verification } from '../api/types'
+import { actorKindLabels, claimStatusLabels, hypothesisStatusLabels, verificationLabels } from './labels'
 
 const ANY_AI_CLIENT = 'An AI client (AI)'
 
@@ -49,36 +49,36 @@ export function actorTooltip(actor: Actor): string {
 
 // One entry per activity verb. "{T}" is the target ref.
 const VERBS: Record<string, string> = {
-  'investigation.create': 'created this case',
-  'investigation.update': 'edited the case details',
-  'investigation.archive': 'archived this case',
-  'investigation.unarchive': 'unarchived this case',
-  'conclusion.update': 'updated the conclusion',
-  'evidence.add': 'added evidence {T}',
-  'evidence.update': 'updated evidence {T}',
-  'claim.add': 'added claim {T}',
-  'claim.update': 'updated claim {T}',
-  'claim.supersede': 'superseded claim {T}',
-  'hypothesis.add': 'added hypothesis {T}',
-  'hypothesis.update': 'updated hypothesis {T}',
-  'hypothesis.supersede': 'superseded hypothesis {T}',
-  'link.add': 'linked evidence to {T}',
-  'link.update': 'changed how evidence relates to {T}',
-  'link.remove': 'unlinked evidence from {T}',
+  'investigation.create': 'created this question',
+  'investigation.update': 'edited the question',
+  'investigation.archive': 'archived this question',
+  'investigation.unarchive': 'unarchived this question',
+  'conclusion.update': 'updated the answer',
+  'evidence.add': 'added source {T}',
+  'evidence.update': 'updated source {T}',
+  'claim.add': 'added finding {T}',
+  'claim.update': 'updated finding {T}',
+  'claim.supersede': 'replaced finding {T}',
+  'hypothesis.add': 'added finding {T}',
+  'hypothesis.update': 'updated finding {T}',
+  'hypothesis.supersede': 'replaced finding {T}',
+  'link.add': 'linked a source to {T}',
+  'link.update': 'changed how a source relates to {T}',
+  'link.remove': 'unlinked a source from {T}',
   'question.add': 'asked {T}',
   'question.update': 'reworded {T}',
   'question.resolve': 'resolved {T}',
   'question.defer': 'deferred {T}',
   'question.reopen': 'reopened {T}',
-  'investigation.delete': 'deleted case {T}',
-  'evidence.delete': 'deleted evidence {T}',
-  'claim.delete': 'deleted claim {T}',
-  'hypothesis.delete': 'deleted hypothesis {T}',
+  'investigation.delete': 'deleted question {T}',
+  'evidence.delete': 'deleted source {T}',
+  'claim.delete': 'deleted finding {T}',
+  'hypothesis.delete': 'deleted finding {T}',
   'question.delete': 'deleted {T}',
-  'active.set': "made this your AI's current case",
-  'active.clear': "cleared your AI's current case",
+  'active.set': "made this your AI's current question",
+  'active.clear': "cleared your AI's current question",
   checkpoint: 'saved a checkpoint',
-  import: 'imported this case',
+  import: 'imported this question',
   restore: 'restored all data from a backup',
 }
 
@@ -92,7 +92,7 @@ function fill(tpl: string, targetRef: string): string {
   return targetRef ? tpl.replace('{T}', targetRef) : tpl.replace(/ ?\{T\}/, '')
 }
 
-/** "added evidence E-005", "resolved Q-001", "recorded x.y on T". */
+/** "added source E-005", "resolved Q-001", "recorded x.y on T". */
 export function verbPhrase(action: string, targetRef: string): string {
   return fill(template(action, targetRef), targetRef)
 }
@@ -165,25 +165,39 @@ function statusWord(rec: string, v: string): string {
   return v
 }
 
-/** "statement", "confidence high" -> "statement", "confidence High". */
+/** The engine's record noun, as a person reads it. */
+const RECORD_WORD: Record<string, string> = { claim: 'finding', hypothesis: 'finding', evidence: 'source' }
+
+/** "statement", "status rejected" -> "statement", "now Ruled out". */
 function fieldWord(rec: string, item: string): string {
   const [field, value] = item.split(' ', 2)
   if (value === undefined) return field.replace(/_/g, ' ')
-  if (field === 'confidence') return `confidence ${confidenceLabels[value as Confidence] ?? value}`
-  if (field === 'status') return `status ${statusWord(rec, value)}`
-  if (field === 'verification') return `verification ${verificationWord(value)}`
+  if (field === 'status') return `now ${statusWord(rec, value)}`
+  if (field === 'verification') return `marked ${verificationWord(value)}`
   return `${field.replace(/_/g, ' ')} ${value}`
 }
 
-/** "Marked C-002 Human verified", with the new status when it reads differently. */
+/** The edited fields in plain words. Confidence is stored but never shown. */
+function fieldWords(rec: string, items: string[]): string[] {
+  return items.filter((f) => !f.startsWith('confidence')).map((f) => fieldWord(rec, f))
+}
+
+/** "Edited finding C-002 (statement)", or without the list when nothing shown changed. */
+function editedSentence(rec: string, target: string, items: string[]): string {
+  const fields = fieldWords(rec, items)
+  const noun = RECORD_WORD[rec] ?? rec
+  return fields.length ? `Edited ${noun} ${target} (${fields.join(', ')})` : `Edited ${noun} ${target}`
+}
+
+/** "Marked C-002: You checked this", with the new status when it reads differently. */
 function markedSentence(rec: string, target: string, verification: string, status?: string): string {
   const label = verificationWord(verification)
   const statusText = status && statusWord(rec, status)
-  return statusText && statusText !== label ? `Marked ${target} ${label}; status now ${statusText}` : `Marked ${target} ${label}`
+  return statusText && statusText !== label && statusText !== 'Current' ? `Marked ${target}: ${label}; now ${statusText}` : `Marked ${target}: ${label}`
 }
 
 export interface SummaryContext {
-  /** The case's conclusion_reviewed_at: the conclusion row written at that instant is the review. */
+  /** The question's conclusion_reviewed_at: the answer row written at that instant is the review. */
   conclusionReviewedAt?: string
 }
 
@@ -197,10 +211,9 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     const m = /^Updated (claim|hypothesis|evidence) (\S+): (.*)$/.exec(sum.slice(0, reset.index))
     if (m) {
       const [, rec, target, list] = m
-      const fields = list.split(', ').filter((f) => f !== 'verification').map((f) => fieldWord(rec, f))
-      const edited = fields.length ? `Edited ${rec} ${target} (${fields.join(', ')}).` : `Edited ${rec} ${target}.`
-      const back = rec === 'evidence' ? '' : '; it is back in Review findings'
-      return `${edited} Its verification was reset to AI generated after the edit${back}.`
+      const edited = editedSentence(rec, target, list.split(', ').filter((f) => f !== 'verification'))
+      const back = rec === 'evidence' ? '' : ' and is back in Review findings'
+      return `${edited}. It changed after it was checked, so it reads Not checked again${back}.`
     }
   }
   let m = /^Set verification of (\S+) to ([a-z_]+)(?:; status ([a-z_]+))?$/.exec(sum)
@@ -208,7 +221,7 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     const rec = activity.action.split('.')[0]
     return markedSentence(rec, m[1], m[2], m[3])
   }
-  // An edit with no reset, such as Verify myself from Review findings
+  // An edit with no reset, such as I checked this from Review findings
   // ("Updated claim C-002: verification human_verified").
   m = /^Updated (claim|hypothesis|evidence) (\S+): (.+)$/.exec(sum)
   if (m) {
@@ -220,21 +233,20 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     if (verification && others.length === 0) {
       return markedSentence(rec, target, verification.slice('verification '.length), status?.slice('status '.length))
     }
-    return `Edited ${rec} ${target} (${items.map((f) => fieldWord(rec, f)).join(', ')})`
+    return editedSentence(rec, target, items)
   }
   m = /^Set active investigation to (\S+)$/.exec(sum)
-  if (m) return `Made ${m[1]} your AI's current case`
+  if (m) return `Made ${m[1]} your AI's current question`
   m = /^Made (\S+) the active investigation for (.+)$/.exec(sum)
-  if (m) return `Made ${m[1]} your AI's current case for ${m[2]}`
+  if (m) return `Made ${m[1]} your AI's current question for ${m[2]}`
   m = /^Cleared active investigation \(was (\S+)\)$/.exec(sum)
-  if (m) return `Cleared your AI's current case (was ${m[1]})`
+  if (m) return `Cleared your AI's current question (was ${m[1]})`
   m = /^Created investigation (\S+) /.exec(sum)
-  if (m) return m[1] === activity.investigation_ref ? 'Created this case' : `Created case ${m[1]}`
-  m = /^Updated conclusion of \S+ \(confidence ([a-z]+)\)$/.exec(sum)
+  if (m) return m[1] === activity.investigation_ref ? 'Created this question' : `Created question ${m[1]}`
+  m = /^Updated conclusion of \S+ \(confidence [a-z]+\)$/.exec(sum)
   if (m && activity.action === 'conclusion.update') {
-    const conf = m[1] === 'unknown' ? 'confidence not assessed' : `${confidenceLabels[m[1] as Confidence] ?? m[1]} confidence`
     const review = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
-    return review ? `Recorded a review of the conclusion (${conf})` : `Updated the conclusion (${conf})`
+    return review ? 'Recorded a review of the answer' : 'Updated the answer'
   }
   return sum
 }

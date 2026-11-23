@@ -44,7 +44,7 @@ export function EvidenceRow({ evidence: e, detail, onOpen }: EvidenceRowProps) {
       data-ref={e.ref}
     >
       {onOpen && (
-        <button type="button" className="row-hit" aria-label={`Open evidence ${e.ref}: ${e.title}`} onClick={() => onOpen(e.ref)} />
+        <button type="button" className="row-hit" aria-label={`Open source ${e.ref}: ${e.title}`} onClick={() => onOpen(e.ref)} />
       )}
       <div className="row-content">
         <p className="row-line">

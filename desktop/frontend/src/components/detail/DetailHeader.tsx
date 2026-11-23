@@ -1,5 +1,5 @@
 // The sticky 56px detail header: ref,
-// title and status picker on the left; on the right, 8px apart, the AI
+// title and Answered or No answer yet on the left; on the right, 8px apart, the AI
 // toggle, Copy for your AI (secondary), Share summary (the one primary
 // action) and the More menu. The title is
 // the page's h1 and takes focus after an investigation is created. The
@@ -11,7 +11,7 @@ import { ActiveToggle } from './ActiveToggle'
 import { CopyContextButton } from './CopyContextButton'
 import { MoreMenu } from './MoreMenu'
 import { ShareSummaryButton } from './ShareSummaryButton'
-import { StatusPicker } from './StatusPicker'
+import { AnswerState } from '../record/StatusLabel'
 import './DetailHeader.css'
 
 export interface DetailHeaderProps {
@@ -19,7 +19,7 @@ export interface DetailHeaderProps {
   /** Move focus to the title once (after creating the investigation). */
   focusTitle?: boolean
   onTitleFocused?: () => void
-  /** Controls placed after the status picker. */
+  /** Controls placed after the answer state. */
   leftExtra?: ReactNode
   /** Controls placed between the AI toggle and Copy for your AI. */
   rightExtra?: ReactNode
@@ -50,7 +50,7 @@ export function DetailHeader({
         <h1 className="detail-header-title" ref={titleRef} tabIndex={-1} title={inv.title}>
           {inv.title}
         </h1>
-        <StatusPicker investigation={inv} />
+        <AnswerState answer={inv.conclusion} archived={inv.archived} />
         {leftExtra}
       </div>
       <div className="detail-header-right">

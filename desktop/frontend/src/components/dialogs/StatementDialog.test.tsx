@@ -45,7 +45,7 @@ describe('StatementDialog', () => {
     const { onClose } = renderDialog('claim')
     const statement = screen.getByLabelText('Statement')
     await user.type(statement, 'First wording.')
-    await user.click(screen.getByRole('button', { name: 'Add claim' }))
+    await user.click(screen.getByRole('button', { name: 'Add finding' }))
     const toast = await screen.findByRole('alert')
 
     await user.clear(statement)
@@ -56,21 +56,20 @@ describe('StatementDialog', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
-  it('adds a claim with confidence, rationale and supporting and contradicting evidence', async () => {
+  it('adds a claim with its rationale and supporting and contradicting sources, and asks for no confidence', async () => {
     const user = userEvent.setup()
     const { onClose, onCreated } = renderDialog('claim')
-    expect(screen.getByRole('dialog', { name: 'Add claim' })).toBeInTheDocument()
-    expect(screen.getByText('What do we believe? One clear sentence.')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Not assessed' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('dialog', { name: 'Add finding' })).toBeInTheDocument()
+    expect(screen.getByText('What did you find? One clear sentence.')).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Confidence' })).toBeNull()
     await user.type(screen.getByLabelText('Statement'), 'The log level comes from the chart default.')
-    await user.click(screen.getByRole('radio', { name: 'Medium' }))
-    await user.type(screen.getByLabelText('Why this confidence (optional)'), 'Code and docs.')
+    await user.type(screen.getByLabelText('Why (optional)'), 'Code and docs.')
     await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
     await user.click(within(row('E-003')).getByRole('radio', { name: 'Contradicts' }))
-    await user.click(screen.getByRole('button', { name: 'Add claim' }))
+    await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(mocks.api.addClaim).toHaveBeenCalledWith('INV-0001', {
       statement: 'The log level comes from the chart default.',
-      confidence: 'medium',
+      confidence: 'unknown',
       confidence_rationale: 'Code and docs.',
       links: [
         { evidence_ref: 'E-001', relation: 'supports' },
@@ -94,11 +93,11 @@ describe('StatementDialog', () => {
     const user = userEvent.setup()
     Object.assign(mocks.api, mockApi({ addHypothesis: async () => ({ ...hypotheses[0], ref: 'H-004' }) }))
     const { onCreated } = renderDialog('hypothesis')
-    expect(screen.getByRole('dialog', { name: 'Add hypothesis' })).toBeInTheDocument()
-    expect(screen.getByText('What might explain it?')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Add finding to test' })).toBeInTheDocument()
+    expect(screen.getByText('What might explain it? One clear sentence.')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Statement'), 'Data transfer.')
-    await user.type(screen.getByLabelText('Why this confidence (optional)'), 'A hunch.')
-    await user.click(screen.getByRole('button', { name: 'Add hypothesis' }))
+    await user.type(screen.getByLabelText('Why (optional)'), 'A hunch.')
+    await user.click(screen.getByRole('button', { name: 'Add finding to test' }))
     expect(mocks.api.addHypothesis).toHaveBeenCalledWith('INV-0001', {
       statement: 'Data transfer.',
       confidence: 'unknown',
@@ -110,7 +109,7 @@ describe('StatementDialog', () => {
 
   it('says so when there is no evidence to link', () => {
     renderDialog('claim', [])
-    expect(screen.getByText('No evidence to link yet. You can link it later.')).toBeInTheDocument()
+    expect(screen.getByText('No sources to link yet. You can link one later.')).toBeInTheDocument()
   })
 
   it('shows Adding... while the call runs', async () => {
@@ -118,7 +117,7 @@ describe('StatementDialog', () => {
     Object.assign(mocks.api, mockApi({ addClaim: () => new Promise<Claim>(() => {}) }))
     renderDialog('claim')
     await user.type(screen.getByLabelText('Statement'), 'S')
-    await user.click(screen.getByRole('button', { name: 'Add claim' }))
+    await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(screen.getByRole('button', { name: 'Adding...' })).toBeDisabled()
   })
 
@@ -136,7 +135,7 @@ describe('StatementDialog', () => {
     await user.type(screen.getByLabelText('Statement'), 'S')
     await user.click(within(row('E-001')).getByRole('radio', { name: 'Supports' }))
     await user.click(within(row('E-003')).getByRole('radio', { name: 'Supports' }))
-    await user.click(screen.getByRole('button', { name: 'Add claim' }))
+    await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(await within(row('E-003')).findByText('evidence E-003 is not in INV-0001')).toBeInTheDocument()
     expect(within(row('E-001')).queryByText('evidence E-003 is not in INV-0001')).toBeNull()
   })
@@ -152,7 +151,7 @@ describe('StatementDialog', () => {
       }),
     )
     renderDialog('claim')
-    await user.click(screen.getByRole('button', { name: 'Add claim' }))
+    await user.click(screen.getByRole('button', { name: 'Add finding' }))
     expect(await screen.findByText('is required')).toBeInTheDocument()
     expect(screen.getByLabelText('Statement')).toHaveAttribute('aria-invalid', 'true')
   })

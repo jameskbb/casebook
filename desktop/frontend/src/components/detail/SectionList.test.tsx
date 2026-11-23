@@ -11,12 +11,12 @@ function renderList(over: Partial<SectionListProps<Item>> = {}) {
     id: 'claims',
     icon: Quote,
     kind: 'claim',
-    heading: 'What we believe',
-    addLabel: 'Add claim',
+    heading: 'What backs this up',
+    addLabel: 'Add finding',
     emptyText: 'No claims yet. Add one when the evidence supports a clear statement.',
     items: [],
     ruledOut: [],
-    ruledOutNoun: ['superseded or rejected claim', 'superseded or rejected claims'],
+    ruledOutNoun: ['replaced finding', 'replaced findings'],
     itemKey: (i) => i.ref,
     renderItem: (i) => <p>{i.text}</p>,
     ...over,
@@ -30,7 +30,7 @@ const items = (n: number, prefix = 'C'): Item[] =>
 describe('SectionList', () => {
   it('renders the heading as an h2 and the empty copy with no add button by default', () => {
     renderList()
-    expect(screen.getByRole('heading', { level: 2, name: 'What we believe' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'What backs this up' })).toBeInTheDocument()
     expect(
       screen.getByText('No claims yet. Add one when the evidence supports a clear statement.'),
     ).toBeInTheDocument()
@@ -41,7 +41,7 @@ describe('SectionList', () => {
     const onAdd = vi.fn()
     const user = userEvent.setup()
     renderList({ onAdd })
-    const buttons = screen.getAllByRole('button', { name: 'Add claim' })
+    const buttons = screen.getAllByRole('button', { name: 'Add finding' })
     expect(buttons).toHaveLength(1)
     await user.click(buttons[0])
     expect(onAdd).toHaveBeenCalledTimes(1)
@@ -49,8 +49,8 @@ describe('SectionList', () => {
 
   it('shows the heading add action once rows exist', () => {
     renderList({ onAdd: () => {}, items: items(2) })
-    const section = screen.getByRole('region', { name: 'What we believe' })
-    expect(within(section).getAllByRole('button', { name: 'Add claim' })).toHaveLength(1)
+    const section = screen.getByRole('region', { name: 'What backs this up' })
+    expect(within(section).getAllByRole('button', { name: 'Add finding' })).toHaveLength(1)
     expect(within(section).getAllByRole('listitem')).toHaveLength(2)
   })
 
@@ -58,11 +58,11 @@ describe('SectionList', () => {
     const user = userEvent.setup()
     renderList({ items: items(1), ruledOut: items(1, 'X') })
     expect(screen.queryByText('X text 1')).not.toBeInTheDocument()
-    const toggle = screen.getByRole('button', { name: 'Show 1 superseded or rejected claim' })
+    const toggle = screen.getByRole('button', { name: 'Show 1 replaced finding' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await user.click(toggle)
     expect(screen.getByText('X text 1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Hide 1 superseded or rejected claim' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Hide 1 replaced finding' })).toHaveAttribute(
       'aria-expanded',
       'true',
     )
@@ -70,7 +70,7 @@ describe('SectionList', () => {
 
   it('uses the plural disclosure for many ruled-out items', () => {
     renderList({ items: items(1), ruledOut: items(3, 'X') })
-    expect(screen.getByRole('button', { name: 'Show 3 superseded or rejected claims' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show 3 replaced findings' })).toBeInTheDocument()
   })
 
   it('shows the empty copy alongside the disclosure when asked', () => {
@@ -90,10 +90,10 @@ describe('SectionList', () => {
     renderList({
       emptyText: 'Nothing is open. Add a question when something still needs an answer.',
       emptyWithRuledOut: true,
-      lead: <p>Explanations still open</p>,
+      lead: <p>Findings to test</p>,
       items: [],
     })
-    expect(screen.getByText('Explanations still open')).toBeInTheDocument()
+    expect(screen.getByText('Findings to test')).toBeInTheDocument()
     expect(screen.queryByText(/Nothing is open/)).not.toBeInTheDocument()
   })
 

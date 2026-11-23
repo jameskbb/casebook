@@ -27,7 +27,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
   const write = useWrite()
   const name = useId()
   const errorId = useId()
-  const noun = kind === 'claim' ? 'claim' : 'hypothesis'
+  const noun = 'finding'
   const records: (Claim | Hypothesis)[] = props.records
   const candidates = records.filter((r) => r.ref !== record.ref && r.status !== 'superseded')
   const [chosen, setChosen] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
   const [choiceError, setChoiceError] = useState<string | undefined>()
   const [summary, setSummary] = useState<string | undefined>()
   const firstRef = useRef<HTMLInputElement>(null)
-  const title = `Supersede ${record.ref}`
+  const title = `Replace ${record.ref}`
 
   if (candidates.length === 0) {
     return (
@@ -50,7 +50,7 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
         }
       >
         <p className="dialog-text">
-          {`There is no other ${noun} to replace it with. Add the new ${noun} first, then supersede this one.`}
+          {`There is no other ${noun} to replace it with. Add the new ${noun} first, then replace this one.`}
         </p>
       </Dialog>
     )
@@ -92,8 +92,8 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
       title={title}
       onClose={onClose}
       onSubmit={() => void submit()}
-      submitLabel={`Supersede ${noun}`}
-      busyLabel="Superseding..."
+      submitLabel={`Replace ${noun}`}
+      busyLabel="Replacing..."
       busy={busy}
       initialFocus={firstRef}
       summary={
@@ -105,13 +105,13 @@ export function SupersedeDialog(props: SupersedeDialogProps) {
       }
     >
       <p className="dialog-text">
-        {`Choose the ${noun} that replaces it. ${record.ref} stays in the history, marked as superseded.`}
+        {`Choose the ${noun} that replaces it. ${record.ref} stays in the history, marked as replaced.`}
       </p>
       <fieldset
         className={['choice-field', choiceError ? 'is-invalid' : ''].filter(Boolean).join(' ')}
         aria-describedby={choiceError ? errorId : undefined}
       >
-        <legend className="sr-only">{kind === 'claim' ? 'Replacement claim' : 'Replacement hypothesis'}</legend>
+        <legend className="sr-only">Replacement finding</legend>
         <div className="choice-list">
           {candidates.map((c, i) => (
             <label key={c.ref} className={['choice', chosen === c.ref ? 'is-selected' : ''].filter(Boolean).join(' ')}>

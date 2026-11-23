@@ -43,31 +43,31 @@ describe('actorTooltip', () => {
 
 describe('verbPhrase', () => {
   const cases: [string, string, string][] = [
-    ['investigation.create', 'INV-0001', 'created this case'],
-    ['investigation.update', 'INV-0001', 'edited the case details'],
-    ['investigation.archive', 'INV-0001', 'archived this case'],
-    ['investigation.unarchive', 'INV-0001', 'unarchived this case'],
-    ['conclusion.update', 'INV-0001', 'updated the conclusion'],
-    ['evidence.add', 'E-005', 'added evidence E-005'],
-    ['evidence.update', 'E-002', 'updated evidence E-002'],
-    ['claim.add', 'C-001', 'added claim C-001'],
-    ['claim.update', 'C-001', 'updated claim C-001'],
-    ['claim.supersede', 'C-003', 'superseded claim C-003'],
-    ['hypothesis.add', 'H-001', 'added hypothesis H-001'],
-    ['hypothesis.update', 'H-001', 'updated hypothesis H-001'],
-    ['hypothesis.supersede', 'H-002', 'superseded hypothesis H-002'],
-    ['link.add', 'C-001', 'linked evidence to C-001'],
-    ['link.update', 'C-001', 'changed how evidence relates to C-001'],
-    ['link.remove', 'H-003', 'unlinked evidence from H-003'],
+    ['investigation.create', 'INV-0001', 'created this question'],
+    ['investigation.update', 'INV-0001', 'edited the question'],
+    ['investigation.archive', 'INV-0001', 'archived this question'],
+    ['investigation.unarchive', 'INV-0001', 'unarchived this question'],
+    ['conclusion.update', 'INV-0001', 'updated the answer'],
+    ['evidence.add', 'E-005', 'added source E-005'],
+    ['evidence.update', 'E-002', 'updated source E-002'],
+    ['claim.add', 'C-001', 'added finding C-001'],
+    ['claim.update', 'C-001', 'updated finding C-001'],
+    ['claim.supersede', 'C-003', 'replaced finding C-003'],
+    ['hypothesis.add', 'H-001', 'added finding H-001'],
+    ['hypothesis.update', 'H-001', 'updated finding H-001'],
+    ['hypothesis.supersede', 'H-002', 'replaced finding H-002'],
+    ['link.add', 'C-001', 'linked a source to C-001'],
+    ['link.update', 'C-001', 'changed how a source relates to C-001'],
+    ['link.remove', 'H-003', 'unlinked a source from H-003'],
     ['question.add', 'Q-004', 'asked Q-004'],
     ['question.update', 'Q-001', 'reworded Q-001'],
     ['question.resolve', 'Q-001', 'resolved Q-001'],
     ['question.defer', 'Q-003', 'deferred Q-003'],
     ['question.reopen', 'Q-002', 'reopened Q-002'],
-    ['active.set', 'INV-0001', "made this your AI's current case"],
-    ['active.clear', 'INV-0001', "cleared your AI's current case"],
+    ['active.set', 'INV-0001', "made this your AI's current question"],
+    ['active.clear', 'INV-0001', "cleared your AI's current question"],
     ['checkpoint', 'INV-0001', 'saved a checkpoint'],
-    ['import', 'INV-0004', 'imported this case'],
+    ['import', 'INV-0004', 'imported this question'],
     ['restore', '', 'restored all data from a backup'],
     ['x.y', 'T', 'recorded x.y on T'],
     ['x.y', '', 'recorded x.y'],
@@ -84,13 +84,13 @@ describe('activitySentence', () => {
     const s = activitySentence(row('evidence.add', 'E-005', a('ai', 'claude-code')))
     expect(s.actor).toBe('Claude Code (AI)')
     expect(s.tooltip).toBe('AI, claude-code')
-    expect(s.segments).toEqual([{ text: 'added evidence ' }, { ref: 'E-005' }])
+    expect(s.segments).toEqual([{ text: 'added source ' }, { ref: 'E-005' }])
     expect(activitySentence(row('link.update', 'C-001')).segments).toEqual([
-      { text: 'changed how evidence relates to ' },
+      { text: 'changed how a source relates to ' },
       { ref: 'C-001' },
     ])
     expect(activitySentence(row('hypothesis.supersede', 'H-002')).segments).toEqual([
-      { text: 'superseded hypothesis ' },
+      { text: 'replaced finding ' },
       { ref: 'H-002' },
     ])
   })
@@ -99,7 +99,7 @@ describe('activitySentence', () => {
     expect(activitySentence(row('question.resolve', 'Q-001')).segments).toEqual([{ text: 'resolved Q-001' }])
     expect(activitySentence(row('x.y', 'INV-0002')).segments).toEqual([{ text: 'recorded x.y on INV-0002' }])
     expect(activitySentence(row('investigation.create', 'INV-0001')).segments).toEqual([
-      { text: 'created this case' },
+      { text: 'created this question' },
     ])
   })
 })
@@ -116,10 +116,10 @@ describe('imported and deleted rows', () => {
   })
 
   it('phrases deletes and never links the deleted ref', () => {
-    expect(verbPhrase('evidence.delete', 'E-002')).toBe('deleted evidence E-002')
+    expect(verbPhrase('evidence.delete', 'E-002')).toBe('deleted source E-002')
     expect(verbPhrase('question.delete', 'Q-001')).toBe('deleted Q-001')
-    expect(verbPhrase('investigation.delete', 'INV-0003')).toBe('deleted case INV-0003')
-    expect(activitySentence(row('claim.delete', 'C-003')).segments).toEqual([{ text: 'deleted claim C-003' }])
+    expect(verbPhrase('investigation.delete', 'INV-0003')).toBe('deleted question INV-0003')
+    expect(activitySentence(row('claim.delete', 'C-003')).segments).toEqual([{ text: 'deleted finding C-003' }])
   })
 })
 
@@ -130,51 +130,51 @@ describe('activitySummary', () => {
 
   it('says an AI edit reset verification without naming the lost label', () => {
     expect(activitySummary(at('claim.update', 'C-001', 'Updated claim C-001: statement, verification; verification reset to ai_generated after AI edit')))
-      .toBe('Edited claim C-001 (statement). Its verification was reset to AI generated after the edit; it is back in Review findings.')
+      .toBe('Edited finding C-001 (statement). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
     expect(activitySummary(at('hypothesis.update', 'H-002', 'Updated hypothesis H-002: rationale, confidence high, verification; verification reset to ai_generated after AI edit')))
-      .toBe('Edited hypothesis H-002 (rationale, confidence High). Its verification was reset to AI generated after the edit; it is back in Review findings.')
+      .toBe('Edited finding H-002 (rationale). It changed after it was checked, so it reads Not checked again and is back in Review findings.')
     expect(activitySummary(at('evidence.update', 'E-004', 'Updated evidence E-004: title, verification; verification reset to ai_generated after AI edit')))
-      .toBe('Edited evidence E-004 (title). Its verification was reset to AI generated after the edit.')
+      .toBe('Edited source E-004 (title). It changed after it was checked, so it reads Not checked again.')
   })
 
   it('names verification labels instead of enum values', () => {
     expect(activitySummary(at('claim.update', 'C-003', 'Set verification of C-003 to human_verified', a('human', 'casebook-ui'))))
-      .toBe('Marked C-003 Human verified')
+      .toBe('Marked C-003: You checked this')
     expect(activitySummary(at('claim.update', 'C-001', 'Set verification of C-001 to disputed; status disputed')))
-      .toBe('Marked C-001 Disputed')
+      .toBe('Marked C-001: Sources disagree')
     expect(activitySummary(at('hypothesis.update', 'H-001', 'Set verification of H-001 to source_verified; status supported')))
-      .toBe('Marked H-001 Source verified; status now Supported')
+      .toBe('Marked H-001: AI checked the source; now Supported')
   })
 
   it('phrases a person\'s own verification and plain edits without enum values', () => {
     const you = a('human', 'casebook-ui')
     expect(activitySummary(at('claim.update', 'C-002', 'Updated claim C-002: verification human_verified', you)))
-      .toBe('Marked C-002 Human verified')
+      .toBe('Marked C-002: You checked this')
     expect(activitySummary(at('hypothesis.update', 'H-004', 'Updated hypothesis H-004: verification human_verified', you)))
-      .toBe('Marked H-004 Human verified')
+      .toBe('Marked H-004: You checked this')
     expect(activitySummary(at('evidence.update', 'E-003', 'Updated evidence E-003: verification human_verified', you)))
-      .toBe('Marked E-003 Human verified')
+      .toBe('Marked E-003: You checked this')
     expect(activitySummary(at('claim.update', 'C-001', 'Updated claim C-001: status disputed, verification disputed', you)))
-      .toBe('Marked C-001 Disputed')
+      .toBe('Marked C-001: Sources disagree')
     expect(activitySummary(at('claim.update', 'C-002', 'Updated claim C-002: statement, confidence high')))
-      .toBe('Edited claim C-002 (statement, confidence High)')
-    expect(activitySummary(at('claim.update', 'C-001', 'Updated claim C-001: statement'))).toBe('Edited claim C-001 (statement)')
+      .toBe('Edited finding C-002 (statement)')
+    expect(activitySummary(at('claim.update', 'C-001', 'Updated claim C-001: statement'))).toBe('Edited finding C-001 (statement)')
   })
 
   it('speaks of the case, never the investigation', () => {
-    expect(activitySummary(at('active.set', 'INV-0001', 'Set active investigation to INV-0001'))).toBe("Made INV-0001 your AI's current case")
-    expect(activitySummary(at('active.clear', 'INV-0001', 'Cleared active investigation (was INV-0001)'))).toBe("Cleared your AI's current case (was INV-0001)")
-    expect(activitySummary(at('investigation.create', 'INV-0001', 'Created investigation INV-0001 "Northeast margin down 6 points in Q3"'))).toBe('Created this case')
-    expect(activitySummary(at('investigation.create', 'INV-0003', 'Created investigation INV-0003 "Other"'))).toBe('Created case INV-0003')
+    expect(activitySummary(at('active.set', 'INV-0001', 'Set active investigation to INV-0001'))).toBe("Made INV-0001 your AI's current question")
+    expect(activitySummary(at('active.clear', 'INV-0001', 'Cleared active investigation (was INV-0001)'))).toBe("Cleared your AI's current question (was INV-0001)")
+    expect(activitySummary(at('investigation.create', 'INV-0001', 'Created investigation INV-0001 "Northeast margin down 6 points in Q3"'))).toBe('Created this question')
+    expect(activitySummary(at('investigation.create', 'INV-0003', 'Created investigation INV-0003 "Other"'))).toBe('Created question INV-0003')
   })
 
   it('tells the conclusion review apart from the edit before it', () => {
     const ctx = { conclusionReviewedAt: '2026-10-27T03:29:47.051Z' }
     const edit = at('conclusion.update', 'INV-0001', 'Updated conclusion of INV-0001 (confidence high)', ai, { created_at: '2026-10-27T03:20:00.000Z' })
     const review = at('conclusion.update', 'INV-0001', 'Updated conclusion of INV-0001 (confidence high)', a('human', 'casebook-ui'), { created_at: ctx.conclusionReviewedAt })
-    expect(activitySummary(edit, ctx)).toBe('Updated the conclusion (High confidence)')
-    expect(activitySummary(review, ctx)).toBe('Recorded a review of the conclusion (High confidence)')
-    expect(activitySummary(review)).toBe('Updated the conclusion (High confidence)')
+    expect(activitySummary(edit, ctx)).toBe('Updated the answer')
+    expect(activitySummary(review, ctx)).toBe('Recorded a review of the answer')
+    expect(activitySummary(review)).toBe('Updated the answer')
   })
 
   it('keeps any other summary as stored', () => {

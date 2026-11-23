@@ -18,7 +18,7 @@ import { api } from '../../api/api'
 import { errorCopy, toApiError } from '../../api/errors'
 import type { Claim, Evidence, Hypothesis, InvestigationDetail, Verification } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
-import { sourceTypeLabels } from '../../lib/labels'
+import { claimStatusLabels, sourceTypeLabels, verificationLabels } from '../../lib/labels'
 import { prettyMetadata } from '../../lib/metadata'
 import { usedBy } from '../../lib/records'
 import { formatAbsolute } from '../../lib/relativeTime'
@@ -34,7 +34,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { IconButton } from '../ui/IconButton'
 import { Menu } from '../ui/Menu'
 import { useToast } from '../ui/Toaster'
-import { DrawerGroup } from './StatementDrawer'
+import { CHECKED_ACTION, DrawerGroup } from './StatementDrawer'
 import './EvidenceDrawer.css'
 
 const RETIRED = new Set(['superseded', 'rejected', 'disproven'])
@@ -76,15 +76,15 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
         />
       </div>
 
-      <DrawerGroup title="Source">
+      <DrawerGroup title="Where it came from">
         <dl className="source-list">
           <div className="source-row">
-            <dt>Source type</dt>
+            <dt>Kind of source</dt>
             <dd>{sourceTypeLabels[e.source_type] ?? e.source_type}</dd>
           </div>
           {e.source_label && (
             <div className="source-row">
-              <dt>Source</dt>
+              <dt>From</dt>
               <dd>{e.source_label}</dd>
             </div>
           )}
@@ -133,7 +133,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
 
       <DrawerGroup title="Used by">
         {users.length === 0 ? (
-          <p className="drawer-empty">No claim or hypothesis uses this evidence yet.</p>
+          <p className="drawer-empty">No finding uses this source yet.</p>
         ) : (
           <ul className="used-by-list">
             {users.map((u) => {
@@ -158,8 +158,8 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
                         <span className="used-by-status">
                           {rec.status === 'superseded'
                             ? rec.superseded_by
-                              ? `Superseded by ${rec.superseded_by}`
-                              : 'Superseded'
+                              ? `Replaced by ${rec.superseded_by}`
+                              : claimStatusLabels.superseded
                             : rec.status === 'rejected'
                               ? 'Rejected'
                               : 'Disproven'}
@@ -181,10 +181,10 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
 }
 
 export const supersedeEvidenceBody = (ref: string) =>
-  `${ref} stays in this case, struck through, and AI context packs list it as superseded. Evidence has no replacement link: say what replaced it in a newer piece of evidence. Verify brings it back.`
+  `${ref} stays in this question, struck through, and the text your AI reads lists it as replaced. A source has no replacement link: say what replaced it in a newer source. ${CHECKED_ACTION} brings it back.`
 
 export const deleteEvidenceBody = (e: Evidence) =>
-  `${e.ref} "${e.title}" will be removed from this case with its summary, source, raw detail and metadata.`
+  `${e.ref} "${e.title}" will be removed from this question with its summary, where it came from, raw detail and metadata.`
 export const evidenceLinkedBlocker = (ref: string, linkedBy: string[]) =>
   `${ref} is linked to ${refList(linkedBy)}. Unlink it there first (open each one and choose Unlink), then delete it.`
 
@@ -222,15 +222,15 @@ function EvidenceActions({
   return (
     <div className="evidence-actions">
       <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
-        Edit evidence
+        Edit source
       </Button>
       {verified ? (
         <Button variant="secondary" icon={BadgeCheck} disabled>
-          Verified
+          {verificationLabels.human_verified}
         </Button>
       ) : (
         <Button variant="secondary" disabled={busy} onClick={() => void setVerification('human_verified')}>
-          Verify
+          {CHECKED_ACTION}
         </Button>
       )}
       <Button
@@ -238,26 +238,26 @@ function EvidenceActions({
         disabled={busy || e.verification === 'disputed'}
         onClick={() => void setVerification('disputed')}
       >
-        Dispute
+        {verificationLabels.disputed}
       </Button>
       <Menu
         label="More actions"
         align="end"
         items={[
           {
-            label: 'Mark superseded',
+            label: 'Mark replaced',
             icon: Replace,
             disabled: busy || e.verification === 'superseded',
             onSelect: () => setSuperseding(true),
           },
           {
-            label: 'Mark source verified',
+            label: 'Mark as checked by AI',
             icon: BadgeCheck,
             disabled: busy || e.verification === 'source_verified',
             onSelect: () => void setVerification('source_verified'),
           },
           {
-            label: 'Delete evidence...',
+            label: 'Delete source...',
             icon: Trash2,
             separatorBefore: true,
             onSelect: () => setDeleting(true),
@@ -268,9 +268,9 @@ function EvidenceActions({
       {editing && <EvidenceDialog mode="edit" evidence={e} invRef={invRef} onClose={() => setEditing(false)} />}
       {superseding && (
         <ConfirmDialog
-          title={`Mark ${e.ref} superseded?`}
+          title={`Mark ${e.ref} replaced?`}
           body={supersedeEvidenceBody(e.ref)}
-          confirmLabel="Mark superseded"
+          confirmLabel="Mark replaced"
           confirmVariant="primary"
           onConfirm={() => {
             setSuperseding(false)
@@ -281,14 +281,14 @@ function EvidenceActions({
       )}
       {deleting && (
         <DeleteDialog
-          title={`Delete evidence ${e.ref}?`}
+          title={`Delete source ${e.ref}?`}
           body={deleteEvidenceBody(e)}
           blocker={linkedBy.length > 0 ? evidenceLinkedBlocker(e.ref, linkedBy) : null}
-          confirmLabel="Delete evidence"
+          confirmLabel="Delete source"
           onConfirm={async () => {
             const done = await write(() => api.deleteEvidence(invRef, e.ref).then(() => true), { rethrowConflict: true })
             if (done) {
-              toast.success(`Deleted evidence ${e.ref}.`)
+              toast.success(`Deleted source ${e.ref}.`)
               onDeleted?.()
             }
             return Boolean(done)

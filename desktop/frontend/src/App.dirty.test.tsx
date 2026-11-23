@@ -16,8 +16,8 @@ const DISCARD = 'Discard this draft?'
 async function openClaimWithDraft() {
   const user = userEvent.setup()
   render(<App />)
-  await user.click(await screen.findByRole('button', { name: /^Open claim C-001:/ }))
-  const drawer = screen.getByRole('dialog', { name: 'Claim C-001' })
+  await user.click(await screen.findByRole('button', { name: /^Open finding C-001:/ }))
+  const drawer = screen.getByRole('dialog', { name: 'Finding C-001' })
   await user.click(within(drawer).getByRole('button', { name: 'Edit statement' }))
   await user.type(within(drawer).getByLabelText('Statement'), ' Draft words.')
   return { user, drawer }
@@ -34,7 +34,7 @@ describe('dirty drawer and conclusion editors', () => {
     const confirm = screen.getByRole('dialog', { name: DISCARD })
     await user.click(within(confirm).getByRole('button', { name: 'Keep editing' }))
     expect(screen.queryByRole('dialog', { name: DISCARD })).toBeNull()
-    const drawer = screen.getByRole('dialog', { name: 'Claim C-001' })
+    const drawer = screen.getByRole('dialog', { name: 'Finding C-001' })
     expect((within(drawer).getByLabelText('Statement') as HTMLTextAreaElement).value).toContain('Draft words.')
   })
 
@@ -42,46 +42,46 @@ describe('dirty drawer and conclusion editors', () => {
     const { user, drawer } = await openClaimWithDraft()
     await user.click(within(drawer).getByRole('button', { name: 'Close' }))
     await user.click(within(screen.getByRole('dialog', { name: DISCARD })).getByRole('button', { name: 'Discard' }))
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Claim C-001' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finding C-001' })).toBeNull())
     expect(mocks.api.updateClaim).not.toHaveBeenCalled()
   })
 
   it('asks before pushing another drawer over a dirty editor', async () => {
     const { user, drawer } = await openClaimWithDraft()
-    const block = within(drawer).getAllByRole('button', { name: /^Open evidence E-/ })[0]
+    const block = within(drawer).getAllByRole('button', { name: /^Open source E-/ })[0]
     await user.click(block)
     expect(screen.getByRole('dialog', { name: DISCARD })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Keep editing' }))
-    expect(screen.getByRole('dialog', { name: 'Claim C-001' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Finding C-001' })).toBeInTheDocument()
     expect((screen.getByLabelText('Statement') as HTMLTextAreaElement).value).toContain('Draft words.')
 
-    await user.click(within(screen.getByRole('dialog', { name: 'Claim C-001' })).getAllByRole('button', { name: /^Open evidence E-/ })[0])
+    await user.click(within(screen.getByRole('dialog', { name: 'Finding C-001' })).getAllByRole('button', { name: /^Open source E-/ })[0])
     await user.click(screen.getByRole('button', { name: 'Discard' }))
-    await waitFor(() => expect(screen.getByRole('dialog', { name: /^Evidence E-/ })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('dialog', { name: /^Source E-/ })).toBeInTheDocument())
   })
 
   it('closes a clean drawer at once', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(await screen.findByRole('button', { name: /^Open claim C-001:/ }))
+    await user.click(await screen.findByRole('button', { name: /^Open finding C-001:/ }))
     fireEvent.mouseDown(document.querySelector('.drawer-scrim')!)
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Claim C-001' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finding C-001' })).toBeNull())
     expect(screen.queryByRole('dialog', { name: DISCARD })).toBeNull()
   })
 
   it('asks before opening another investigation over a dirty conclusion, and only then switches', async () => {
     const user = userEvent.setup()
     render(<App />)
-    const panel = await screen.findByRole('region', { name: 'Current conclusion' })
-    await user.click(within(panel).getByRole('button', { name: 'Update conclusion' }))
-    await user.type(within(panel).getByLabelText('Conclusion'), ' Unsaved.')
+    const panel = await screen.findByRole('region', { name: 'The answer' })
+    await user.click(within(panel).getByRole('button', { name: 'Edit answer' }))
+    await user.type(within(panel).getByLabelText('Answer'), ' Unsaved.')
 
     const other = screen.getByText('Checkout p99 doubled after the region move').closest('button')!
     await user.click(other)
     expect(screen.getByRole('dialog', { name: DISCARD })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(mocks.api.getInvestigationDetail).not.toHaveBeenCalledWith('INV-0002', expect.anything())
-    const box = within(screen.getByRole('region', { name: 'Current conclusion' })).getByLabelText('Conclusion')
+    const box = within(screen.getByRole('region', { name: 'The answer' })).getByLabelText('Answer')
     expect((box as HTMLTextAreaElement).value).toContain('Unsaved.')
 
     await user.click(other)
@@ -92,13 +92,13 @@ describe('dirty drawer and conclusion editors', () => {
   it('does not ask when closing a clean drawer over a dirty conclusion', async () => {
     const user = userEvent.setup()
     render(<App />)
-    const panel = await screen.findByRole('region', { name: 'Current conclusion' })
-    await user.click(within(panel).getByRole('button', { name: 'Update conclusion' }))
-    await user.type(within(panel).getByLabelText('Conclusion'), ' Unsaved.')
-    await user.click(screen.getByRole('button', { name: /^Open claim C-001:/ }))
-    await user.click(within(screen.getByRole('dialog', { name: 'Claim C-001' })).getByRole('button', { name: 'Close' }))
+    const panel = await screen.findByRole('region', { name: 'The answer' })
+    await user.click(within(panel).getByRole('button', { name: 'Edit answer' }))
+    await user.type(within(panel).getByLabelText('Answer'), ' Unsaved.')
+    await user.click(screen.getByRole('button', { name: /^Open finding C-001:/ }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Finding C-001' })).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: DISCARD })).toBeNull()
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Claim C-001' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finding C-001' })).toBeNull())
   })
 })
 

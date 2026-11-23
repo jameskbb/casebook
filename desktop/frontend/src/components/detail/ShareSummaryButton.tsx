@@ -10,7 +10,7 @@ export function ShareSummaryButton({ investigationRef, title }: { investigationR
   return (
     <>
       <Button variant="primary" icon={ScrollText} className="share-summary-btn" onClick={() => setOpen(true)}>
-        Share summary
+        Share the answer
       </Button>
       {open && <ShareSummaryDialog invRef={investigationRef} title={title} onClose={() => setOpen(false)} />}
     </>
