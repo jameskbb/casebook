@@ -2,18 +2,22 @@
 // one window and in this order. First each source they have not checked: its
 // name, what it shows, where to find it, the exact words, and the finding it
 // backs or goes against; "I checked this" saves the check and moves on by
-// itself. Then each finding where sources disagree, with its sources both
-// ways: It still holds, Rule this out or Skip. Last the answer, when there is
-// one the person has not checked, so a decision never undoes a check made a
-// minute before. The end says so, and offers Write the answer when there is
-// none. Opened from a finding's Decide button, the pass starts on that
-// finding and then goes on in the same order.
+// itself. Then each finding where sources disagree, under the title Decide
+// about this finding: the question as the step's heading (focus starts on it,
+// so Enter cannot decide unread), the finding, its sources both ways with
+// their exact words, and an optional Why it still holds (the finding's why,
+// shown first so nothing is replaced unseen): It still holds, Rule this out
+// or Skip. Last the answer, when there is one the person has not checked, so
+// a decision never undoes a check made a minute before. The end says what
+// happened, and offers Write the answer when there is none. Opened from a
+// finding's Decide button, the pass starts on that finding and then goes on
+// in the same order.
 //
 // The window reads the latest detail on every render, so a source an AI adds
-// meanwhile joins the end and one checked elsewhere drops out. Focus stays on
-// the main button from step to step, so Enter moves through them; Escape
+// meanwhile joins the end and one checked elsewhere drops out. On source steps
+// focus stays on the main button, so Enter moves through them; Escape
 // closes and the page puts focus back on the answer's buttons.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { api } from '../../api/api'
 import { ApiError, plainError, toApiError } from '../../api/errors'
 import type { Evidence, InvestigationDetail } from '../../api/types'
@@ -33,11 +37,19 @@ import { answerChecked, answerCheckInput, CHECKED_ANSWER_ACTION, WHAT_DID_YOU_CH
 import './CheckSources.css'
 
 export const CHECK_SOURCES_TITLE = 'Check the sources'
+export const DECIDE_TITLE = 'Decide about this finding'
+export const WHY_STILL_HOLDS = 'Why it still holds (optional)'
 export const SOURCE_CHECKED_ACTION = 'I checked this'
 export const SKIP_ACTION = 'Skip'
-export const ALL_CHECKED = 'You have checked everything.'
-export const DISAGREE_HEADING = 'Sources disagree about this finding'
+export const ALL_SOURCES_CHECKED = 'You have checked every source.'
+export const ALL_DECIDED = 'You decided every finding where sources disagree.'
 export const WRITE_THE_ANSWER = 'Write the answer'
+
+/** The end of the pass when nothing is left: what the person did, never more. */
+export const endText = (decided: boolean) => (decided ? `${ALL_SOURCES_CHECKED} ${ALL_DECIDED}` : ALL_SOURCES_CHECKED)
+
+/** A finding's why: on a claim it is stored as confidence_rationale. */
+const findingWhy = (f: Finding) => (f.kind === 'claim' ? f.record.confidence_rationale : f.record.rationale) ?? ''
 
 /** "Source 3 of 7", "Finding 1 of 2". */
 export const progressText = (position: number, total: number, noun = 'Source') => `${noun} ${position} of ${total}`
@@ -90,7 +102,11 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
   const [error, setError] = useState('')
   const [basis, setBasis] = useState('')
   const [basisError, setBasisError] = useState<string | undefined>()
+  // Why it still holds, for the finding on screen (ref), starting from its why.
+  const [why, setWhy] = useState<{ ref: string; text: string } | null>(null)
+  const [whyError, setWhyError] = useState<string | undefined>()
   const mainRef = useRef<HTMLButtonElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const answerRef = useRef<HTMLDivElement>(null)
 
   const sources = checkStep(detail.evidence, skipped, checked)
@@ -105,23 +121,31 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
   const askAnswer = !source && !finding && left === 0 && hasAnswer && !answerChecked(inv)
   const stage = source ? source.ref : finding ? finding.record.ref : askAnswer ? 'answer' : 'end'
 
-  // The main button changes from step to step; keep the keyboard on it (or in the one field).
+  // The main button changes from step to step; keep the keyboard on it (or in
+  // the one field). A finding step starts on its question, not on a decision.
   useEffect(() => {
     if (stage === 'answer') answerRef.current?.querySelector('textarea')?.focus()
+    else if (finding) headingRef.current?.focus()
     else mainRef.current?.focus()
+    // Runs once per step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage])
+
+  const whyText = finding ? (why?.ref === finding.record.ref ? why.text : findingWhy(finding)) : ''
 
   const run = async (fn: () => Promise<unknown>, after: () => void) => {
     if (busy) return
     setBusy(true)
     setError('')
     setBasisError(undefined)
+    setWhyError(undefined)
     try {
       const saved = await write(fn, { rethrowConflict: true })
       if (saved !== undefined) after()
     } catch (e) {
-      const split = splitFieldErrors(e, ['review_basis'])
+      const split = splitFieldErrors(e, ['review_basis', 'rationale', 'confidence_rationale'])
       setBasisError(split.fieldErrors.review_basis)
+      setWhyError(split.fieldErrors.rationale ?? split.fieldErrors.confidence_rationale)
       setError(split.summary ?? '')
     } finally {
       setBusy(false)
@@ -137,11 +161,16 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
     return run(async () => {
       if (!holds) return kind === 'claim' ? api.updateClaim(inv.ref, r.ref, { status: 'rejected' }) : api.updateHypothesis(inv.ref, r.ref, { status: 'disproven' })
       if (!seen) throw new ApiError('conflict', 'this finding changed; show the new version')
-      await api.reviewStatement(inv.ref, { kind, ref: r.ref, basis: seen, verification: 'human_verified', settle_dispute: true })
+      // Sent only when the person changed what the field showed.
+      const reason = whyText.trim() !== '' && whyText !== findingWhy(f) ? { rationale: whyText } : {}
+      await api.reviewStatement(inv.ref, { kind, ref: r.ref, basis: seen, verification: 'human_verified', settle_dispute: true, ...reason })
       // One the person decided holds is no longer waiting to be tested.
       if (kind === 'hypothesis' && r.status === 'open') await api.updateHypothesis(inv.ref, r.ref, { status: 'supported' })
       return true
-    }, () => setDecided((n) => n + 1))
+    }, () => {
+      setWhy(null)
+      setDecided((n) => n + 1)
+    })
   }
   const skip = (ref: string) => setSkipped((s) => [...s, ref])
 
@@ -156,12 +185,16 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
       </>
     )
   } else if (finding) {
-    body = <Disagreement key={finding.record.ref} finding={finding} detail={detail} progress={progressText(findings.position, findings.total, 'Finding')} />
+    body = (
+      <Disagreement key={finding.record.ref} finding={finding} detail={detail} progress={progressText(findings.position, findings.total, 'Finding')} headingRef={headingRef}>
+        <TextArea label={WHY_STILL_HOLDS} value={whyText} onChange={(text) => setWhy({ ref: finding.record.ref, text })} error={whyError} note={nearLimit(whyText, LIMITS.rationale)} spellCheck />
+      </Disagreement>
+    )
     footer = (
       <>
         <Button variant="secondary" disabled={busy} onClick={() => skip(finding.record.ref)}>{SKIP_ACTION}</Button>
         <Button variant="secondary" disabled={busy} onClick={() => void decide(finding, false)}>{RULE_OUT_ACTION}</Button>
-        <Button variant="primary" ref={mainRef} aria-busy={busy || undefined} onClick={() => void decide(finding, true)}>{STILL_HOLDS_ACTION}</Button>
+        <Button variant="primary" aria-busy={busy || undefined} onClick={() => void decide(finding, true)}>{STILL_HOLDS_ACTION}</Button>
       </>
     )
   } else if (askAnswer) {
@@ -183,7 +216,7 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
     const writeNext = left === 0 && !hasAnswer && onWriteAnswer
     body = (
       <div className="check-end">
-        <p className="check-end-heading" role="status">{left === 0 ? ALL_CHECKED : skippedText(sources.left, findings.left)}</p>
+        <p className="check-end-heading" role="status">{left === 0 ? endText(decided > 0) : skippedText(sources.left, findings.left)}</p>
         {writeNext && <p>The next step is to write the answer.</p>}
       </div>
     )
@@ -197,7 +230,14 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
   }
 
   return (
-    <Dialog title={CHECK_SOURCES_TITLE} className={['check-sources', stage === 'end' ? 'is-end' : ''].filter(Boolean).join(' ')} onClose={onClose} initialFocus={mainRef} dirty={basis.trim() !== ''} footer={footer}>
+    <Dialog
+      title={finding ? DECIDE_TITLE : CHECK_SOURCES_TITLE}
+      className={['check-sources', stage === 'end' ? 'is-end' : ''].filter(Boolean).join(' ')}
+      onClose={onClose}
+      initialFocus={finding ? headingRef : mainRef}
+      dirty={basis.trim() !== '' || (finding !== undefined && whyText !== findingWhy(finding))}
+      footer={footer}
+    >
       {error && <p className="dialog-summary" role="alert">{error}</p>}
       {body}
     </Dialog>
@@ -206,25 +246,6 @@ export function CheckSources({ detail, startAt, onClose, onWriteAnswer }: CheckS
 
 /** One source, laid out the same way every time so the buttons never move. */
 function Source({ evidence: e, detail, progress }: { evidence: Evidence; detail: InvestigationDetail; progress: string }) {
-  const invRef = detail.investigation.ref
-  const [raw, setRaw] = useState<string | null>(null)
-  const [rawError, setRawError] = useState('')
-  // The exact words are what a person checks against, so they load without asking.
-  useEffect(() => {
-    if (!e.has_raw_detail) return
-    let live = true
-    api.getEvidence(invRef, e.ref, { include_raw_detail: true }).then(
-      (full) => {
-        if (live) setRaw(full.raw_detail ?? '')
-      },
-      (err) => {
-        if (live) setRawError(plainError(toApiError(err)))
-      },
-    )
-    return () => {
-      live = false
-    }
-  }, [invRef, e.ref, e.has_raw_detail, e.updated_at])
 
   const records = new Map([...detail.claims, ...detail.hypotheses].map((r) => [r.ref, r] as const))
   const findings = usedBy(e, detail).filter((u) => {
@@ -249,7 +270,7 @@ function Source({ evidence: e, detail, progress }: { evidence: Evidence; detail:
         {e.has_raw_detail && (
           <div>
             <dt>Exact words or numbers</dt>
-            <dd>{raw !== null ? <pre className="raw-detail">{raw}</pre> : rawError || 'Loading the exact words...'}</dd>
+            <dd><RawWords invRef={detail.investigation.ref} evidence={e} /></dd>
           </div>
         )}
         <div>
@@ -269,14 +290,14 @@ function Source({ evidence: e, detail, progress }: { evidence: Evidence; detail:
   )
 }
 
-/** One finding where sources disagree: the finding, then its sources both ways with who checked each. */
-function Disagreement({ finding: { record: r }, detail, progress }: { finding: Finding; detail: InvestigationDetail; progress: string }) {
+/** One finding where sources disagree: the question, the finding, then its sources both ways with who checked each and their exact words; children sit last. */
+function Disagreement({ finding: { record: r }, detail, progress, headingRef, children }: { finding: Finding; detail: InvestigationDetail; progress: string; headingRef: RefObject<HTMLHeadingElement | null>; children?: ReactNode }) {
   const byRef = evidenceByRef(detail)
   const side = (relation: 'supports' | 'contradicts') => r.links.filter((l) => l.relation === relation)
   return (
     <div className="check-source">
       <p className="check-progress" role="status">{progress}</p>
-      <h3 className="check-source-title">{DISAGREE_HEADING}</h3>
+      <h3 className="check-source-title" ref={headingRef} tabIndex={-1}>{STILL_HOLDS_QUESTION}</h3>
       <p className="check-answer">{r.statement}</p>
       <dl className="check-source-facts">
         {(['supports', 'contradicts'] as const).map((relation) =>
@@ -289,6 +310,7 @@ function Disagreement({ finding: { record: r }, detail, progress }: { finding: F
                   <dd key={l.evidence_ref} className="check-disagree-source">
                     <span>{e?.title ?? l.evidence_title}</span> {e && <VerificationBadge verification={e.verification} />}
                     {e?.summary && <span className="check-disagree-summary">{e.summary}</span>}
+                    {e?.has_raw_detail && <RawWords invRef={detail.investigation.ref} evidence={e} />}
                   </dd>
                 )
               })}
@@ -296,7 +318,31 @@ function Disagreement({ finding: { record: r }, detail, progress }: { finding: F
           ),
         )}
       </dl>
-      <p>{STILL_HOLDS_QUESTION}</p>
+      {children}
     </div>
   )
+}
+
+/**
+ * A source's exact words. They are what a person checks against, so they
+ * load without asking, again when the source changes.
+ */
+function RawWords({ invRef, evidence: e }: { invRef: string; evidence: Evidence }) {
+  const [raw, setRaw] = useState<string | null>(null)
+  const [rawError, setRawError] = useState('')
+  useEffect(() => {
+    let live = true
+    api.getEvidence(invRef, e.ref, { include_raw_detail: true }).then(
+      (full) => {
+        if (live) setRaw(full.raw_detail ?? '')
+      },
+      (err) => {
+        if (live) setRawError(plainError(toApiError(err)))
+      },
+    )
+    return () => {
+      live = false
+    }
+  }, [invRef, e.ref, e.updated_at])
+  return raw !== null ? <pre className="raw-detail">{raw}</pre> : <>{rawError || 'Loading the exact words...'}</>
 }

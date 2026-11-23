@@ -7,7 +7,7 @@ import { AppDataProvider, useAppData } from '../../state/appData'
 import { summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_CHECKED_BODY, answeredLine, Home, needYouHeading, NO_SOURCES_YET, NOTHING_NEEDS_YOU } from './Home'
+import { ALL_CHECKED_BODY, ALL_CHECKED_DECIDED_BODY, answeredLine, Home, needYouHeading, NO_SOURCES_YET, NOTHING_NEEDS_YOU } from './Home'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -96,6 +96,24 @@ describe('Home', () => {
     expect(answered).toHaveTextContent('1 of 1 source checked by you')
     await user.click(within(answered).getByRole('button', { name: 'Why did more customers cancel in March?' }))
     expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0003')
+  })
+
+  it('says a finding where sources disagree was decided only when a person decided one, and never that no sources disagree', async () => {
+    const done = { ...cancels, archived: false, archived_at: '' }
+    await renderHome([{ ...done, findings_decided: 1 }])
+    expect(screen.getByText(ALL_CHECKED_DECIDED_BODY)).toBeInTheDocument()
+    expect(ALL_CHECKED_DECIDED_BODY).toBe('You have checked every source and every answer, and decided every finding where sources disagree.')
+    expect(ALL_CHECKED_BODY).toBe('You have checked every source and every answer.')
+    expect(screen.queryByText(/no sources disagree/)).toBeNull()
+  })
+
+  it('asks for a finding when every source is checked but none holds, and opens Add finding', async () => {
+    const user = userEvent.setup()
+    await renderHome([{ ...helpDesk, sources_checked_by_you: 2, findings_backing: 0 }])
+    const items = within(screen.getByRole('list', { name: 'Questions that need you' })).getAllByRole('listitem')
+    expect(items[0].querySelector('.home-needs')).toHaveTextContent(/^Add a finding from your sources.$/)
+    await user.click(screen.getByRole('button', { name: 'Add a finding: Why are help desk tickets taking longer to close this month?' }))
+    expect(screen.getByTestId('probe')).toHaveTextContent('ready:INV-0002 add-finding')
   })
 
   it('never lets things still to find out make a question need you, and says how many are open on its line', async () => {

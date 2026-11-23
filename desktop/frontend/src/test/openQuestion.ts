@@ -24,7 +24,7 @@ export async function openQuestion(ref = 'INV-0001'): Promise<void> {
 
 /**
  * The first control on the question page that opens this source: where it
- * sits under a finding, or its own row under Other sources.
+ * sits under a finding, else its row under Sources.
  */
 export async function findSourceButton(ref: string): Promise<HTMLElement> {
   const find = () => document.querySelector<HTMLElement>(`button[data-ref="${ref}"], [data-ref="${ref}"] > .row-hit`)

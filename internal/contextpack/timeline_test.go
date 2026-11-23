@@ -29,6 +29,8 @@ func TestTimelinePhrase(t *testing.T) {
 		{"answer cleared", "conclusion.update", "INV-0002", "Cleared the answer", "cleared the answer"},
 		{"answer checked", "conclusion.update", "INV-0002", "Recorded a review of the answer", "checked the answer"},
 		{"source add", "evidence.add", "E-001", `Added source E-001 "Call log"`, `added the source E-001 "Call log"`},
+		{"source add checked", "evidence.add", "E-001", `Added source E-001 "Call log"; checked by a person`, `added the source E-001 "Call log" and checked it`},
+		{"first answer", "conclusion.update", "INV-0002", "Wrote conclusion of INV-0002 (confidence high)", "wrote the answer"},
 		{"finding add", "claim.add", "C-001", "Added finding C-001 with 3 sources", "added the finding C-001 with 3 sources"},
 		{"finding add one", "hypothesis.add", "H-002", "Added finding H-002 with 1 source", "added the finding H-002 with 1 source"},
 		{"finding add bare", "hypothesis.add", "H-003", "Added finding H-003", "added the finding H-003"},

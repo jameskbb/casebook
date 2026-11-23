@@ -152,6 +152,7 @@ describe('activitySummary', () => {
   const at = (action: string, target: string, summary: string, actor: Actor = ai, extra: Partial<Activity> = {}): Activity =>
     ({ ...row(action, target, actor), summary, ...extra })
 
+  const text = (s: ReturnType<typeof activitySentence>) => s.segments.map((x) => ('text' in x ? x.text : '')).join('')
   const NEEDS_CHECKING_AGAIN = 'It changed after it was checked, so it needs checking again.'
   const NOTE = 'Compared the call log with the billing notice. Next: ask who approves refunds.'
 
@@ -235,9 +236,22 @@ describe('activitySummary', () => {
     const ctx = { conclusionReviewedAt: '2026-10-27T03:29:47.051Z' }
     const edit = at('conclusion.update', 'INV-0001', 'Updated conclusion of INV-0001 (confidence high)', ai, { created_at: '2026-10-27T03:20:00.000Z' })
     const check = at('conclusion.update', 'INV-0001', 'Updated conclusion of INV-0001 (confidence high)', you, { created_at: ctx.conclusionReviewedAt })
-    expect(activitySummary(edit, ctx)).toBe('')
-    expect(activitySummary(check, ctx)).toBe('Checked the answer.')
+    // The check is the row's own verb, not updated the answer and a second line.
+    expect(activitySummary(edit)).toBe('')
     expect(activitySummary(check)).toBe('')
+    expect(text(activitySentence(check, ctx))).toBe('checked the answer')
+    expect(text(activitySentence(edit, ctx))).toBe('updated the answer')
+    expect(text(activitySentence(check))).toBe('updated the answer')
+  })
+
+  it('says the first answer was written and a review was a check', () => {
+    expect(text(activitySentence(at('conclusion.update', 'INV-0001', 'Wrote conclusion of INV-0001 (confidence high)', you)))).toBe('wrote the answer')
+    expect(text(activitySentence(at('conclusion.update', 'INV-0001', 'Recorded a review of the answer', you)))).toBe('checked the answer')
+  })
+
+  it('says a person checked a source they added and said they looked at', () => {
+    expect(activitySummary(at('evidence.add', 'E-001', 'Added source E-001 "Sales report"; checked by a person', you))).toBe('Checked this.')
+    expect(activitySummary(at('evidence.add', 'E-001', 'Added source E-001 "Sales report"', you))).toBe('')
   })
 
   // Suspected source defect: FIELD_WORD.title is "the question", so a source whose name changed reads "Changed the question."

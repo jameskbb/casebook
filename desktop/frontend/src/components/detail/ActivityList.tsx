@@ -87,8 +87,8 @@ function ActivityRow({
   now: Date
   conclusionReviewedAt?: string
 }) {
-  const s = activitySentence(a)
-  const plain = activitySummary(a, { conclusionReviewedAt })
+  const s = activitySentence(a, { conclusionReviewedAt })
+  const plain = activitySummary(a)
   const name = a.target_ref ? nameOf?.(a.target_ref) : undefined
   // Something to find out left for later is named by its words.
   if (a.action === 'question.defer' && name) s.segments = [{ text: `left "${shortName(name)}" for later` }]

@@ -12,7 +12,8 @@ import { CopyContextProvider } from '../../state/copyContext'
 import { detail, summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_SOURCES_TITLE, DISAGREE_HEADING } from './CheckSources'
+import { DECIDE_TITLE } from './CheckSources'
+import { STILL_HOLDS_QUESTION } from '../drawers/StatementDrawer'
 import { DECIDE_ACTION } from './ConclusionPanel'
 import { DetailView } from './DetailView'
 
@@ -56,9 +57,11 @@ describe('round 5 on the question page', () => {
     const { user } = renderPage(detail)
     const disagree = await screen.findByRole('region', { name: 'Where sources disagree' })
     const statement = 'Callers waited too long and hung up before buying.'
+    // A real button on the row, quieter than the answer card's main one.
+    expect(within(disagree).getByRole('button', { name: `${DECIDE_ACTION}: ${statement}` })).toHaveClass('btn-secondary')
     await user.click(within(disagree).getByRole('button', { name: `${DECIDE_ACTION}: ${statement}` }))
-    const dialog = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
-    expect(within(dialog).getByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: DECIDE_TITLE })
+    expect(within(dialog).getByRole('heading', { name: STILL_HOLDS_QUESTION })).toHaveFocus()
     expect(within(dialog).getByText(statement)).toBeInTheDocument()
   })
 
@@ -67,7 +70,7 @@ describe('round 5 on the question page', () => {
     const disagree = await screen.findByRole('region', { name: 'Where sources disagree' })
     const decide = within(disagree).getByRole('button', { name: `${DECIDE_ACTION}: Callers waited too long and hung up before buying.` })
     await user.click(decide)
-    await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
+    await screen.findByRole('dialog', { name: DECIDE_TITLE })
     const focus = vi.spyOn(HTMLElement.prototype, 'focus')
     await user.keyboard('{Escape}')
     await waitFor(() => expect(document.activeElement).toBe(decide))

@@ -5,7 +5,7 @@ import type { Api } from '../../api/api'
 import type { InvestigationDetail } from '../../api/types'
 import { AppDataProvider } from '../../state/appData'
 import { CopyContextProvider } from '../../state/copyContext'
-import { claims, detail, evidence, questions, summaries } from '../../test/fixtures'
+import { detail, evidence, questions, summaries } from '../../test/fixtures'
 import { archivedDetail, emptyDetail, manyRuledOutDetail, partialDetail } from '../../test/fixtures.detail'
 import { bareEvidence, detailWith, detailWithBareEvidence } from '../../test/fixtures.records'
 import { mockApi } from '../../test/mockApi'
@@ -15,7 +15,7 @@ import { LATER } from '../record/StatusLabel'
 import { ToastProvider } from '../ui/Toaster'
 import { CHECK_SOURCES_TITLE, SOURCE_CHECKED_ACTION } from './CheckSources'
 import { CHECK_NEXT_SOURCE, SHARE_THE_ANSWER } from './ConclusionPanel'
-import { DetailView } from './DetailView'
+import { DetailView, SOURCES_HEADING } from './DetailView'
 import { ADD_FINDING, ADD_SOURCE } from './FirstFindingGuide'
 import { BACK_IN_LIST_COPY, PUT_BACK_LABEL } from './MoreMenu'
 
@@ -99,42 +99,42 @@ describe('DetailView reading column', () => {
     expect(within(panel).getByRole('button', { name: SHARE_THE_ANSWER })).toHaveClass('btn-secondary')
   })
 
-  it('lists only the sources no finding uses under Other sources, and leaves the section out when there are none', async () => {
-    const { unmount } = renderDetail()
-    await screen.findByRole('region', { name: 'What backs this up' })
+  it('lists every source once under Sources, with where to find it, and a replaced one behind its own line', async () => {
+    const user = userEvent.setup()
+    const replaced = { ...bareEvidence, ref: 'E-010', title: 'An older call count', verification: 'superseded' as const }
+    renderDetail(detailWith({ evidence: [...evidence, bareEvidence, replaced] }))
+    const list = await screen.findByRole('region', { name: SOURCES_HEADING })
+    const refs = Array.from(list.querySelectorAll('.evidence-row')).map((r) => r.getAttribute('data-ref'))
+    // Sources a finding uses are listed too, each once.
+    expect(refs).toEqual([...evidence.map((e) => e.ref), 'E-009'])
+    expect(new Set(refs).size).toBe(refs.length)
+    expect(within(list).getByText(`Where to find it: ${evidence[0].source_ref}`)).toBeInTheDocument()
+    expect(within(list).getByRole('button', { name: `Open source E-001: ${evidence[0].title}` })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Other sources' })).toBeNull()
-    unmount()
-    renderDetail(detailWithBareEvidence())
-    await screen.findByRole('region', { name: 'Other sources' })
-    const rows = section('Other sources').querySelectorAll('.evidence-row')
-    expect(Array.from(rows).map((r) => r.getAttribute('data-ref'))).toEqual(['E-009'])
+    await user.click(within(list).getByRole('button', { name: 'Show 1 replaced source' }))
+    expect(within(list).getByText('An older call count')).toBeInTheDocument()
   })
 
-  it('lists a source whose only finding is replaced under Other sources, and not one under a finding that stands', async () => {
-    // E-009 backs only C-003, which C-002 replaced, so it would otherwise sit behind Show replaced findings.
-    const lone = { ...bareEvidence, claim_links: [{ ref: 'C-003', relation: 'supports' as const }] }
-    renderDetail(
-      detailWith({
-        evidence: [...evidence, lone],
-        claims: claims.map((c) =>
-          c.ref === 'C-003' ? { ...c, links: [...c.links, { ...c.links[0], evidence_ref: lone.ref, evidence_title: lone.title, relation: 'supports' as const }] } : c,
-        ),
-      }),
-    )
-    const other = await screen.findByRole('region', { name: 'Other sources' })
-    const refs = Array.from(other.querySelectorAll('.evidence-row')).map((r) => r.getAttribute('data-ref'))
-    // E-001 backs C-001, which stands. E-003 is used by the replaced C-003 too, but also by C-002, which stands.
-    expect(refs).toEqual(['E-009'])
-    expect(within(other).getByText(lone.title)).toBeInTheDocument()
-    expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
+  it('shows the exact words under a source in Sources when asked, as the source drawer does', async () => {
+    const user = userEvent.setup()
+    renderDetail()
+    Object.assign(mocks.api, { getEvidence: vi.fn(async (_inv: string, ref: string) => ({ ...evidence.find((e) => e.ref === ref)!, raw_detail: 'Calls about a bill: 400, then 1,070.' })) })
+    const list = await screen.findByRole('region', { name: SOURCES_HEADING })
+    const row = list.querySelector<HTMLElement>('.evidence-row[data-ref="E-003"]')!
+    // Only a source with exact words offers them.
+    expect(list.querySelector('.evidence-row[data-ref="E-002"] .exact-words')).toBeNull()
+    const show = within(row).getByRole('button', { name: 'Show the exact words' })
+    expect(show).toHaveAttribute('aria-expanded', 'false')
+    await user.click(show)
+    expect(await within(row).findByText('Calls about a bill: 400, then 1,070.')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Hide the exact words' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('renders the sections in reading order after the question, leaving out the empty ones', async () => {
     renderDetail()
     await screen.findByRole('heading', { level: 1, name: 'Why did calls go up 30% in October when sales stayed the same?' })
     const h2 = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    // Every source sits under a finding, so Other sources is not drawn.
-    expect(h2).toEqual(['The answer', 'What backs this up', 'Where sources disagree', 'Still to find out', 'How we got here'])
+    expect(h2).toEqual(['The answer', 'What backs this up', 'Where sources disagree', 'Still to find out', 'Sources', 'How we got here'])
     const label = screen.getByText('The question')
     const conclusion = screen.getByRole('heading', { level: 2, name: 'The answer' })
     expect(label.compareDocumentPosition(conclusion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -265,7 +265,7 @@ describe('DetailView reading column', () => {
     renderDetail(partialDetail())
     await screen.findByRole('region', { name: 'What backs this up' })
     expect(screen.getByRole('region', { name: 'The question' })).toHaveTextContent('Why did calls go up 30% in October when sales stayed the same?')
-    expect(screen.getByText('No answer yet. Write it once a finding holds.')).toBeInTheDocument()
+    expect(screen.getByText('No answer yet.')).toBeInTheDocument()
     expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
   })
 
@@ -309,11 +309,10 @@ describe('DetailView reading column', () => {
     expect(within(empty).getByText('No answer yet')).toBeInTheDocument()
   })
 
-  it('wraps long text in the reading column and clamps only source summaries', async () => {
+  it('wraps long text in the reading column and clamps nothing', async () => {
     renderDetail(detailWithBareEvidence())
-    await screen.findByRole('region', { name: 'Other sources' })
-    expect(document.querySelectorAll('.evidence-summary.is-clamped').length).toBe(1)
-    expect(document.querySelectorAll('.record-statement.is-clamped').length).toBe(0)
+    await screen.findByRole('region', { name: SOURCES_HEADING })
+    expect(document.querySelectorAll('.is-clamped').length).toBe(0)
   })
 })
 

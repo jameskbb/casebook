@@ -105,6 +105,17 @@ describe('ShareSummaryDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
     expect(mocked.copySharePreview).toHaveBeenLastCalledWith('reviewed-report')
   })
+  it('shows each version from its top when the person switches', async () => {
+    renderDialog()
+    await screen.findByRole('heading', { level: 1 })
+    const paper = document.querySelector<HTMLElement>('.share-summary-dialog .note-paper')!
+    paper.scrollTop = 400
+    mocked.sharePreview.mockResolvedValue(preview({ mode: 'report', snapshot_id: 'reviewed-report' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Everything' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled())
+    expect(document.querySelector<HTMLElement>('.share-summary-dialog .note-paper')!.scrollTop).toBe(0)
+  })
+
   it('has no Choose what to share, no ticks, no refresh button and no block about another app', async () => {
     renderDialog()
     await screen.findByRole('heading', { level: 1 })

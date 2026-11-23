@@ -12,7 +12,7 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
 import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
-import { ADDED_COUNTS_AS_CHECKED, EvidenceDialog } from './EvidenceDialog'
+import { EvidenceDialog, LOOKED_MYSELF, LOOKED_MYSELF_HINT } from './EvidenceDialog'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -55,14 +55,16 @@ describe('EvidenceDialog add', () => {
     )
   })
 
-  it('opens with Name focused and four fields, and says a source added by hand counts as checked', () => {
+  it('opens with Name focused, four fields and the looked-at tick off', () => {
     renderAdd()
     expect(screen.getByRole('dialog', { name: 'Add source' })).toBeInTheDocument()
     expect(screen.getByLabelText(NAME)).toHaveFocus()
     expect(screen.getByLabelText(SHOWS)).toBeInTheDocument()
     expect(screen.getByLabelText(WHERE)).toBeInTheDocument()
     expect(screen.getByLabelText(WORDS)).toBeInTheDocument()
-    expect(screen.getByText(ADDED_COUNTS_AS_CHECKED)).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: LOOKED_MYSELF })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: LOOKED_MYSELF })).toHaveAccessibleDescription(LOOKED_MYSELF_HINT)
+    expect(screen.queryByText(/count as checked/)).toBeNull()
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull()
     expect(screen.queryByLabelText(/Kind of source/)).toBeNull()
     expect(screen.queryByLabelText(/Date of the source/)).toBeNull()
@@ -74,7 +76,7 @@ describe('EvidenceDialog add', () => {
     expect(screen.queryByRole('button', { name: 'Add source detail' })).toBeNull()
   })
 
-  it('adds a source with every field as one the person saw, and sends no source_label, date or metadata', async () => {
+  it('adds a source with every field as Not checked, and sends no source_label, date or metadata', async () => {
     const user = userEvent.setup()
     const { onClose, onSaved } = renderAdd()
     await user.type(screen.getByLabelText(NAME), 'October sales report')
@@ -88,6 +90,7 @@ describe('EvidenceDialog add', () => {
       source_type: 'manual_observation',
       source_ref: 'Shared drive, Sales, october.pdf, page 2',
       raw_detail: 'October: $512,000',
+      verification: 'ai_generated',
     })
     const sent = vi.mocked(mocks.api.addEvidence).mock.calls[0][1]
     expect(sent).not.toHaveProperty('source_label')
@@ -107,7 +110,18 @@ describe('EvidenceDialog add', () => {
       title: 'Screenshot',
       summary: 'The wall board shows 3,120 calls.',
       source_type: 'manual_observation',
+      verification: 'ai_generated',
     })
+  })
+
+  it('saves the source as checked by the person when they tick that they looked at it', async () => {
+    const user = userEvent.setup()
+    renderAdd()
+    await user.type(screen.getByLabelText(NAME), 'Screenshot')
+    await user.type(screen.getByLabelText(SHOWS), 'The wall board shows 3,120 calls.')
+    await user.click(screen.getByRole('checkbox', { name: LOOKED_MYSELF }))
+    await user.click(screen.getByRole('button', { name: 'Add source' }))
+    expect(mocks.api.addEvidence).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ verification: 'human_verified' }))
   })
 
   it('shows Adding... and disables submit while the call runs', async () => {
@@ -195,7 +209,7 @@ describe('EvidenceDialog edit', () => {
     expect(mocks.api.getEvidence).toHaveBeenCalledWith('INV-0001', 'E-003', { include_raw_detail: true })
     expect(screen.getByLabelText(NAME)).toHaveValue('Calls about a bill: 400 in September, 1,070 in October')
     await waitFor(() => expect(screen.getByLabelText(WORDS)).toHaveValue(E003_RAW))
-    expect(screen.queryByText(ADDED_COUNTS_AS_CHECKED)).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: LOOKED_MYSELF })).toBeNull()
     expect(screen.queryByLabelText(/Kind of source/)).toBeNull()
     expect(screen.queryByLabelText(/Where it came from/)).toBeNull()
     expect(screen.queryByLabelText(/Extra details/)).toBeNull()

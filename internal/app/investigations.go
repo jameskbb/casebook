@@ -434,6 +434,10 @@ func (a *App) conclusionTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 		return Investigation{}, false, err
 	}
 	summary := fmt.Sprintf("Updated conclusion of %s (confidence %s)", inv.Ref, c.confidence)
+	if inv.Conclusion == "" {
+		// The first answer: the history says it was written, not changed.
+		summary = fmt.Sprintf("Wrote conclusion of %s (confidence %s)", inv.Ref, c.confidence)
+	}
 	if inv.ConclusionVerification != next.ConclusionVerification && next.ConclusionVerification == domain.VerificationAIGenerated && actor.Kind != domain.ActorHuman && inv.Conclusion != c.conclusion {
 		summary += resetNote(actor.Kind)
 	}

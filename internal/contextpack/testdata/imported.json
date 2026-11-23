@@ -193,7 +193,7 @@
       },
       "action": "evidence.add",
       "target_ref": "E-005",
-      "summary": "Added source E-005 \"Local check: payments values file still lacks the debug override\"",
+      "summary": "Added source E-005 \"Local check: payments values file still lacks the debug override\"; checked by a person",
       "imported": false
     },
     {
@@ -215,7 +215,7 @@
       },
       "action": "conclusion.update",
       "target_ref": "INV-0001",
-      "summary": "Updated conclusion of INV-0001 (confidence high)",
+      "summary": "Wrote conclusion of INV-0001 (confidence high)",
       "imported": true
     },
     {

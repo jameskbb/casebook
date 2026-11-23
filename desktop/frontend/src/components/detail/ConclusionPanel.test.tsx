@@ -12,8 +12,9 @@ import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { CHANGED_ELSEWHERE_COPY, SHOW_NEW_VERSION } from '../ui/ChangedElsewhereBanner'
 import { ToastProvider } from '../ui/Toaster'
-import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECKED_ANSWER_ACTION, ConclusionPanel, DECIDE_ACTION, JUST_WROTE_ANSWER, NOT_CHECKED_ANSWER, SHARE_THE_ANSWER, UNDO_ANSWER_CHECK, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
+import { CHECK_ANSWER_AGAIN, CHECK_NEXT_SOURCE, CHECK_THIS_ANSWER, CHECKED_ANSWER_ACTION, ConclusionPanel, DECIDE_WHERE_ACTION, JUST_WROTE_ANSWER, NOT_CHECKED_ANSWER, SHARE_THE_ANSWER, UNDO_ANSWER_CHECK, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
 import { ANSWER_COPIED } from './ShareSummaryDialog'
+import { ADD_FINDING_NEED } from '../../lib/questions'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
 vi.mock('../../api/api', () => ({ api: mocks.api }))
@@ -158,12 +159,26 @@ describe('ConclusionPanel editing', () => {
     const user = userEvent.setup()
     renderPanel({ ...investigation, conclusion: '', conclusion_confidence: 'unknown', conclusion_rationale: '' })
     expect(
-      within(panel()).getByText('No answer yet. Write it once a finding holds.'),
+      within(panel()).getByText('No answer yet. Add a finding from your sources.'),
     ).toBeInTheDocument()
     await user.click(within(panel()).getByRole('button', { name: 'Write the answer' }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('')
 
     expect(within(panel()).queryByRole('button', { name: 'Clear answer' })).toBeNull()
+  })
+})
+
+describe('The empty answer card', () => {
+  beforeEach(() => { Object.assign(mocks.api, mockApi()) })
+
+  it('says No answer yet once a finding holds, and what Home says before one does', () => {
+    const empty = { ...investigation, conclusion: '', conclusion_rationale: '' }
+    const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
+    const { unmount } = render(providers(<ConclusionPanel investigation={empty} claims={detail.claims.slice(0, 1)} evidence={checked} onCheckSources={() => {}} />))
+    expect(within(panel()).getByText('No answer yet.')).toBeInTheDocument()
+    unmount()
+    render(providers(<ConclusionPanel investigation={empty} claims={[]} evidence={checked} onCheckSources={() => {}} />))
+    expect(within(panel()).getByText(`No answer yet. ${ADD_FINDING_NEED}`)).toBeInTheDocument()
   })
 })
 
@@ -271,9 +286,9 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
     render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} evidence={checked} onCheckSources={onCheckSources} share />))
     expect(button(CHECK_NEXT_SOURCE)).toBeNull()
-    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
-    expect(button(DECIDE_ACTION)).toHaveClass('btn-primary')
-    await user.click(button(DECIDE_ACTION)!)
+    expect(button(CHECK_THIS_ANSWER)).toBeNull()
+    expect(button(DECIDE_WHERE_ACTION)).toHaveClass('btn-primary')
+    await user.click(button(DECIDE_WHERE_ACTION)!)
     expect(onCheckSources).toHaveBeenCalledTimes(1)
   })
 
@@ -315,7 +330,7 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     const onCheckSources = vi.fn()
     render(providers(<ConclusionPanel investigation={investigation} evidence={detail.evidence} onCheckSources={onCheckSources} share />))
     expect(button(CHECK_NEXT_SOURCE)).toHaveClass('btn-primary')
-    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
+    expect(button(CHECK_THIS_ANSWER)).toBeNull()
     expect(button(SHARE_THE_ANSWER)).toHaveClass('btn-secondary')
     await user.click(button(CHECK_NEXT_SOURCE)!)
     expect(onCheckSources).toHaveBeenCalledTimes(1)
@@ -325,7 +340,7 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
     render(providers(<ConclusionPanel investigation={investigation} evidence={checked} onCheckSources={() => {}} share />))
     expect(button(CHECK_NEXT_SOURCE)).toBeNull()
-    expect(button(CHECKED_ANSWER_ACTION)).toHaveClass('btn-primary')
+    expect(button(CHECK_THIS_ANSWER)).toHaveClass('btn-primary')
     expect(button(SHARE_THE_ANSWER)).toHaveClass('btn-secondary')
   })
 
@@ -334,7 +349,7 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     const checked = detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const }))
     const inv = { ...investigation, conclusion_reviewed_at: '2026-10-20T12:00:00.000Z', conclusion_needs_review: false }
     render(providers(<ConclusionPanel investigation={inv} evidence={checked} onCheckSources={() => {}} share />))
-    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
+    expect(button(CHECK_THIS_ANSWER)).toBeNull()
     const share = button(SHARE_THE_ANSWER)!
     expect(share).toHaveClass('btn-primary')
     await user.click(share)
@@ -350,7 +365,7 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     const { unmount } = render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion: '' }} evidence={detail.evidence} onCheckSources={() => {}} share />))
     expect(button(CHECK_NEXT_SOURCE)).toBeInTheDocument()
     expect(button(SHARE_THE_ANSWER)).toBeNull()
-    expect(button(CHECKED_ANSWER_ACTION)).toBeNull()
+    expect(button(CHECK_THIS_ANSWER)).toBeNull()
     unmount()
     renderPanel()
     expect(button(CHECK_NEXT_SOURCE)).toBeNull()
@@ -393,7 +408,7 @@ describe('The findings an answer is saved with', () => {
 describe('Checking the answer', () => {
   beforeEach(() => { Object.assign(mocks.api, mockApi()) })
 
-  const checkButton = () => within(panel()).queryByRole('button', { name: CHECKED_ANSWER_ACTION })
+  const checkButton = () => within(panel()).queryByRole('button', { name: CHECK_THIS_ANSWER })
   const checkedAt = '2026-10-20T12:00:00.000Z'
 
   it('says the answer is not checked yet and offers I checked this answer', () => {

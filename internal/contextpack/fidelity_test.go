@@ -165,7 +165,7 @@ func TestReportDatesSourceOnce(t *testing.T) {
 		},
 	}
 	md := RenderReport(s, ReportOptions{})
-	for _, want := range []string{"  - Seen by the person who shared this on November 23, 2026\n", "  - Returns desk, dated November 20, 2026\n"} {
+	for _, want := range []string{"  - Added by a person on November 23, 2026\n", "  - Returns desk, dated November 20, 2026\n"} {
 		if !strings.Contains(md, want) {
 			t.Errorf("report lacks %q:\n%s", want, md)
 		}

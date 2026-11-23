@@ -53,9 +53,9 @@ E-005 Local check: payments values file still lacks the debug override (Local re
 Recent changes:
 - 2026-01-15T09:00:00.000Z human casebook-ui: Added something to find out: Q-002 "Who owns the chart default now?"
 - 2026-01-15T09:00:00.000Z human casebook-ui: Added the finding C-004 with 1 source
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-005 "Local check: payments values file still lacks the debug override"
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-005 "Local check: payments values file still lacks the debug override" and checked it
 - 2026-01-15T09:00:00.000Z import casebook-ui: Added this question from a file
-- 2026-01-15T09:00:00.000Z human casebook-ui (imported): Updated the answer
+- 2026-01-15T09:00:00.000Z human casebook-ui (imported): Wrote the answer
 - 2026-01-15T09:00:00.000Z human casebook-ui (imported): Added something to find out: Q-001 "Can every service except payments go back to info level today?"
 - 2026-01-15T09:00:00.000Z ai claude-code (imported): Ruled out the finding H-002
 - 2026-01-15T09:00:00.000Z ai claude-code (imported): Added the finding H-002 with 1 source

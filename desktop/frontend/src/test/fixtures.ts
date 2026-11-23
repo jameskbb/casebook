@@ -72,6 +72,8 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 4,
     sources_checked_by_you: 1,
     findings_disagree: 1,
+    findings_backing: 3,
+    findings_decided: 0,
     answer_checked_by_you: false,
   },
   {
@@ -90,6 +92,8 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 2,
     sources_checked_by_you: 0,
     findings_disagree: 0,
+    findings_backing: 1,
+    findings_decided: 0,
     answer_checked_by_you: false,
   },
   {
@@ -108,6 +112,8 @@ export const summaries: InvestigationSummary[] = [
     sources_total: 1,
     sources_checked_by_you: 1,
     findings_disagree: 0,
+    findings_backing: 1,
+    findings_decided: 0,
     answer_checked_by_you: true,
   },
 ]

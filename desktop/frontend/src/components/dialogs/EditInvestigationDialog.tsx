@@ -10,8 +10,7 @@ import { useChangedElsewhere } from '../../hooks/useChangedElsewhere'
 import { useWrite } from '../../state/useWrite'
 import { ChangedElsewhereBanner } from '../ui/ChangedElsewhereBanner'
 import { Dialog } from '../ui/Dialog'
-import { TextArea } from '../ui/TextArea'
-import { TextField } from '../ui/TextField'
+import { QuestionField, TextArea } from '../ui/TextArea'
 
 const FIELDS = ['title', 'problem_statement'] as const
 
@@ -104,14 +103,11 @@ export function EditInvestigationDialog({ investigation: inv, onClose }: EditInv
       }
     >
       <div className="dialog-fields" ref={fieldsRef}>
-        <TextField
-          label="Question"
+        <QuestionField
           value={title}
           onChange={setTitle}
           error={fieldErrors.title}
           note={nearLimit(title, LIMITS.title)}
-          autoComplete="off"
-          spellCheck
         />
         <TextArea
           label="Background (optional)"

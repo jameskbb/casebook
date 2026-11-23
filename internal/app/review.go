@@ -40,6 +40,10 @@ type ReviewStatementInput struct {
 	Basis         string            `json:"basis"`
 	Verification  Verification      `json:"verification"`
 	SettleDispute bool              `json:"settle_dispute"`
+	// Rationale, when not empty, replaces the finding's why in the same write:
+	// the person's reason that it still holds. The desktop shows the current
+	// why in the field first, so nothing is replaced unseen.
+	Rationale string `json:"rationale,omitempty"`
 }
 
 func reviewKind(kind domain.RecordType) (stmtKind, error) {
@@ -160,7 +164,11 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 	if in.Verification != domain.VerificationHumanVerified && in.Verification != domain.VerificationDisputed {
 		return ReviewFinding{}, a.fail(op, domain.NewValidationError("verification", "must be human_verified or disputed"))
 	}
-	pp, err := k.preparePatch(actor, stmtPatch{Verification: &in.Verification}, "superseded_by")
+	patch := stmtPatch{Verification: &in.Verification}
+	if in.Rationale != "" {
+		patch.Rationale = &in.Rationale
+	}
+	pp, err := k.preparePatch(actor, patch, "superseded_by")
 	if err != nil {
 		return ReviewFinding{}, a.fail(op, err)
 	}

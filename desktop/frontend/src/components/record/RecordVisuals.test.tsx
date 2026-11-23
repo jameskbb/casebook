@@ -178,14 +178,14 @@ describe('RecordRow', () => {
 })
 
 describe('EvidenceRow', () => {
-  it('shows its check label, the title and the clamped summary, and nothing else', () => {
+  it('shows its check label and the title, and no summary', () => {
     const e3 = byRef(evidence, 'E-003')
     const { container } = render(<EvidenceRow evidence={e3} />)
     const row = container.querySelector('[data-ref="E-003"]') as HTMLElement
     expect(row.className).toContain('kind-rule-evidence')
     expect(within(row).getByText('Not checked')).toBeInTheDocument()
     expect(within(row).getByText('Calls about a bill: 400 in September, 1,070 in October')).toBeInTheDocument()
-    expect(row.querySelector('.evidence-summary')?.className).toContain('is-clamped')
+    expect(row.querySelector('.evidence-summary')).toBeNull()
     // Where it came from and its kind are not shown.
     expect(row).not.toHaveTextContent('Call log')
     expect(row.querySelector('.evidence-meta')).toBeNull()

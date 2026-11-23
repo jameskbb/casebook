@@ -114,10 +114,15 @@ func timelinePhrase(a domain.Activity, name refNamer) string {
 		}
 		return sum
 	}
-	if p := detailPhrase(a.Action, ref, sum, name); p != "" {
-		return p
+	// A person who added a source and said they looked at it themselves.
+	checked := ""
+	if s, ok := strings.CutSuffix(sum, "; checked by a person"); ok && a.Action == "evidence.add" {
+		sum, checked = s, " and checked it"
 	}
-	return fill(base, name(ref))
+	if p := detailPhrase(a.Action, ref, sum, name); p != "" {
+		return p + checked
+	}
+	return fill(base, name(ref)) + checked
 }
 
 // resetSentence says an edit lowered a checked record to Not checked.
@@ -134,6 +139,9 @@ func detailPhrase(action, ref, sum string, name refNamer) string {
 	case "conclusion.update":
 		if strings.HasPrefix(sum, "Cleared conclusion") || strings.HasPrefix(sum, "Cleared the answer") {
 			return "cleared the answer"
+		}
+		if strings.HasPrefix(sum, "Wrote conclusion") {
+			return "wrote the answer"
 		}
 		if strings.HasPrefix(sum, "Recorded a review of the answer") {
 			return "checked the answer"

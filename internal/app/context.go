@@ -33,7 +33,7 @@ func (a *App) ContextPack(ctx context.Context, invRef string, o ContextOptions) 
 	}
 	var snap contextpack.Snapshot
 	err := a.db.WithReadTx(ctx, func(tx *sql.Tx) error {
-		s, err := a.readSnapshot(ctx, tx, invRef, contextActivityRows)
+		s, err := a.readSnapshot(ctx, tx, invRef, contextActivityRows, false)
 		snap = s
 		return err
 	})
@@ -74,15 +74,15 @@ func (a *App) RenderContext(ctx context.Context, invRef, format string, o Contex
 
 // readSnapshot reads what a context pack or report needs about one
 // investigation (empty invRef means the active one) inside tx: the
-// investigation, evidence (never raw detail), claims and hypotheses with
+// investigation, evidence (raw detail only withRaw, for a shared answer), claims and hypotheses with
 // links, questions and the newest activityRows activity rows.
-func (a *App) readSnapshot(ctx context.Context, tx *sql.Tx, invRef string, activityRows int) (contextpack.Snapshot, error) {
+func (a *App) readSnapshot(ctx context.Context, tx *sql.Tx, invRef string, activityRows int, withRaw bool) (contextpack.Snapshot, error) {
 	inv, err := a.resolveInvestigation(ctx, tx, invRef)
 	if err != nil {
 		return contextpack.Snapshot{}, err
 	}
 	s := contextpack.Snapshot{Investigation: inv}
-	if s.Evidence, err = store.ListEvidence(ctx, tx, inv.ID); err != nil {
+	if s.Evidence, err = store.ListEvidenceRaw(ctx, tx, inv.ID, withRaw); err != nil {
 		return s, err
 	}
 	claims, err := store.ListStatements(ctx, tx, store.LinkClaim, inv.ID)

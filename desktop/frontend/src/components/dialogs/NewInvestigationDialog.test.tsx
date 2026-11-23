@@ -57,6 +57,20 @@ describe('NewInvestigationDialog', () => {
     expect(mocks.api.createInvestigation).toHaveBeenCalledWith(expect.objectContaining({ make_active: true }))
   })
 
+  it('gives the question a two-line box, where Enter adds the question and a pasted line break becomes a space', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    const dialog = await screen.findByRole('dialog', { name: 'New question' })
+    const box = within(dialog).getByLabelText('Question')
+    expect(box.tagName).toBe('TEXTAREA')
+    expect(box).toHaveAttribute('rows', '2')
+    await user.click(box)
+    await user.paste('Why are tickets\nslower?')
+    expect(box).toHaveValue('Why are tickets slower?')
+    await user.keyboard('{Enter}')
+    expect(mocks.api.createInvestigation).toHaveBeenCalledWith(expect.objectContaining({ title: 'Why are tickets slower?' }))
+  })
+
   it('offers no AI choice and never turns the AI on when no AI tool is connected', async () => {
     const off = { ...clientConnections, claude: { ...clientConnections.claude, configured: false } }
     Object.assign(mocks.api, mockApi({ listInvestigations: async () => [], clientConnections: async () => off }))

@@ -89,7 +89,7 @@ How we know: The race detector reproduces it (E-006), the code shows the shared 
 - Claude Code added the finding "TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map." with 3 sources
 - Claude Code said the finding "The two checkout tests share cartCache when the package runs in parallel on slow runners." turned out right
 - Claude Code added something to find out: "Do other packages keep test state in package-level maps?"
-- Claude Code updated the answer
+- Claude Code wrote the answer
 
 ### October 7, 2026
 

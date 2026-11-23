@@ -9,8 +9,7 @@ import { useAppData } from '../../state/appData'
 import { useWrite } from '../../state/useWrite'
 import { Checkbox } from '../ui/Checkbox'
 import { Dialog } from '../ui/Dialog'
-import { TextArea } from '../ui/TextArea'
-import { TextField } from '../ui/TextField'
+import { QuestionField, TextArea } from '../ui/TextArea'
 
 const FIELDS = ['title', 'problem_statement'] as const
 
@@ -105,15 +104,12 @@ export function NewInvestigationDialog({ onClose, onCreated }: NewInvestigationD
       }
     >
       <div className="dialog-fields" ref={fieldsRef}>
-        <TextField
-          label="Question"
+        <QuestionField
           hint="What do you want to know? For example: Why did calls go up when sales stayed the same?"
           value={title}
           onChange={setTitle}
           error={fieldErrors.title}
           note={nearLimit(title, LIMITS.title)}
-          autoComplete="off"
-          spellCheck
         />
         <TextArea
           label="Background (optional)"

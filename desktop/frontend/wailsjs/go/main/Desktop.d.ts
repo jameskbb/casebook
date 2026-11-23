@@ -27,6 +27,8 @@ export function ClearActiveInvestigation(arg1:string):Promise<boolean>;
 
 export function ClientConnections():Promise<main.ClientConnections>;
 
+export function ConnectClient(arg1:string):Promise<main.ClientChange>;
+
 export function CopyContext(arg1:string):Promise<void>;
 
 export function CopyContextPlain(arg1:string):Promise<void>;
@@ -54,6 +56,8 @@ export function DeleteHypothesis(arg1:string,arg2:string):Promise<void>;
 export function DeleteInvestigation(arg1:string):Promise<void>;
 
 export function DeleteQuestion(arg1:string,arg2:string):Promise<void>;
+
+export function DisconnectClient(arg1:string):Promise<main.ClientChange>;
 
 export function ExportInvestigation(arg1:string):Promise<main.FileResult>;
 

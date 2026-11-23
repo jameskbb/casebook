@@ -67,10 +67,12 @@ How we know: The billing team's notice, the call log and the billing team lead a
 - Calls about a bill: 400 in September, 1,070 in October (Not checked)
   - Call log, September and October, by reason
   - The call log gives a reason for every call. Calls about a bill went from 400 in September to 1,070 in October. Calls to buy went from 2,000 to 2,050. The extra bill calls start on October 3.
+  - Exact words: Calls to buy: 2,000 in September, 2,050 in October. Calls about a bill: 400 in September, 1,070 in October. All calls: 2,400 in September, 3,120 in October.
 - Notice dated October 4: 1,900 customers were charged twice on October 3 (A person checked this)
   - Email from the billing team
   - Where to find it: Email to all staff, October 4, subject: Customers charged twice on October 3
   - The billing team emailed all staff on October 4. A mistake in the bills sent on October 3 charged 1,900 customers twice. The team said refunds would go out within a week.
+  - Exact words: From: Billing team Date: October 4 Subject: Customers charged twice on October 3 The bills we sent yesterday charged 1,900 customers twice. We found the mistake this morning. Refunds will go out within a week. Customers may call about it.
 - Call notes: 9 in 10 October calls about a bill mention being charged twice (Not checked)
   - Call log notes
   - Where to find it: Call log, October, notes column

@@ -9,8 +9,8 @@ import { detail as baseDetail, evidence } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { OpenAtLaunch } from '../../test/OpenAtLaunch'
 import { ToastProvider } from '../ui/Toaster'
-import { RULE_OUT_ACTION, STILL_HOLDS_ACTION } from '../drawers/StatementDrawer'
-import { ALL_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, DISAGREE_HEADING, goBackText, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION, WRITE_THE_ANSWER } from './CheckSources'
+import { RULE_OUT_ACTION, STILL_HOLDS_ACTION, STILL_HOLDS_QUESTION } from '../drawers/StatementDrawer'
+import { ALL_DECIDED, ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, CheckSources, checkStep, DECIDE_TITLE, endText, goBackText, SKIP_ACTION, skippedText, SOURCE_CHECKED_ACTION, WHY_STILL_HOLDS, WRITE_THE_ANSWER } from './CheckSources'
 import { CHECKED_ANSWER_ACTION, WHAT_DID_YOU_CHECK } from './ConclusionPanel'
 
 const mocks = vi.hoisted(() => ({ api: {} as Api }))
@@ -23,6 +23,13 @@ describe('checkStep', () => {
     expect(checkStep(list, [], 0)).toMatchObject({ current: { ref: 'E-001' }, position: 1, total: 3, left: 3 })
     expect(checkStep(list, ['E-001'], 0)).toMatchObject({ current: { ref: 'E-002' }, position: 2, total: 3, left: 3 })
     expect(checkStep(list, ['E-001', 'E-002', 'E-003'], 0)).toMatchObject({ current: undefined, left: 3 })
+  })
+
+  it('offers a source the person added without ticking that they looked at it, and not one they ticked', () => {
+    const you = { kind: 'human' as const, client: 'casebook-ui' }
+    const added = { ...evidence[0], ref: 'E-010', source_type: 'manual_observation' as const, created_by: you, verification: 'ai_generated' as const }
+    const ticked = { ...added, ref: 'E-011', verification: 'human_verified' as const }
+    expect(checkStep([ticked, added], [], 0)).toMatchObject({ current: { ref: 'E-010' }, total: 1 })
   })
 
   it('keeps counting the sources already checked in this walk', () => {
@@ -86,7 +93,7 @@ describe('CheckSources', () => {
     render(wrap(<Harness />))
     await waitFor(() => expect(mocks.api.getInvestigationDetail).toHaveBeenCalled())
     await user.click(screen.getByRole('button', { name: 'Open' }))
-    return { user, dialog: await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE }) }
+    return { user, dialog: await screen.findByRole('dialog') }
   }
 
   it('goes through the sources, then each finding where sources disagree, then the answer, in one pass', async () => {
@@ -106,12 +113,15 @@ describe('CheckSources', () => {
     await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
 
     // The skipped one is still not checked; going back offers it again.
-    // Then the finding where sources disagree, with its sources both ways.
-    expect(await within(dialog).findByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    // Then the finding where sources disagree, with its sources both ways,
+    // under its own title, and focus on the question rather than a decision.
+    const question = await within(dialog).findByRole('heading', { name: STILL_HOLDS_QUESTION })
+    expect(dialog).toHaveAccessibleName(DECIDE_TITLE)
+    expect(question).toHaveFocus()
     expect(within(dialog).getByText('Finding 1 of 1')).toBeInTheDocument()
     expect(within(dialog).getByText('Callers waited too long and hung up before buying.')).toBeInTheDocument()
     expect(within(dialog).getByText('Goes against it')).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION })).toHaveFocus()
+    expect(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION })).not.toHaveFocus()
     await user.click(within(dialog).getByRole('button', { name: SKIP_ACTION }))
 
     // The skipped ones still need the person; going back offers them again, source first.
@@ -148,13 +158,47 @@ describe('CheckSources', () => {
   it('records It still holds as the person read the finding', async () => {
     current = { ...current, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })) }
     const { user, dialog } = await renderWalk()
-    expect(within(dialog).getByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    expect(dialog).toHaveAccessibleName(DECIDE_TITLE)
+    expect(within(dialog).getByRole('heading', { name: STILL_HOLDS_QUESTION })).toHaveFocus()
+    // Enter on the question decides nothing.
+    await user.keyboard('{Enter}')
+    expect(mocks.api.reviewStatement).not.toHaveBeenCalled()
+    expect(within(dialog).getByLabelText(WHY_STILL_HOLDS)).toHaveValue('')
     await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
     expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', { kind: 'claim', ref: 'C-004', basis: 'fixture-C-004', verification: 'human_verified', settle_dispute: true })
     expect(await within(dialog).findByText('Last, check the answer.')).toBeInTheDocument()
   })
 
-  it('ends on You have checked everything with Write the answer when there is no answer', async () => {
+  it('shows the exact words of each source in the Decide step, and sends the reason with It still holds', async () => {
+    current = { ...current, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })) }
+    Object.assign(mocks.api, { getEvidence: vi.fn(async (_inv: string, ref: string) => ({ ...current.evidence.find((e) => e.ref === ref)!, raw_detail: `Words of ${ref}` })) })
+    const { user, dialog } = await renderWalk()
+    expect(await within(dialog).findByText('Words of E-003')).toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText(WHY_STILL_HOLDS), 'The wait stayed the same, but the sales manager saw it.')
+    await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    expect(mocks.api.reviewStatement).toHaveBeenCalledWith('INV-0001', expect.objectContaining({ ref: 'C-004', rationale: 'The wait stayed the same, but the sales manager saw it.' }))
+  })
+
+  it("shows the finding's current why in the reason field, and sends nothing when it is left as it is", async () => {
+    current = { ...current, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })), claims: current.claims.map((c) => (c.ref === 'C-004' ? { ...c, confidence_rationale: 'The sales manager said so.' } : c)) }
+    const { user, dialog } = await renderWalk()
+    expect(within(dialog).getByLabelText(WHY_STILL_HOLDS)).toHaveValue('The sales manager said so.')
+    await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    expect(vi.mocked(mocks.api.reviewStatement).mock.calls[0][1]).not.toHaveProperty('rationale')
+  })
+
+  it('ends by saying what the person did: every source checked, and every finding decided only after deciding one', async () => {
+    expect(endText(false)).toBe('You have checked every source.')
+    expect(endText(true)).toBe('You have checked every source. You decided every finding where sources disagree.')
+    current = { ...current, investigation: { ...current.investigation, conclusion: '' }, evidence: current.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })) }
+    const { user, dialog } = await renderWalk()
+    await user.click(within(dialog).getByRole('button', { name: STILL_HOLDS_ACTION }))
+    expect(await within(dialog).findByText(`${ALL_SOURCES_CHECKED} ${ALL_DECIDED}`)).toBeInTheDocument()
+    expect(dialog).toHaveAccessibleName(CHECK_SOURCES_TITLE)
+    expect(within(dialog).queryByText(/checked everything/)).toBeNull()
+  })
+
+  it('ends on You have checked every source with Write the answer when there is no answer', async () => {
     current = {
       ...current,
       investigation: { ...current.investigation, conclusion: '' },
@@ -164,7 +208,8 @@ describe('CheckSources', () => {
     const { user, dialog } = await renderWalk()
     expect(within(dialog).getByText('Source 1 of 1')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: SOURCE_CHECKED_ACTION }))
-    expect(await within(dialog).findByText(ALL_CHECKED)).toBeInTheDocument()
+    expect(await within(dialog).findByText(ALL_SOURCES_CHECKED)).toBeInTheDocument()
+    expect(within(dialog).queryByText(ALL_DECIDED, { exact: false })).toBeNull()
     expect(within(dialog).queryByLabelText(WHAT_DID_YOU_CHECK)).toBeNull()
     const writeIt = within(dialog).getByRole('button', { name: WRITE_THE_ANSWER })
     expect(writeIt).toHaveFocus()

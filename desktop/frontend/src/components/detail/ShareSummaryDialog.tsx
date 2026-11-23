@@ -71,6 +71,12 @@ export function ShareSummaryDialog({ invRef, onClose }: { invRef: string; onClos
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invRef])
 
+  // Each version is read from its top: switching never lands midway down.
+  useEffect(() => {
+    const paper = document.querySelector<HTMLElement>('.share-summary-dialog .note-paper')
+    if (paper) paper.scrollTop = 0
+  }, [preview])
+
   // The answer changed since the sheet was loaded: show how it reads now
   // rather than send the older one.
   const failed = (e: unknown) => {

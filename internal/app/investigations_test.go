@@ -301,7 +301,7 @@ func TestUpdateConclusionSetAndClear(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rows[0].Summary != "Updated conclusion of INV-0001 (confidence high)" || rows[0].TargetRef != "INV-0001" {
+	if rows[0].Summary != "Wrote conclusion of INV-0001 (confidence high)" || rows[0].TargetRef != "INV-0001" {
 		t.Fatalf("conclusion activity = %+v", rows[0])
 	}
 	// Identical replacement is a no-op.

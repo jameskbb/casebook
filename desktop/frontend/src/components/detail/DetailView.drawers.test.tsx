@@ -77,10 +77,10 @@ describe('DetailView drawers', () => {
     expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull()
   })
 
-  it('opens the drawer from a source row under Other sources', async () => {
+  it('opens the drawer from a source row under Sources', async () => {
     const user = userEvent.setup()
     renderDetail(detailWithBareEvidence())
-    const other = await screen.findByRole('region', { name: 'Other sources' })
+    const other = await screen.findByRole('region', { name: 'Sources' })
     await user.click(within(other).getByRole('button', { name: /^Open source E-009:/ }))
     expect(screen.getByRole('dialog', { name: 'Source E-009' })).toBeInTheDocument()
   })

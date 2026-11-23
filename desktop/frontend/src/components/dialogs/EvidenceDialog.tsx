@@ -1,8 +1,9 @@
 // Add and edit a source. Four fields: Name, What it shows, Where to find it
-// and Exact words or numbers. A source a person adds is saved as seen by
-// them and counts as checked by them; the window says so. The stored kind,
-// date and extra details are not edited here; an edit leaves them as they
-// are.
+// and Exact words or numbers. Adding one also offers a tick, off at first:
+// I have looked at this source myself. Ticked, the source is saved as checked
+// by the person (the history says so); unticked, it is Not checked and Check
+// the next source offers it. The stored kind, date and extra details are not
+// edited here; an edit leaves them as they are.
 //
 // Edit mode loads the exact words through GetEvidence with include_raw_detail
 // and sends only the fields that changed. An error appears under its field;
@@ -15,13 +16,15 @@ import { LIMITS, nearLimit } from '../../lib/bytes'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { useWrite } from '../../state/useWrite'
 import { ChangedElsewhereBanner } from '../ui/ChangedElsewhereBanner'
+import { Checkbox } from '../ui/Checkbox'
 import { Dialog } from '../ui/Dialog'
 import { TextArea } from '../ui/TextArea'
 import { TextField } from '../ui/TextField'
 import { useToast } from '../ui/Toaster'
 import './EvidenceDialog.css'
 
-export const ADDED_COUNTS_AS_CHECKED = 'Sources you add yourself count as checked by you.'
+export const LOOKED_MYSELF = 'I have looked at this source myself'
+export const LOOKED_MYSELF_HINT = 'Leave it off and the source shows as Not checked until you check it.'
 
 const FIELDS = ['title', 'summary', 'source_ref', 'raw_detail'] as const
 
@@ -62,6 +65,7 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [summary, setSummary] = useState<string | undefined>()
   const [focusInvalid, setFocusInvalid] = useState(false)
+  const [looked, setLooked] = useState(false)
   const fieldsRef = useRef<HTMLDivElement>(null)
 
   // Edit mode: load the stored exact words when the dialog opens (and again
@@ -124,8 +128,8 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
 
   const buildInput = (): EvidenceInput => {
     const v = values
-    // Added by hand: the person saw it themselves.
-    const input: EvidenceInput = { title: v.title, summary: v.summary, source_type: 'manual_observation' }
+    // Added by hand. Checked by the person only when they say they looked at it.
+    const input: EvidenceInput = { title: v.title, summary: v.summary, source_type: 'manual_observation', verification: looked ? 'human_verified' : 'ai_generated' }
     if (v.source_ref.trim()) input.source_ref = v.source_ref
     if (v.raw_detail.trim()) input.raw_detail = v.raw_detail
     return input
@@ -241,7 +245,12 @@ export function EvidenceDialog(props: EvidenceDialogProps) {
           rows={4}
           spellCheck={false}
         />
-        {!existing && <p className="evidence-dialog-note">{ADDED_COUNTS_AS_CHECKED}</p>}
+        {!existing && (
+          <div>
+            <Checkbox label={LOOKED_MYSELF} checked={looked} onChange={setLooked} aria-describedby="evidence-looked-hint" />
+            <p className="evidence-dialog-note" id="evidence-looked-hint">{LOOKED_MYSELF_HINT}</p>
+          </div>
+        )}
       </div>
     </Dialog>
   )

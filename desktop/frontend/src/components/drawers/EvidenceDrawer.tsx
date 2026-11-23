@@ -80,7 +80,7 @@ export function EvidenceDrawer({ evidence: e, detail, onOpenRef, onDeleted }: Ev
         </DrawerGroup>
       )}
 
-      {e.has_raw_detail && <RawDetail evidence={e} invRef={detail.investigation.ref} />}
+      {e.has_raw_detail && <ExactWords evidence={e} invRef={detail.investigation.ref} />}
 
       <DrawerGroup title="Kind" className="codes-only">
         <p>{sourceKindWord[e.source_type] ?? e.source_type}</p>
@@ -264,8 +264,11 @@ function EvidenceActions({
  * request time, not on GetEvidence's: when the source changed between the
  * detail load and GetEvidence the two differ, and comparing them would
  * refetch in a loop until the detail reloads.
+ *
+ * inline is the question page's Sources list: the same toggle, without the
+ * drawer's heading.
  */
-function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string }) {
+export function ExactWords({ evidence: e, invRef, inline = false }: { evidence: Evidence; invRef: string; inline?: boolean }) {
   const toast = useToast()
   const [shown, setShown] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -303,23 +306,34 @@ function RawDetail({ evidence: e, invRef }: { evidence: Evidence; invRef: string
     if (!raw || raw.requestedFor !== version) void load()
   }
 
-  return (
-    <DrawerGroup
-      title="Exact words or numbers"
-      action={
-        <Button variant="ghost" className="disclosure-button" aria-expanded={shown} onClick={toggle}>
-          <ChevronDown
-            className={['disclosure-icon', shown ? 'is-open' : ''].filter(Boolean).join(' ')}
-            size={16}
-            strokeWidth={1.75}
-            aria-hidden="true"
-          />
-          {shown ? 'Hide the exact words' : 'Show the exact words'}
-        </Button>
-      }
-    >
+  const button = (
+    <Button variant="ghost" className="disclosure-button" aria-expanded={shown} onClick={toggle}>
+      <ChevronDown
+        className={['disclosure-icon', shown ? 'is-open' : ''].filter(Boolean).join(' ')}
+        size={16}
+        strokeWidth={1.75}
+        aria-hidden="true"
+      />
+      {shown ? 'Hide the exact words' : 'Show the exact words'}
+    </Button>
+  )
+  const body = (
+    <>
       {shown && slow && !raw && <p className="drawer-empty">Loading the exact words...</p>}
       {shown && raw && <pre className="raw-detail">{raw.text}</pre>}
+    </>
+  )
+  if (inline) {
+    return (
+      <div className="exact-words">
+        {button}
+        {body}
+      </div>
+    )
+  }
+  return (
+    <DrawerGroup title="Exact words or numbers" action={button}>
+      {body}
     </DrawerGroup>
   )
 }

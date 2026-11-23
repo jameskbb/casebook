@@ -1,17 +1,19 @@
 // The answer: the one bold element on the screen. View mode shows the answer
 // in Literata 20, how many of the question's sources a person has checked,
 // one line saying whether they checked the answer, one row of buttons (Check
-// the next source while one is left, then Decide while only findings where
-// sources disagree are left, then I checked this answer, then Share the
-// answer; the first one that applies is the main button, and I checked this
+// the next source while one is left, then Decide where sources disagree while
+// only those findings are left, then Check this answer, then Share the
+// answer; the first one that applies is the main button, and Check this
 // answer waits until nothing else is left) and how the person knows; the
 // findings under What backs this up, and apart from them the findings where
 // sources disagree, counted from the page as it is now (ruled out and
-// replaced ones are not counted). Once the person checked the answer, Undo my check sets it back to
-// not checked. Edit mode is inline in the same panel:
-// the answer and how you know, saved together through UpdateConclusion with
-// the findings on the page behind it (lib/records answerFindings). Confidence
-// is stored and passed through unchanged, never shown. Clearing asks first.
+// replaced ones are not counted). With no answer and no finding that holds,
+// the empty line says what Home says: Add a finding from your sources. Once
+// the person checked the answer, Undo my check sets it back to not checked.
+// Edit mode is inline in the same panel: the answer and how you know, saved
+// together through UpdateConclusion with the findings on the page behind it
+// (lib/records answerFindings). Confidence is stored and passed through
+// unchanged, never shown. Clearing asks first.
 // Saves show no toast; the panel returns to view mode with the saved value.
 //
 // Edit-in-place safety: the editor snapshots the stored values when it
@@ -28,6 +30,7 @@ import { formatDate } from '../../lib/relativeTime'
 import { splitFieldErrors } from '../../lib/formErrors'
 import { confidenceOptions } from '../../lib/labels'
 import { countOf, plural } from '../../lib/plural'
+import { ADD_FINDING_NEED } from '../../lib/questions'
 import { answerFindings, evidenceByRef, groupFindings, sourceChecks, sourcesToCheck } from '../../lib/records'
 import { useDirtyEditor } from '../../state/dirtyGuard'
 import { useWrite } from '../../state/useWrite'
@@ -76,6 +79,10 @@ export interface ConclusionPanelProps {
 
 export const CHECK_NEXT_SOURCE = 'Check the next source'
 export const DECIDE_ACTION = 'Decide'
+/** The answer card's main button while only findings where sources disagree are left. */
+export const DECIDE_WHERE_ACTION = 'Decide where sources disagree'
+/** Opens the answer check; CHECKED_ANSWER_ACTION confirms it. */
+export const CHECK_THIS_ANSWER = 'Check this answer'
 export const SHARE_THE_ANSWER = 'Share the answer'
 export const CHECKED_ANSWER_ACTION = 'I checked this answer'
 export const NOT_CHECKED_ANSWER = 'You have not checked this answer yet.'
@@ -297,8 +304,8 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
   const canShare = share && has
   const actions = (next || canShare || canCheck) && !checking && (
     <div className="conclusion-next">
-      {next && <Button variant="primary" onClick={onCheckSources}>{sourcesLeft ? CHECK_NEXT_SOURCE : DECIDE_ACTION}</Button>}
-      {canCheck && <Button variant={next ? 'secondary' : 'primary'} ref={checkButtonRef} onClick={beginCheck}>{CHECKED_ANSWER_ACTION}</Button>}
+      {next && <Button variant="primary" onClick={onCheckSources}>{sourcesLeft ? CHECK_NEXT_SOURCE : DECIDE_WHERE_ACTION}</Button>}
+      {canCheck && <Button variant={next ? 'secondary' : 'primary'} ref={checkButtonRef} onClick={beginCheck}>{CHECK_THIS_ANSWER}</Button>}
       {canShare && <Button variant={next || canCheck ? 'secondary' : 'primary'} icon={ScrollText} onClick={() => setSharing(true)}>{SHARE_THE_ANSWER}</Button>}
     </div>
   )
@@ -418,7 +425,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
         </div>
       ) : (
         <div className="conclusion-empty">
-          <p className="conclusion-empty-text">{bare ? 'No answer yet.' : 'No answer yet. Write it once a finding holds.'}</p>
+          <p className="conclusion-empty-text">{bare || next || backing.length > 0 ? 'No answer yet.' : `No answer yet. ${ADD_FINDING_NEED}`}</p>
           {!bare && (
             <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
               Write the answer

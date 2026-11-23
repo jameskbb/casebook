@@ -146,22 +146,32 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		}
 		return out
 	}
-	// label is "" when the section heading already says the state. A ruled
-	// out finding's reason reads "Why we thought so:".
-	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string, ruled bool) []string {
-		lines := []string{"- " + oneLine(statement) + stateWords(imported, label)}
-		if w := oneLine(why); w != "" {
-			whyLabel := "Why we think so: "
-			if ruled {
-				whyLabel = "Why we thought so: "
-			}
-			lines = append(lines, "  - "+whyLabel+w)
-		}
-		return append(lines, sources(links)...)
-	}
 	verification := map[string]domain.Verification{}
 	for _, e := range allEvidence {
 		verification[e.Ref] = e.Verification
+	}
+	// label is "" when the section heading already says the state. A ruled
+	// out finding's reason reads "Why we thought so:". A finding a person
+	// decided holds while a source still goes against it says how many do,
+	// and its reason reads "Why it still holds:".
+	finding := func(statement, why string, v domain.Verification, imported bool, links []domain.EvidenceLink, label string, ruled bool) []string {
+		line := "- " + oneLine(statement) + stateWords(imported, label)
+		whyLabel := "Why we think so: "
+		if ruled {
+			whyLabel = "Why we thought so: "
+		} else if n := againstCount(links, verification); label != "" && v == domain.VerificationHumanVerified && n > 0 {
+			if n == 1 {
+				line += " (1 source goes against it)"
+			} else {
+				line += fmt.Sprintf(" (%d sources go against it)", n)
+			}
+			whyLabel = "Why it still holds: "
+		}
+		lines := []string{line}
+		if w := oneLine(why); w != "" {
+			lines = append(lines, "  - "+whyLabel+w)
+		}
+		return append(lines, sources(links)...)
 	}
 
 	// The same groups as the question page: a finding sits under what
@@ -171,7 +181,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	sortByRef(claims, domain.RecordClaim, func(c domain.Claim) string { return c.Ref })
 	for _, c := range claims {
 		item := func(label string) []string {
-			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, label, c.Status == domain.ClaimStatusRejected)
+			return finding(c.Statement, c.ConfidenceRationale, c.Verification, c.Imported, c.Links, label, c.Status == domain.ClaimStatusRejected)
 		}
 		switch {
 		case c.Status == domain.ClaimStatusSuperseded || c.Verification == domain.VerificationSuperseded:
@@ -188,7 +198,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	sortByRef(hyps, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
 	for _, h := range hyps {
 		item := func(label string) []string {
-			return finding(h.Statement, h.Rationale, h.Imported, h.Links, label, h.Status == domain.HypothesisStatusDisproven)
+			return finding(h.Statement, h.Rationale, h.Verification, h.Imported, h.Links, label, h.Status == domain.HypothesisStatusDisproven)
 		}
 		switch {
 		case h.Status == domain.HypothesisStatusSuperseded || h.Verification == domain.VerificationSuperseded:
@@ -238,8 +248,8 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		if from == "" {
 			from = e.SourceType.PlainLabel()
 			if e.SourceType == domain.SourceTypeManualObservation {
-				// The reader is not the person who saw it.
-				from, dated = "Seen by the person who shared this", " on "
+				// Someone typed it in; the reader may not be that person.
+				from, dated = "Added by a person", " on "
 			}
 		}
 		if on := longDate(e.CapturedAt); d.full && on != "" {
@@ -252,6 +262,9 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		if sum := oneLine(e.Summary); sum != "" {
 			list = append(list, "  - "+sum)
 		}
+		if raw := oneLine(e.RawDetail); raw != "" {
+			list = append(list, "  - Exact words: "+raw)
+		}
 	}
 	d.section("Sources", list)
 }
@@ -260,12 +273,19 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 // a finding with these links. verification holds every source of the
 // question by ref.
 func againstIt(links []domain.EvidenceLink, verification map[string]domain.Verification) bool {
+	return againstCount(links, verification) > 0
+}
+
+// againstCount counts the sources that have not been replaced and go against
+// a finding with these links.
+func againstCount(links []domain.EvidenceLink, verification map[string]domain.Verification) int {
+	n := 0
 	for _, l := range links {
 		if l.Relation == domain.RelationContradicts && verification[l.EvidenceRef] != domain.VerificationSuperseded {
-			return true
+			n++
 		}
 	}
-	return false
+	return n
 }
 
 // sourcesDisagree is the rule for the "Where sources disagree" group, for a

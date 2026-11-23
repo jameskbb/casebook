@@ -545,6 +545,8 @@ func (s *seeder) person() {
 		Summary:     "The billing team lead said in person that the bills sent on October 3 charged 1,900 customers twice, and that the mistake was fixed on October 5.",
 		SourceType:  app.SourceTypeUserStatement,
 		SourceLabel: "Billing team lead, in person",
+		// The person heard it themselves, so it is saved as checked by them.
+		Verification: app.VerificationHumanVerified,
 	})
 	if !s.check(FeaturedRef+" E-009", err) {
 		return

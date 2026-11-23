@@ -71,3 +71,8 @@
   flex: none;
   margin-top: 2px;
 }
+
+/* The Question box starts at two lines, not three. */
+.field-textarea.field-question {
+  min-height: calc(2 * var(--leading-body) + 12px);
+}

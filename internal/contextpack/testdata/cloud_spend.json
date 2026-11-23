@@ -141,7 +141,7 @@
       },
       "action": "conclusion.update",
       "target_ref": "INV-0001",
-      "summary": "Updated conclusion of INV-0001 (confidence high)",
+      "summary": "Wrote conclusion of INV-0001 (confidence high)",
       "imported": false
     },
     {
@@ -240,7 +240,7 @@
       },
       "action": "evidence.add",
       "target_ref": "E-004",
-      "summary": "Added source E-004 \"Head of platform: debug was requested for payments only\"",
+      "summary": "Added source E-004 \"Head of platform: debug was requested for payments only\"; checked by a person",
       "imported": false
     }
   ],

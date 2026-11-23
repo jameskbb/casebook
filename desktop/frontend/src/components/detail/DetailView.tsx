@@ -1,10 +1,11 @@
 // The question page: sticky header, then the reading column in this exact
 // order: the question, the answer, the add buttons, What backs this up,
 // Where sources disagree, the ruled out and replaced findings (each behind
-// one line), Still to find out, Other sources, How we got here. A section
-// with nothing in it is not drawn. Findings (claims and hypotheses) are
-// grouped by what happened to them and each one lists its own sources; Other
-// sources holds the ones no finding on the page uses.
+// one line), Still to find out, Sources, How we got here. A section with
+// nothing in it is not drawn. Findings (claims and hypotheses) are grouped by
+// what happened to them and each one lists its own sources; Sources lists
+// every source once, with Show the exact words, and the replaced ones behind
+// one line.
 //
 // Reloads keep the previous content on screen (the column is never keyed on
 // dataVersion, so scroll position and open editors survive). A first load
@@ -16,7 +17,7 @@
 // matching detail is loaded: a search hit's record opens its drawer or
 // focuses its row; Home's buttons open the check (Decide opens it too: its
 // sources are all checked, so it starts on the findings where sources
-// disagree), the answer editor or the answer check. A finding where sources
+// disagree), Add finding, the answer editor or the answer check. A finding where sources
 // disagree has its own Decide button, which opens the check on it. When the
 // check closes, focus goes back to that Decide button, or else to the
 // answer's first button.
@@ -119,6 +120,8 @@ function Page({ detail }: { detail: InvestigationDetail }) {
   // The check is open; startAt is the finding a Decide button opened it on.
   const [checking, setChecking] = useState<{ startAt?: string } | null>(null)
   const [answerIntent, setAnswerIntent] = useState<AnswerIntent | null>(null)
+  // Home's Add a finding: the add finding window opens once.
+  const [addFinding, setAddFinding] = useState(false)
   // Set when the check closes: the finding its Decide button was for, or '' for none.
   const [refocus, setRefocus] = useState<string | null>(null)
 
@@ -143,6 +146,8 @@ function Page({ detail }: { detail: InvestigationDetail }) {
     if (!pendingOpen || inv.ref !== selectedRef) return
     if (pendingOpen === 'check-sources' || pendingOpen === 'decide') {
       setChecking({})
+    } else if (pendingOpen === 'add-finding') {
+      setAddFinding(true)
     } else if (pendingOpen === 'write-answer' || pendingOpen === 'check-answer') {
       setAnswerIntent(pendingOpen)
     } else if (drawerKind(pendingOpen)) {
@@ -173,7 +178,7 @@ function Page({ detail }: { detail: InvestigationDetail }) {
         intent={answerIntent}
         onIntentDone={() => setAnswerIntent(null)}
       />
-      <ReadingSections detail={detail} onDecide={(startAt) => setChecking({ startAt })} />
+      <ReadingSections detail={detail} onDecide={(startAt) => setChecking({ startAt })} addFinding={addFinding} onAddFindingOpened={() => setAddFinding(false)} />
       {checking && (
         <CheckSources
           detail={detail}
@@ -221,7 +226,7 @@ function StaleDetailBanner() {
   )
 }
 
-export const OTHER_SOURCES_HEADING = 'Other sources'
+export const SOURCES_HEADING = 'Sources'
 export const LABELS_LINK = 'What the labels mean'
 
 /** A row under Still to find out: a finding not tested yet, or something to find out. */
@@ -236,7 +241,7 @@ type RecordDialog =
  * (or changes state) focus moves to its row; one that moved behind its Show
  * line leaves focus on that line.
  */
-function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; onDecide: (ref: string) => void }) {
+function ReadingSections({ detail, onDecide, addFinding = false, onAddFindingOpened }: { detail: InvestigationDetail; onDecide: (ref: string) => void; addFinding?: boolean; onAddFindingOpened?: () => void }) {
   const { open } = useDrawers()
   const write = useWrite()
   const toast = useToast()
@@ -247,6 +252,12 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
   const [legendOpen, setLegendOpen] = useState(false)
   const [testing, setTesting] = useState<string | null>(null)
   const sectionsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!addFinding) return
+    setDialog({ type: 'claim' })
+    onAddFindingOpened?.()
+  }, [addFinding, onAddFindingOpened])
 
   useEffect(() => {
     if (!focusRef) return
@@ -325,10 +336,9 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
 
   const sources = evidenceByRef(detail)
   const findings = groupFindings(detail.claims, detail.hypotheses, sources)
-  // Sources under a finding are read there; the rest are listed on their own,
-  // and so is one whose only findings sit behind Show replaced findings.
-  const hidden = new Set(findings.replaced.map((f) => f.record.ref))
-  const otherSources = detail.evidence.filter((e) => [...e.claim_links, ...e.hypothesis_links].every((l) => hidden.has(l.ref)))
+  // Every source once, so none drops off the page when a finding uses it.
+  const currentSources = detail.evidence.filter((e) => e.verification !== 'superseded')
+  const replacedSources = detail.evidence.filter((e) => e.verification === 'superseded')
   const names = new Map<string, string>([
     ...detail.evidence.map((e) => [e.ref, e.title] as const),
     ...detail.claims.map((c) => [c.ref, c.statement] as const),
@@ -342,7 +352,7 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
   const toFind: ToFind[] = [...findings.notTested.map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
   const toFindRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} actions={f.kind === 'hypothesis' && testActions(f.record)} />
   const decideButton = (f: Finding) => (
-    <Button variant="ghost" aria-label={`${DECIDE_ACTION}: ${f.record.statement}`} onClick={() => onDecide(f.record.ref)}>{DECIDE_ACTION}</Button>
+    <Button variant="secondary" aria-label={`${DECIDE_ACTION}: ${f.record.statement}`} onClick={() => onDecide(f.record.ref)}>{DECIDE_ACTION}</Button>
   )
   return (
     <div className="reading-sections" ref={sectionsRef}>
@@ -384,10 +394,12 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
         id="evidence"
         icon={FileText}
         kind="evidence"
-        heading={otherSources.length < detail.evidence.length ? OTHER_SOURCES_HEADING : 'Sources'}
-        items={otherSources}
+        heading={SOURCES_HEADING}
+        items={currentSources}
+        collapsed={replacedSources}
+        collapsedNoun={['replaced source', 'replaced sources']}
         itemKey={(e) => e.ref}
-        renderItem={(e) => <EvidenceRow evidence={e} onOpen={open} />}
+        renderItem={(e) => <EvidenceRow evidence={e} onOpen={open} invRef={invRef} />}
       />
       <ActivityList
         activities={detail.recent_activity}

@@ -26,3 +26,31 @@ export function TextArea({ label, hint, error, note, value, onChange, id, classN
     </FieldChrome>
   )
 }
+
+/**
+ * The Question field of New question and Edit question: a box of two lines
+ * so a whole question can be read while it is typed. A question is one line,
+ * so Enter submits the form as it does in a one-line field, and a pasted line
+ * break becomes a space.
+ */
+export function QuestionField(props: Omit<TextAreaProps, 'label' | 'rows'>) {
+  const { onChange, onKeyDown } = props
+  return (
+    <TextArea
+      {...props}
+      label="Question"
+      rows={2}
+      className="field-question"
+      autoComplete="off"
+      spellCheck
+      onChange={(v) => onChange(v.replace(/\r?\n/g, ' '))}
+      onKeyDown={(e) => {
+        onKeyDown?.(e)
+        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !e.nativeEvent.isComposing) {
+          e.preventDefault()
+          e.currentTarget.form?.requestSubmit()
+        }
+      }}
+    />
+  )
+}

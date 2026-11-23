@@ -85,6 +85,10 @@ export interface InvestigationSummary {
   sources_checked_by_you?: number
   /** Findings where sources disagree (lib/records sourcesDisagree is the same rule). */
   findings_disagree?: number
+  /** Findings under What backs this up (lib/records groupFindings is the same rule). */
+  findings_backing?: number
+  /** Findings a person decided hold while a source still goes against them. */
+  findings_decided?: number
   /** There is an answer, a person checked it, and nothing changed since. */
   answer_checked_by_you?: boolean
 }
@@ -208,6 +212,8 @@ export interface ReviewStatementInput {
   basis: string
   verification: 'human_verified'
   settle_dispute: boolean
+  /** When not empty, replaces the finding's why in the same write: why it still holds. */
+  rationale?: string
 }
 
 export interface SearchHit {

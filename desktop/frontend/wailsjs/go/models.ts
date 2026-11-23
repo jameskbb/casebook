@@ -88,6 +88,7 @@ export namespace app {
 	    basis: string;
 	    verification: string;
 	    settle_dispute: boolean;
+	    rationale?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new ReviewStatementInput(source);
@@ -100,6 +101,7 @@ export namespace app {
 	        this.basis = source["basis"];
 	        this.verification = source["verification"];
 	        this.settle_dispute = source["settle_dispute"];
+	        this.rationale = source["rationale"];
 	    }
 	}
 	export class ShareCandidate {
@@ -147,6 +149,7 @@ export namespace app {
 	export class SharePreview {
 	    markdown: string;
 	    html: string;
+	    text: string;
 	    snapshot_id: string;
 	    investigation_ref: string;
 	    mode: string;
@@ -161,6 +164,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.markdown = source["markdown"];
 	        this.html = source["html"];
+	        this.text = source["text"];
 	        this.snapshot_id = source["snapshot_id"];
 	        this.investigation_ref = source["investigation_ref"];
 	        this.mode = source["mode"];
@@ -1116,6 +1120,9 @@ export namespace domain {
 	    sources_total: number;
 	    sources_checked_by_you: number;
 	    findings_disagree: number;
+	    findings_backing: number;
+	    findings_decided: number;
+	    answer_checked_by_you: boolean;
 
 	    static createFrom(source: any = {}) {
 	        return new InvestigationSummary(source);
@@ -1138,6 +1145,9 @@ export namespace domain {
 	        this.sources_total = source["sources_total"];
 	        this.sources_checked_by_you = source["sources_checked_by_you"];
 	        this.findings_disagree = source["findings_disagree"];
+	        this.findings_backing = source["findings_backing"];
+	        this.findings_decided = source["findings_decided"];
+	        this.answer_checked_by_you = source["answer_checked_by_you"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1335,7 +1345,62 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class ClientFile {
+	    file: string;
+	    action: string;
+	    backup: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ClientFile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.file = source["file"];
+	        this.action = source["action"];
+	        this.backup = source["backup"];
+	    }
+	}
+	export class ClientChange {
+	    tool: string;
+	    connected: boolean;
+	    changed: boolean;
+	    message: string;
+	    files: ClientFile[];
+
+	    static createFrom(source: any = {}) {
+	        return new ClientChange(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tool = source["tool"];
+	        this.connected = source["connected"];
+	        this.changed = source["changed"];
+	        this.message = source["message"];
+	        this.files = this.convertValues(source["files"], ClientFile);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ClientConnection {
+	    found: boolean;
 	    configured: boolean;
 	    matches_cli: boolean;
 	    command: string;
@@ -1354,6 +1419,7 @@ export namespace main {
 
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.found = source["found"];
 	        this.configured = source["configured"];
 	        this.matches_cli = source["matches_cli"];
 	        this.command = source["command"];
@@ -1375,6 +1441,7 @@ export namespace main {
 	    shell: string;
 	    claude: ClientConnection;
 	    codex: ClientConnection;
+	    claude_desktop: ClientConnection;
 
 	    static createFrom(source: any = {}) {
 	        return new ClientConnections(source);
@@ -1389,6 +1456,7 @@ export namespace main {
 	        this.shell = source["shell"];
 	        this.claude = this.convertValues(source["claude"], ClientConnection);
 	        this.codex = this.convertValues(source["codex"], ClientConnection);
+	        this.claude_desktop = this.convertValues(source["claude_desktop"], ClientConnection);
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1409,6 +1477,7 @@ export namespace main {
 		    return a;
 		}
 	}
+
 	export class FileResult {
 	    cancelled: boolean;
 	    path: string;

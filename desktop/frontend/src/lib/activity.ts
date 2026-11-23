@@ -93,9 +93,20 @@ export function importedActorPhrase(actor: Actor): string {
   return `${who}, according to the file`
 }
 
-export function activitySentence(activity: Activity): ActivitySentence {
+/** The answer row a person's check wrote, or the first answer: its own verb, not updated the answer. */
+function answerVerb(activity: Activity, ctx: SummaryContext): string | undefined {
+  if (activity.action !== 'conclusion.update') return undefined
+  const sum = activity.summary.trim()
+  if (/^Wrote conclusion /.test(sum)) return 'wrote the answer'
+  if (/^Recorded a review of the answer/.test(sum)) return 'checked the answer'
+  // An older row of a check: written at the instant the question says it was checked.
+  if (/^Updated conclusion /.test(sum) && !RESET_NOTE.test(sum) && Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human') return 'checked the answer'
+  return undefined
+}
+
+export function activitySentence(activity: Activity, ctx: SummaryContext = {}): ActivitySentence {
   const target = activity.target_ref
-  const tpl = VERBS[activity.action] ?? UNKNOWN_VERB
+  const tpl = answerVerb(activity, ctx) ?? VERBS[activity.action] ?? UNKNOWN_VERB
   let segments: SentenceSegment[]
   // A deleted finding or source has nothing to open.
   const deleted = activity.action.endsWith('.delete')
@@ -186,12 +197,12 @@ function changeSentences(kind: string, items: string[]): string {
 }
 
 export interface SummaryContext {
-  /** The question's conclusion_reviewed_at: the answer row written at that instant is the person's check. */
+  /** The question's conclusion_reviewed_at: an older answer row written at that instant is the person's check. */
   conclusionReviewedAt?: string
 }
 
 /** The second line for an activity row; "" when the first line already says it or the shape is not known. */
-export function activitySummary(activity: Activity, ctx: SummaryContext = {}): string {
+export function activitySummary(activity: Activity): string {
   let sum = activity.summary.trim()
   const action = activity.action
   const kind = action.split('.')[0]
@@ -206,9 +217,11 @@ export function activitySummary(activity: Activity, ctx: SummaryContext = {}): s
     if (reset) return NEEDS_CHECKING_AGAIN
     if (/^Cleared /.test(sum)) return 'Cleared the answer.'
     if (/^Undid the check/.test(sum)) return 'Undid the check of the answer.'
-    const checked = Boolean(ctx.conclusionReviewedAt) && activity.created_at === ctx.conclusionReviewedAt && activity.actor.kind === 'human'
-    return checked ? 'Checked the answer.' : ''
+    // Wrote and checked the answer are said by the first line (answerVerb).
+    return ''
   }
+  // A source a person added and said they looked at.
+  if (action === 'evidence.add') return /; checked by a person$/.test(sum) ? CHECK_SENTENCE.human_verified : ''
   let m = /^Set \w+ of \S+ to ([a-z_]+)(?:; status ([a-z_]+))?$/.exec(sum)
   if (m) return changeSentences(kind, [`verification ${m[1]}`, ...(m[2] ? [`status ${m[2]}`] : [])])
   if (kind === 'claim' || kind === 'hypothesis' || kind === 'evidence' || action === 'investigation.update') {

@@ -122,6 +122,13 @@ button.finding-source:hover {
   text-wrap: pretty;
 }
 
+/* A name that opens the source is underlined like the history's links. */
+button.finding-source .finding-source-title {
+  text-decoration: underline;
+  text-decoration-color: var(--control-border);
+  text-underline-offset: 3px;
+}
+
 .record-row-actions {
   display: flex;
   flex-wrap: wrap;

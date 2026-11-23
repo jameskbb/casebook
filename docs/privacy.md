@@ -83,7 +83,7 @@ How this was checked (an audit on 2026-10-02, and a rerun for 0.3.0 on 2026-10-0
 Saving a summary in a notes or document app ([how](sharing.md#using-a-shared-answer-in-other-apps)) adds no network path and no credential to Casebook.
 
 - Casebook connects to no other app. When you copy or save a summary, the text goes where you put it. When you ask your AI client to save it in an app, the client fetches the summary from Casebook and writes it with that app's own tools, under your sign-in to that app and the client's permission prompts. That text moves through your AI client like any other data, under the client's terms and the app's.
-- What a shared answer holds is what you see in **Share the answer**: the short version (the findings you choose, with the labels saying who checked them, their sources and a note of what is left out) or everything (every finding and the history of changes, never the exact words stored with a source).
+- What a shared answer holds is what you see in **Share the answer**: the short version (the findings you choose, with the labels saying who checked them, their sources and a note of what is left out) or everything (every finding and the history of changes). Both carry the exact words or numbers saved with each source they list.
 - Casebook holds no sign-in for any other app and stores nothing about the destination: no note ids, no links, no record of a save.
 - What the other app does with the text is governed by that app's terms, as for anything you write there.
 

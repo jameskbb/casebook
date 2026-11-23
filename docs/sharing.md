@@ -8,7 +8,7 @@ Open a question that has an answer and choose **Share the answer**. Under **How 
 
 The short version always carries the findings where sources disagree, the sources that go against a finding and the findings behind the answer, and a few of the rest. It never carries findings that were ruled out or replaced; Everything does.
 
-The reader of a shared answer is not you, so it never says "You". A finding is labelled from its sources: `2 of 2 sources checked by a person`, `No source yet`, or `A person decided this holds` when a source goes against it and you decided it still holds. A source you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
+The reader of a shared answer is not you, so it never says "You". A finding is labelled from its sources: `2 of 2 sources checked by a person`, `No source yet`, or `A person decided this holds` when a source goes against it and you decided it still holds. That finding also says how many sources still go against it, for example `(1 source goes against it)`, and its why reads `Why it still holds:`. A source you checked reads `A person checked this`, and the count under the answer reads, for example, `2 of 9 sources checked by a person. 1 checked by AI, 6 not checked.` The answer is followed by `A person checked this answer on November 1, 2026.` or `Nobody has checked this answer yet.`
 
 A shared answer has no record codes: the title is the question, and findings and sources are named by their own text. Dates are written out (`October 30, 2026`). A section with nothing in it is left out, and each finding appears once. The sections, in this order:
 
@@ -21,7 +21,7 @@ A shared answer has no record codes: the title is the question, and findings and
 - `## Still to find out`: findings not tested yet, then each thing to find out marked `not answered yet` or `left for later`, with why it can wait.
 - `## Ruled out` (Everything only): findings that were ruled out, each with `Why we thought so:` and the sources that go against them.
 - `## Replaced` (Everything only): findings a newer finding took the place of.
-- `## Sources`: each source once, with its label, its name, where to find it and what it shows. Something you saw yourself reads `Seen by the person who shared this`. Everything also gives the date of each source, once.
+- `## Sources`: each source once, with its label, its name, where to find it, what it shows and `Exact words:` with the exact words or numbers saved with it. A source you added yourself reads `Added by a person`. Everything also gives the date of each source, once.
 - `## How we got here` (Everything only): the history of changes, oldest first, one heading per day.
 
 The short version ends by saying what it leaves out, counting ruled out and replaced findings with the rest, for example `This short version leaves out 1 finding, 2 things still to find out and the history. Ask the person who shared this for the version with everything.` It keeps every thing to find out that has an answer, with the answer. Both versions end with `Made with Casebook. These are the saved findings and sources, word for word.` Casebook builds the text from what is saved without asking a model to write anything, so the same question gives the same text.

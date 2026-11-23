@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InvestigationSummary } from '../api/types'
 import { summaries } from '../test/fixtures'
-import { checkedLine, groupQuestions, homeLists, needOf, needsYou, questionChecks } from './questions'
+import { ADD_FINDING_NEED, checkedLine, groupQuestions, homeLists, needOf, needsYou, questionChecks } from './questions'
 
 const [calls, helpDesk, cancels] = summaries
 const q = (partial: Partial<InvestigationSummary>): InvestigationSummary => ({ ...calls, archived: false, ...partial })
@@ -19,7 +19,10 @@ describe('questions', () => {
     expect(needOf(q({ ...all, sources_checked_by_you: 1, findings_disagree: 2, answer_checked_by_you: false }))).toEqual({ kind: 'check-sources', line: '1 of 3 sources checked by you', button: 'Check' })
     expect(needOf(q({ ...all, findings_disagree: 2, answer_checked_by_you: false }))).toEqual({ kind: 'decide', line: '2 findings where sources disagree', button: 'Decide' })
     expect(needOf(q({ ...all, findings_disagree: 1 }))?.line).toBe('1 finding where sources disagree')
-    expect(needOf(q({ ...all, conclusion: '', answer_checked_by_you: false }))).toEqual({ kind: 'write-answer', line: 'Every source is checked. Write the answer.', button: 'Write the answer' })
+    expect(needOf(q({ ...all, conclusion: '', findings_backing: 1, answer_checked_by_you: false }))).toEqual({ kind: 'write-answer', line: 'Every source is checked. Write the answer.', button: 'Write the answer' })
+    // Sources but no finding that holds: Home asks for a finding first, in the answer card's words.
+    expect(needOf(q({ ...all, conclusion: '', findings_backing: 0, answer_checked_by_you: false }))).toEqual({ kind: 'add-finding', line: 'Add a finding from your sources.', button: 'Add a finding' })
+    expect(ADD_FINDING_NEED).toBe('Add a finding from your sources.')
     expect(needOf(q({ ...all, answer_checked_by_you: false }))).toEqual({ kind: 'check-answer', line: 'The answer is not checked yet.', button: 'Check the answer' })
     expect(needOf(q(all))).toBeNull()
     // No sources and no answer: nothing for a person to do yet.
@@ -49,8 +52,10 @@ describe('questions', () => {
     delete old.sources_total
     delete old.sources_checked_by_you
     delete old.findings_disagree
+    delete old.findings_backing
+    delete old.findings_decided
     delete old.answer_checked_by_you
-    expect(questionChecks(old)).toEqual({ answer: '', answered: false, sourcesTotal: 0, checkedByYou: 0, disagree: 0 })
+    expect(questionChecks(old)).toEqual({ answer: '', answered: false, sourcesTotal: 0, checkedByYou: 0, disagree: 0, backing: 0, decided: 0 })
     expect(needsYou(old)).toBe(false)
     expect(checkedLine(old)).toBe('')
     expect(homeLists([old]).waiting).toEqual([old])

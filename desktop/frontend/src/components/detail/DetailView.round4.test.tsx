@@ -13,9 +13,9 @@ import { CopyContextProvider } from '../../state/copyContext'
 import { claims, detail, evidence, summaries } from '../../test/fixtures'
 import { mockApi } from '../../test/mockApi'
 import { DECIDED_HOLDS, SOURCES_DISAGREE } from '../../lib/labels'
-import { RULE_OUT_ACTION, TURNED_OUT_RIGHT_ACTION } from '../drawers/StatementDrawer'
+import { RULE_OUT_ACTION, STILL_HOLDS_QUESTION, TURNED_OUT_RIGHT_ACTION } from '../drawers/StatementDrawer'
 import { ToastProvider } from '../ui/Toaster'
-import { ALL_CHECKED, CHECK_SOURCES_TITLE, DISAGREE_HEADING, SOURCE_CHECKED_ACTION, WRITE_THE_ANSWER } from './CheckSources'
+import { ALL_SOURCES_CHECKED, CHECK_SOURCES_TITLE, DECIDE_TITLE, SOURCE_CHECKED_ACTION, WRITE_THE_ANSWER } from './CheckSources'
 import { CHECK_NEXT_SOURCE, JUST_WROTE_ANSWER, UNDO_ANSWER_CHECK } from './ConclusionPanel'
 import { DetailView } from './DetailView'
 import { ADD_FINDING } from './FirstFindingGuide'
@@ -101,10 +101,15 @@ describe('round 4 on the question page', () => {
     expect(row).not.toHaveTextContent(DECIDED_HOLDS)
   })
 
+  it('opens Add finding when Home says Add a finding', async () => {
+    renderPage(detail, 'add-finding')
+    expect(await screen.findByRole('dialog', { name: 'Add finding' })).toBeInTheDocument()
+  })
+
   it('opens the check on the finding where sources disagree when Home says Decide', async () => {
     renderPage({ ...detail, evidence: detail.evidence.map((e) => ({ ...e, verification: 'human_verified' as const })) }, 'decide')
-    const dialog = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
-    expect(within(dialog).getByRole('heading', { name: DISAGREE_HEADING })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: DECIDE_TITLE })
+    expect(within(dialog).getByRole('heading', { name: STILL_HOLDS_QUESTION })).toHaveFocus()
     expect(within(dialog).getByText('Callers waited too long and hung up before buying.')).toBeInTheDocument()
   })
 
@@ -122,7 +127,7 @@ describe('round 4 on the question page', () => {
     current = d
     const user = renderPage({ ...d, evidence: allChecked() }, 'check-sources')
     const dialog = await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
-    expect(within(dialog).getByText(ALL_CHECKED)).toBeInTheDocument()
+    expect(within(dialog).getByText(ALL_SOURCES_CHECKED)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: WRITE_THE_ANSWER }))
     expect(screen.queryByRole('dialog', { name: CHECK_SOURCES_TITLE })).toBeNull()
     await waitFor(() => expect(within(screen.getByRole('region', { name: 'The answer' })).getByLabelText('Answer')).toHaveFocus())

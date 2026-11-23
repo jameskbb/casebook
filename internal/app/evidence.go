@@ -125,8 +125,13 @@ func (a *App) addEvidenceTx(ctx context.Context, tx *sql.Tx, actor domain.Actor,
 		return Evidence{}, err
 	}
 	title := domain.TruncateLine(f.title, 120)
-	if err := a.recordActivity(ctx, tx, actor, inv.ID, "evidence.add", ref,
-		fmt.Sprintf("Added source %s %q", ref, title), "", now); err != nil {
+	summary := fmt.Sprintf("Added source %s %q", ref, title)
+	if actor.Kind == domain.ActorHuman && f.verification == domain.VerificationHumanVerified {
+		// The history says the person checked it, not only that they added it
+		// (contextpack timelinePhrase and the desktop's lib/activity.ts read this).
+		summary += "; checked by a person"
+	}
+	if err := a.recordActivity(ctx, tx, actor, inv.ID, "evidence.add", ref, summary, "", now); err != nil {
 		return Evidence{}, err
 	}
 	if err := store.TouchInvestigation(ctx, tx, inv.ID, now); err != nil {

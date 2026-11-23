@@ -1,7 +1,24 @@
-/* The window keeps one height from source to source, so "I checked this"
-   and "Skip" stay under the pointer. Long sources scroll inside it. */
-.check-sources .dialog-body {
-  height: min(460px, 60vh);
+/* The window keeps one height from step to step, so "I checked this" and
+   "Skip" stay under the pointer: it fills the window's height, and only
+   then does a long source or finding scroll inside it. */
+.check-sources:not(.is-end) {
+  height: calc(100vh - 2 * var(--space-6));
+  max-height: none;
+}
+
+.check-sources:not(.is-end) .dialog-form {
+  flex: 1;
+  max-height: none;
+}
+
+.check-sources:not(.is-end) .dialog-body {
+  flex: 1;
+}
+
+/* The step's heading takes focus first; the ring shows it. */
+.check-source-title:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .check-source,
@@ -89,11 +106,6 @@
   line-height: var(--leading-body);
   overflow-wrap: anywhere;
   white-space: pre-line;
-}
-
-/* The end has a line or two: the window fits it. */
-.check-sources.is-end .dialog-body {
-  height: auto;
 }
 
 /* The main button opens focused; the ring shows even when a click opened the window. */

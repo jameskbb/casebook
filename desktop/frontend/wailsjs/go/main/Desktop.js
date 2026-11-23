@@ -46,6 +46,10 @@ export function ClientConnections() {
   return window['go']['main']['Desktop']['ClientConnections']();
 }
 
+export function ConnectClient(arg1) {
+  return window['go']['main']['Desktop']['ConnectClient'](arg1);
+}
+
 export function CopyContext(arg1) {
   return window['go']['main']['Desktop']['CopyContext'](arg1);
 }
@@ -100,6 +104,10 @@ export function DeleteInvestigation(arg1) {
 
 export function DeleteQuestion(arg1, arg2) {
   return window['go']['main']['Desktop']['DeleteQuestion'](arg1, arg2);
+}
+
+export function DisconnectClient(arg1) {
+  return window['go']['main']['Desktop']['DisconnectClient'](arg1);
 }
 
 export function ExportInvestigation(arg1) {

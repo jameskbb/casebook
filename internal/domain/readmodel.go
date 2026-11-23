@@ -73,6 +73,13 @@ type InvestigationSummary struct {
 	// group: not replaced or ruled out, and disputed, or a source that is
 	// not replaced goes against it and no person decided it holds.
 	FindingsDisagree int `json:"findings_disagree"`
+	// FindingsBacking counts the findings the answer can stand on: not
+	// replaced or ruled out, not a hypothesis still open, and not in the
+	// disagree group.
+	FindingsBacking int `json:"findings_backing"`
+	// FindingsDecided counts the current findings a person decided hold
+	// while a source that is not replaced still goes against them.
+	FindingsDecided int `json:"findings_decided"`
 	// AnswerCheckedByYou is true when there is an answer, a person checked
 	// it, and neither it nor what it rests on changed since: the detail's
 	// conclusion_reviewed_at is set and conclusion_needs_review is false.

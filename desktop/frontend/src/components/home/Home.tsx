@@ -4,7 +4,9 @@
 // (lib/questions needOf); then the answers already in hand; then questions
 // with no sources yet. Things still to find out never make a question need
 // a person; an answered one with some open says so on its line. Everything
-// comes from the question list; nothing is stored for this view.
+// comes from the question list; nothing is stored for this view. With
+// nothing to do, the line under the heading says only what is true: it names
+// decided findings only when a person decided one.
 import type { InvestigationSummary } from '../../api/types'
 import { useNow } from '../../hooks/useNow'
 import { plural } from '../../lib/plural'
@@ -17,7 +19,14 @@ import './Home.css'
 const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
 export const NOTHING_NEEDS_YOU = 'Nothing needs you right now.'
-export const ALL_CHECKED_BODY = 'You have checked every source and every answer, and no sources disagree.'
+export const ALL_CHECKED_BODY = 'You have checked every source and every answer.'
+export const ALL_CHECKED_DECIDED_BODY = 'You have checked every source and every answer, and decided every finding where sources disagree.'
+
+/** What Home says when nothing needs the person: only what is true of the questions shown. */
+export function allCheckedBody(list: InvestigationSummary[]): string {
+  const decided = list.some((q) => !q.archived && questionChecks(q).decided > 0)
+  return decided ? ALL_CHECKED_DECIDED_BODY : ALL_CHECKED_BODY
+}
 export const NO_SOURCES_YET = 'No sources yet. Ask your AI to work on it, or add one.'
 
 /** An answered question's line: what is still open, else how many sources a person checked. */
@@ -41,7 +50,7 @@ export function Home() {
       <header>
         <p className="home-eyebrow">{today.format(now)}</p>
         <h1 className="home-heading">{needYouHeading(needYou.length)}</h1>
-        {needYou.length === 0 && <p className="home-note">{ALL_CHECKED_BODY}</p>}
+        {needYou.length === 0 && <p className="home-note">{allCheckedBody(investigations)}</p>}
       </header>
 
       {needYou.length > 0 && (

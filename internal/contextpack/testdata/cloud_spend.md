@@ -45,7 +45,7 @@ E-003 Log ingestion is 71% of the September increase (Billing export query) [Not
 E-004 Head of platform: debug was requested for payments only (Head of platform, in person) [A person checked this]
 
 Recent changes:
-- 2026-01-15T09:00:00.000Z human casebook-ui: Updated the answer
+- 2026-01-15T09:00:00.000Z human casebook-ui: Wrote the answer
 - 2026-01-15T09:00:00.000Z human casebook-ui: Added something to find out: Q-001 "Can every service except payments go back to info level today?"
 - 2026-01-15T09:00:00.000Z ai claude-code: Ruled out the finding H-002
 - 2026-01-15T09:00:00.000Z ai claude-code: Added the finding H-002 with 1 source
@@ -54,4 +54,4 @@ Recent changes:
 - 2026-01-15T09:00:00.000Z ai claude-code: Added the finding C-003 with 1 source
 - 2026-01-15T09:00:00.000Z ai claude-code: Added the finding C-002 with 2 sources
 - 2026-01-15T09:00:00.000Z human casebook-ui: Added the finding C-001 with 2 sources
-- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-004 "Head of platform: debug was requested for payments only"
+- 2026-01-15T09:00:00.000Z human casebook-ui: Added the source E-004 "Head of platform: debug was requested for payments only" and checked it

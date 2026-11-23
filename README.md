@@ -63,12 +63,14 @@ Under the answer, Casebook shows **2 of 9 sources checked by you**. It does not 
 
 ## Check the sources
 
-Open a question. The answer is at the top. Under it is each finding, with its sources listed below the finding.
+Open a question. The answer is at the top. Under it is each finding, with its sources listed below the finding. Below the findings, **Sources** lists every source once.
+
+A source you add yourself starts as Not checked. If you have already looked at it, tick **I have looked at this source myself** when you add it.
 
 - Choose **Check the next source**. It shows one source at a time, with the finding it backs or goes against.
 - Read the source. Open the report or the email it points to and compare.
 - Choose **I checked this** when it holds up, or **Skip**. Casebook moves to the next source by itself.
-- Then it shows each finding where sources disagree. Choose **It still holds** or **Rule this out**. When no source is left to check, the main button under the answer reads **Decide**. Each finding under Where sources disagree also has its own **Decide** button.
+- Then it shows each finding where sources disagree, under **Decide about this finding**. Choose **It still holds** or **Rule this out**. You can also write why it still holds. When no source is left to check, the main button under the answer reads **Decide where sources disagree**. Each finding under Where sources disagree also has its own **Decide** button.
 - Last it shows the answer. Choose **I checked this answer** when you are happy with it.
 
 If something changes after you checked the answer, Casebook tells you to check it again. To take your check back, choose **Undo my check**.

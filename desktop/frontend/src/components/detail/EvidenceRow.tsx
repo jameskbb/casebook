@@ -1,7 +1,9 @@
-// Source row, for a source no finding uses yet (the others sit under their
-// finding). Line 1: its check label. Title 16/600, then the summary clamped
-// to two lines (the full text is in the drawer).
+// Source row in the question page's Sources list, which shows every source
+// once. Line 1: its check label. Then the name 16/600 and where to find it;
+// with invRef, Show the exact words under it, the same toggle as the source
+// drawer. What it shows is in the drawer the row opens.
 import type { Evidence } from '../../api/types'
+import { ExactWords } from '../drawers/EvidenceDrawer'
 import { ImportedTag } from '../record/ImportedTag'
 import { kindRuleClass } from '../record/KindRule'
 import { VerificationBadge } from '../record/VerificationBadge'
@@ -11,9 +13,11 @@ import './EvidenceRow.css'
 export interface EvidenceRowProps {
   evidence: Evidence
   onOpen?: (ref: string) => void
+  /** The question's ref: the row offers Show the exact words when the source has them. */
+  invRef?: string
 }
 
-export function EvidenceRow({ evidence: e, onOpen }: EvidenceRowProps) {
+export function EvidenceRow({ evidence: e, onOpen, invRef }: EvidenceRowProps) {
   const retired = e.verification === 'superseded'
   return (
     <div
@@ -32,7 +36,8 @@ export function EvidenceRow({ evidence: e, onOpen }: EvidenceRowProps) {
           {e.imported && <ImportedTag />}
         </p>
         <p className={['evidence-title', retired ? 'is-retired' : ''].filter(Boolean).join(' ')}>{e.title}</p>
-        {e.summary && <p className="evidence-summary is-clamped">{e.summary}</p>}
+        {e.source_ref && <p className="evidence-where">Where to find it: {e.source_ref}</p>}
+        {invRef && e.has_raw_detail && <ExactWords evidence={e} invRef={invRef} inline />}
       </div>
     </div>
   )

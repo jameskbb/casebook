@@ -134,8 +134,10 @@ func TestLeadershipBriefKeepsConclusionBasisAndMixedVerification(t *testing.T) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
 	}
-	if strings.Contains(p.Markdown, "Private raw capture") {
-		t.Fatal("brief disclosed raw capture")
+	// The exact words are saved with the source, so the share that says "word
+	// for word" carries them.
+	if !strings.Contains(p.Markdown, "  - Exact words: Private raw capture") {
+		t.Fatalf("brief left out the exact words:\n%s", p.Markdown)
 	}
 }
 

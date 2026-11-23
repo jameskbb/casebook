@@ -41,7 +41,7 @@ func (a *App) Report(ctx context.Context, invRef string, o ReportOptions) (strin
 	}
 	var snap contextpack.Snapshot
 	err := a.db.WithReadTx(ctx, func(tx *sql.Tx) error {
-		s, err := a.readSnapshot(ctx, tx, invRef, reportActivityRows+1)
+		s, err := a.readSnapshot(ctx, tx, invRef, reportActivityRows+1, true)
 		snap = s
 		return err
 	})
@@ -128,7 +128,7 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 	var s contextpack.Snapshot
 	err := a.db.WithReadTx(ctx, func(tx *sql.Tx) error {
 		var err error
-		s, err = a.readSnapshot(ctx, tx, invRef, reportActivityRows+1)
+		s, err = a.readSnapshot(ctx, tx, invRef, reportActivityRows+1, true)
 		return err
 	})
 	if err != nil {
