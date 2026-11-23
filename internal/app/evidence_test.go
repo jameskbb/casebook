@@ -80,7 +80,7 @@ func TestAddEvidenceRefsAndVerificationDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rows[0].TargetRef != "E-003" || rows[0].Summary != `Added evidence E-003 "Third"` {
+	if rows[0].TargetRef != "E-003" || rows[0].Summary != `Added source E-003 "Third"` {
 		t.Fatalf("evidence.add row = %+v", rows[0])
 	}
 }
@@ -215,7 +215,7 @@ func TestGetEvidenceRefResolution(t *testing.T) {
 	_, err = a.GetEvidence(ctx, "INV-0002", "C-001", app.GetEvidenceOptions{})
 	wantValidation(t, err, "ref")
 	_, err = a.GetEvidence(ctx, "INV-0001", "E-001", app.GetEvidenceOptions{})
-	if !errors.Is(err, app.ErrNotFound) || !strings.Contains(err.Error(), "evidence E-001 in INV-0001") {
+	if !errors.Is(err, app.ErrNotFound) || !strings.Contains(err.Error(), "source E-001 in INV-0001") {
 		t.Fatalf("missing evidence: err = %v", err)
 	}
 	if _, err := a.GetEvidence(ctx, "", "E-001", app.GetEvidenceOptions{}); !errors.Is(err, app.ErrNoActiveInvestigation) {

@@ -234,6 +234,62 @@ func TestListInvestigationsFixture(t *testing.T) {
 		s.ConclusionConfidence != app.ConfidenceHigh || !s.IsActive || s.Counts != want {
 		t.Fatalf("summary = %+v", s)
 	}
+	if !strings.HasPrefix(s.Conclusion, "Debug logging requested for payments only") || s.SourcesTotal != 4 || s.SourcesCheckedByYou != 1 || s.FindingsDisagree != 0 {
+		t.Fatalf("answer and checked counts = %+v", s)
+	}
+}
+
+// The list carries the answer text, how many sources a person checked and
+// how many findings have sources that disagree. A replaced source and a
+// finding that was replaced or ruled out are not counted.
+func TestListInvestigationsCheckedCounts(t *testing.T) {
+	ctx := context.Background()
+	a := apptest.Open(t)
+	inv := newInv(t, a, "Counts")
+	summary := func() app.InvestigationSummary {
+		t.Helper()
+		got, err := a.ListInvestigations(ctx, app.ListOptions{})
+		if err != nil || len(got) != 1 {
+			t.Fatalf("list = %+v, %v", got, err)
+		}
+		return got[0]
+	}
+	if s := summary(); s.Conclusion != "" || s.SourcesTotal != 0 || s.SourcesCheckedByYou != 0 || s.FindingsDisagree != 0 {
+		t.Fatalf("empty question = %+v", s)
+	}
+
+	for _, title := range []string{"One", "Two", "Three"} {
+		mustAddEvidence(t, a, apptest.AI, inv.Ref, evInput(title))
+	}
+	mustAddEvidence(t, a, apptest.Human, inv.Ref, evInput("Four")) // a person's own source counts as checked
+	for ref, v := range map[string]app.Verification{"E-001": app.VerificationHumanVerified, "E-002": app.VerificationSourceVerified, "E-003": app.VerificationSuperseded} {
+		if _, err := a.SetEvidenceVerification(ctx, apptest.Human, inv.Ref, ref, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c1 := mustAddClaim(t, a, apptest.AI, inv.Ref, app.ClaimInput{Statement: "Sources disagree here"})
+	c2 := mustAddClaim(t, a, apptest.AI, inv.Ref, app.ClaimInput{Statement: "And here, until it is ruled out"})
+	mustAddClaim(t, a, apptest.AI, inv.Ref, app.ClaimInput{Statement: "Nobody doubts this"})
+	for _, ref := range []string{c1.Ref, c2.Ref} {
+		if _, err := a.SetClaimVerification(ctx, apptest.AI, inv.Ref, ref, app.VerificationDisputed); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := a.UpdateConclusion(ctx, apptest.AI, inv.Ref, app.ConclusionInput{Conclusion: "The answer."}); err != nil {
+		t.Fatal(err)
+	}
+	if s := summary(); s.Conclusion != "The answer." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 2 {
+		t.Fatalf("summary = %+v, want the answer, 2 of 3 sources and 2 findings", s)
+	}
+
+	rejected := app.ClaimStatusRejected
+	if _, err := a.UpdateClaim(ctx, apptest.AI, inv.Ref, c2.Ref, app.ClaimPatch{Status: &rejected}); err != nil {
+		t.Fatal(err)
+	}
+	if s := summary(); s.FindingsDisagree != 1 {
+		t.Fatalf("after ruling one out: %+v", s)
+	}
+	apptest.AssertNoJSONNulls(t, summary())
 }
 
 func TestListInvestigationsEmpty(t *testing.T) {

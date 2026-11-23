@@ -116,7 +116,7 @@ func (a *App) makeActiveTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 				return err
 			}
 			return a.recordActivity(ctx, tx, actor, inv.ID, "active.bind", inv.Ref,
-				fmt.Sprintf("Made %s the active investigation for %s", inv.Ref, binding.Dir), "", now)
+				fmt.Sprintf("Made %s your AI's current question for %s", inv.Ref, binding.Dir), "", now)
 		}
 	}
 	if gid, ok, err := store.GetActiveInvestigationID(ctx, tx); err != nil {
@@ -128,7 +128,7 @@ func (a *App) makeActiveTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 		return err
 	}
 	return a.recordActivity(ctx, tx, actor, inv.ID, "active.set", inv.Ref,
-		fmt.Sprintf("Set active investigation to %s", inv.Ref), "", now)
+		fmt.Sprintf("Made %s your AI's current question", inv.Ref), "", now)
 }
 
 // ClearActiveInvestigation unsets the active investigation and records a
@@ -195,9 +195,9 @@ func (a *App) clearActive(ctx context.Context, actor Actor, expected string) (bo
 			return err
 		}
 		cleared = true
-		summary := "Cleared active investigation"
+		summary := "Cleared your AI's current question"
 		if prevRef != "" {
-			summary = fmt.Sprintf("Cleared active investigation (was %s)", prevRef)
+			summary = fmt.Sprintf("Cleared your AI's current question (was %s)", prevRef)
 		}
 		return a.recordActivity(ctx, tx, actor, 0, op, prevRef, summary, "", now)
 	})

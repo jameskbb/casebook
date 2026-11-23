@@ -43,7 +43,7 @@ func canonicalConclusionRefs(inv domain.Investigation, field string, refs []stri
 	seen := map[string]bool{}
 	invNum, _ := domain.ParseInvestigationRef(inv.Ref)
 	if len(refs) > 100 {
-		return nil, domain.NewValidationError(field, "at most 100 selected claims are allowed")
+		return nil, domain.NewValidationError(field, "at most 100 findings can be selected")
 	}
 	for i, ref := range refs {
 		rr, err := domain.ParseRecordRef(ref, domain.RecordClaim)
@@ -51,7 +51,7 @@ func canonicalConclusionRefs(inv domain.Investigation, field string, refs []stri
 			return nil, refieldValidation(err, fmt.Sprintf("%s[%d]", field, i))
 		}
 		if rr.InvestigationNum != 0 && rr.InvestigationNum != invNum {
-			return nil, domain.NewValidationError(field, "%s belongs to another investigation", ref)
+			return nil, domain.NewValidationError(field, "%s belongs to another question", ref)
 		}
 		canonical := domain.FormatRecordRef(domain.RecordClaim, rr.Num)
 		if !seen[canonical] {
@@ -85,7 +85,7 @@ func (a *App) prepareConclusionAccountability(ctx context.Context, q store.Queri
 	for _, s := range next.ConclusionSupportingClaims {
 		for _, c := range next.ConclusionContradictingClaims {
 			if s == c {
-				return next, "", false, domain.NewValidationError("contradicting_claims", "%s cannot both support and contradict the conclusion", s)
+				return next, "", false, domain.NewValidationError("contradicting_claims", "%s cannot both back and contradict the answer", s)
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func (a *App) prepareConclusionAccountability(ctx context.Context, q store.Queri
 			rr, _ := domain.ParseRecordRef(ref, domain.RecordClaim)
 			if _, err := store.GetStatement(ctx, q, store.LinkClaim, inv.ID, rr.Num); err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
-					return next, "", false, domain.NewValidationError("supporting_claims", "claim %s does not exist in %s", ref, inv.Ref)
+					return next, "", false, domain.NewValidationError("supporting_claims", "finding %s does not exist in %s", ref, inv.Ref)
 				}
 				return next, "", false, err
 			}
@@ -126,10 +126,10 @@ func (a *App) prepareConclusionAccountability(ctx context.Context, q store.Queri
 	}
 	if c.review {
 		if c.expectedReviewToken == "" || c.expectedReviewToken != inv.ConclusionReviewToken {
-			return next, "", false, fmt.Errorf("%w: conclusion or selected claims and evidence changed; reload and review the current basis", domain.ErrConflict)
+			return next, "", false, fmt.Errorf("%w: the answer, its findings or their sources changed; reload and review the latest version", domain.ErrConflict)
 		}
 		if !reflect.DeepEqual(inv.ConclusionSupportingClaims, next.ConclusionSupportingClaims) || !reflect.DeepEqual(inv.ConclusionContradictingClaims, next.ConclusionContradictingClaims) {
-			return next, "", false, domain.NewValidationError("review", "save selected claims before recording their review")
+			return next, "", false, domain.NewValidationError("review", "save the selected findings before recording a review")
 		}
 		next.ConclusionReviewedAt, next.ConclusionReviewBasis = now, c.reviewBasis
 		snapshot, err = conclusionBasisSnapshot(ctx, q, next)

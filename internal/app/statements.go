@@ -162,7 +162,7 @@ func (k stmtKind) pairState(cur store.StatementRow, ps *string, pv *domain.Verif
 	case pv != nil && *pv == cur.Verification:
 		return cur.Status, cur.Verification, nil
 	case pv != nil && cur.Status == k.superseded:
-		return "", "", fmt.Errorf("%w: %s is superseded by %s; give it another status before changing its verification",
+		return "", "", fmt.Errorf("%w: finding %s was replaced by %s; bring it back before changing how it is marked",
 			domain.ErrConflict, cur.Ref, cur.SupersededByRef)
 	case pv != nil && k.disputed != "":
 		if *pv == domain.VerificationDisputed {
@@ -224,7 +224,7 @@ func linkedEvidenceID(ctx context.Context, q store.Querier, inv domain.Investiga
 	ref := domain.FormatRecordRef(domain.RecordEvidence, rr.Num)
 	if rr.InvestigationNum != 0 {
 		if other := domain.FormatInvestigationRef(rr.InvestigationNum); other != inv.Ref {
-			return 0, "", fmt.Errorf("%w: cross-investigation link: %s/%s is not in %s", domain.ErrConflict, other, ref, inv.Ref)
+			return 0, "", fmt.Errorf("%w: source %s/%s belongs to another question, not %s", domain.ErrConflict, other, ref, inv.Ref)
 		}
 	}
 	id, err := store.EvidenceID(ctx, q, inv.ID, rr.Num)
@@ -256,12 +256,12 @@ func resolveReplacement(ctx context.Context, q store.Querier, k stmtKind, inv do
 	ref := domain.FormatRecordRef(k.rec, rr.Num)
 	if rr.InvestigationNum != 0 {
 		if other := domain.FormatInvestigationRef(rr.InvestigationNum); other != inv.Ref {
-			return store.StatementRow{}, fmt.Errorf("%w: cross-investigation supersede: %s/%s is not in %s",
+			return store.StatementRow{}, fmt.Errorf("%w: finding %s/%s belongs to another question, not %s",
 				domain.ErrConflict, other, ref, inv.Ref)
 		}
 	}
 	if rr.Num == cur.RefNum {
-		return store.StatementRow{}, fmt.Errorf("%w: %s cannot supersede itself", domain.ErrConflict, cur.Ref)
+		return store.StatementRow{}, fmt.Errorf("%w: finding %s cannot replace itself", domain.ErrConflict, cur.Ref)
 	}
 	rep, err := store.GetStatement(ctx, q, k.target, inv.ID, rr.Num)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -271,8 +271,8 @@ func resolveReplacement(ctx context.Context, q store.Querier, k stmtKind, inv do
 		return store.StatementRow{}, err
 	}
 	if rep.Status == k.superseded {
-		return store.StatementRow{}, fmt.Errorf("%w: %s is itself superseded by %s; supersede %s with a current %s",
-			domain.ErrConflict, rep.Ref, rep.SupersededByRef, cur.Ref, k.rec)
+		return store.StatementRow{}, fmt.Errorf("%w: finding %s was itself replaced by %s; replace %s with a current finding",
+			domain.ErrConflict, rep.Ref, rep.SupersededByRef, cur.Ref)
 	}
 	return rep, nil
 }
@@ -422,9 +422,9 @@ func (a *App) addStatementTx(ctx context.Context, tx *sql.Tx, actor domain.Actor
 			return store.StatementRow{}, err
 		}
 	}
-	summary := fmt.Sprintf("Added %s %s [%s]", k.rec, ref, pa.confidence)
+	summary := "Added finding " + ref
 	if len(seen) > 0 {
-		summary += " with " + plural(len(seen), "evidence link")
+		summary += " with " + plural(len(seen), "source")
 	}
 	if err := a.recordActivity(ctx, tx, actor, inv.ID, k.addOp, ref, summary, "", now); err != nil {
 		return store.StatementRow{}, err
@@ -689,7 +689,7 @@ func (a *App) updateStatementTxOutcome(ctx context.Context, tx *sql.Tx, actor do
 		}
 		if supersededTo != "" {
 			action = k.supersedeOp
-			summary = fmt.Sprintf("%s superseded by %s", cur.Ref, supersededTo)
+			summary = fmt.Sprintf("%s was replaced by %s", cur.Ref, supersededTo)
 			var also []string
 			for _, c := range changed {
 				name, _, _ := strings.Cut(c, " ")
@@ -783,4 +783,10 @@ func (a *App) writeStatementChange(ctx context.Context, tx *sql.Tx, actor domain
 		return store.StatementRow{}, err
 	}
 	return store.GetStatementByID(ctx, tx, k.target, id)
+}
+
+// recordCounts renders "4 sources, 5 findings, 1 follow-up question" for a
+// delete or import summary.
+func recordCounts(sources, findings, questions int) string {
+	return plural(sources, "source") + ", " + plural(findings, "finding") + ", " + plural(questions, "follow-up question")
 }

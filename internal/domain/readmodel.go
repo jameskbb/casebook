@@ -57,6 +57,7 @@ type InvestigationSummary struct {
 	Ref                  string              `json:"ref"`
 	Title                string              `json:"title"`
 	Status               InvestigationStatus `json:"status"`
+	Conclusion           string              `json:"conclusion"` // the answer text, "" when none
 	ConclusionConfidence Confidence          `json:"conclusion_confidence"`
 	CreatedAt            string              `json:"created_at"`
 	UpdatedAt            string              `json:"updated_at"`
@@ -64,6 +65,13 @@ type InvestigationSummary struct {
 	Archived             bool                `json:"archived"`
 	IsActive             bool                `json:"is_active"`
 	Counts               RecordCounts        `json:"counts"`
+	// SourcesTotal counts evidence that is not superseded;
+	// SourcesCheckedByYou counts those with verification human_verified.
+	SourcesTotal        int `json:"sources_total"`
+	SourcesCheckedByYou int `json:"sources_checked_by_you"`
+	// FindingsDisagree counts claims with verification disputed that are
+	// not superseded or rejected.
+	FindingsDisagree int `json:"findings_disagree"`
 }
 
 // SearchOptions scopes Search. An empty InvestigationRef searches every

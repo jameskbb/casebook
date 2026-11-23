@@ -47,7 +47,7 @@ func TestLeadershipBriefRetainsCaveatsAndCountsOmissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{disputed.Statement, contra.Statement, hyp.Statement, "Contradicted by " + ev.Ref, "AI generated", "Disputed", "No conclusion recorded yet.", "Not included: " + ignored.Ref + " and " + q.Ref + ". Activity history is not included. Ask the person who shared this for the complete report."} {
+	for _, want := range []string{disputed.Statement, contra.Statement, hyp.Statement, "Contradicted by " + ev.Ref, "Not checked", "Sources disagree", "No answer yet.", "Not included: " + ignored.Ref + " and " + q.Ref + ". The history is not included. Ask the person who shared this for the full version."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
@@ -129,7 +129,7 @@ func TestLeadershipBriefKeepsConclusionBasisAndMixedVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, "Human verified", "Supported by " + ev.Ref + ": AI captured ledger (AI generated)", "**" + ev.Ref + "** AI captured ledger (File: ledger.csv; AI generated)", "Expenses explain the drop.", "Conclusion verification: Human verified", "Conclusion review: not reviewed; needs review."} {
+	for _, want := range []string{c.Statement, "You checked this", "Supported by " + ev.Ref + ": AI captured ledger (Not checked)", "**" + ev.Ref + "** AI captured ledger (File: ledger.csv; Not checked)", "Expenses explain the drop.", "0 of 1 source checked by you. 1 not checked.", "Answer marked: You checked this", "Answer review: not reviewed yet."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q:\n%s", want, p.Markdown)
 		}
@@ -162,7 +162,7 @@ func TestLeadershipBriefRetainsDisputedSourcesOutsideSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{c.Statement, linked.Title, standalone.Title, "Disputed", "Every claim, hypothesis, question and evidence item in the case is included."} {
+	for _, want := range []string{c.Statement, linked.Title, standalone.Title, "Sources disagree", "Every finding, follow-up question and source is included."} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("source dispute omitted %q", want)
 		}
@@ -276,20 +276,20 @@ func TestLeadershipBriefSelectsOpenExplanations(t *testing.T) {
 		if c.Group == "hypotheses" {
 			selected[c.Ref] = c.Selected
 		}
-		if c.Label == "Disputed; Disputed" || strings.Contains(c.Label, "Active") {
+		if c.Label == "Sources disagree; Sources disagree" || strings.Contains(c.Label, "Active") || strings.Contains(c.Label, "onfidence") {
 			t.Errorf("candidate label repeats or uses the old word: %+v", c)
 		}
-		if c.Ref == disputed.Ref && !strings.HasPrefix(c.Label, "Disputed; ") {
+		if c.Ref == disputed.Ref && c.Label != "Sources disagree" {
 			t.Errorf("disputed claim label = %q", c.Label)
 		}
-		if c.Ref == dead.Ref && (c.Group != "ruled_out" || c.Label != "Disproven; AI generated") {
+		if c.Ref == dead.Ref && (c.Group != "ruled_out" || c.Label != "Ruled out; Not checked") {
 			t.Errorf("disproven candidate = %+v", c)
 		}
 	}
 	if len(selected) != 3 || !selected[refs[0]] || !selected[refs[1]] || selected[refs[2]] {
 		t.Fatalf("default open explanations = %v, want the first two of %v", selected, refs)
 	}
-	if !strings.Contains(p.Markdown, "## Explanations still open or supported\n\n- **"+refs[0]+"** Live explanation 0 (Supported; Confidence not assessed; AI generated)") || strings.Contains(p.Markdown, "Live explanation 2") {
+	if !strings.Contains(p.Markdown, "## Still being tested\n\n- **"+refs[0]+"** Live explanation 0 (Supported; Not checked)") || strings.Contains(p.Markdown, "Live explanation 2") {
 		t.Fatalf("brief does not show the default explanations:\n%s", p.Markdown)
 	}
 	if got := strings.Join(p.Omitted.HypothesisRefs, ","); got != refs[2] || p.Omitted.Hypotheses != 1 {

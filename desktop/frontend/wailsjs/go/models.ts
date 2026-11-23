@@ -1105,6 +1105,7 @@ export namespace domain {
 	    ref: string;
 	    title: string;
 	    status: string;
+	    conclusion: string;
 	    conclusion_confidence: string;
 	    created_at: string;
 	    updated_at: string;
@@ -1112,6 +1113,9 @@ export namespace domain {
 	    archived: boolean;
 	    is_active: boolean;
 	    counts: RecordCounts;
+	    sources_total: number;
+	    sources_checked_by_you: number;
+	    findings_disagree: number;
 
 	    static createFrom(source: any = {}) {
 	        return new InvestigationSummary(source);
@@ -1123,6 +1127,7 @@ export namespace domain {
 	        this.ref = source["ref"];
 	        this.title = source["title"];
 	        this.status = source["status"];
+	        this.conclusion = source["conclusion"];
 	        this.conclusion_confidence = source["conclusion_confidence"];
 	        this.created_at = source["created_at"];
 	        this.updated_at = source["updated_at"];
@@ -1130,6 +1135,9 @@ export namespace domain {
 	        this.archived = source["archived"];
 	        this.is_active = source["is_active"];
 	        this.counts = this.convertValues(source["counts"], RecordCounts);
+	        this.sources_total = source["sources_total"];
+	        this.sources_checked_by_you = source["sources_checked_by_you"];
+	        this.findings_disagree = source["findings_disagree"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

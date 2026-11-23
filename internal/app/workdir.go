@@ -290,7 +290,7 @@ func (a *App) BindDirectory(ctx context.Context, actor Actor, dir, invRef string
 			return err
 		}
 		return a.recordActivity(ctx, tx, actor, inv.ID, op, inv.Ref,
-			fmt.Sprintf("Made %s the active investigation for %s", inv.Ref, key), "", now)
+			fmt.Sprintf("Made %s your AI's current question for %s", inv.Ref, key), "", now)
 	})
 	if err != nil {
 		return DirectoryBinding{}, a.fail(op, err)
@@ -341,7 +341,7 @@ func (a *App) UnbindDirectory(ctx context.Context, actor Actor, dir string) (str
 			return err
 		}
 		removed = b.Dir
-		summary := "Removed the active investigation for " + b.Dir
+		summary := "Cleared your AI's current question for " + b.Dir
 		if ref != "" {
 			summary += " (was " + ref + ")"
 		}

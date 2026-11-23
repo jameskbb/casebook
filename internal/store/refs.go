@@ -21,7 +21,7 @@ RETURNING value`).Scan(&n)
 		return 0, err
 	}
 	if n > domain.MaxRefNum {
-		return 0, fmt.Errorf("%w: investigation refs are exhausted (the highest is %s)",
+		return 0, fmt.Errorf("%w: no more question refs are available (the highest is %s)",
 			domain.ErrConflict, domain.FormatInvestigationRef(domain.MaxRefNum))
 	}
 	return n, nil
@@ -50,8 +50,8 @@ func AllocateRecordNum(ctx context.Context, q Querier, invID int64, t domain.Rec
 		return 0, err
 	}
 	if n > domain.MaxRefNum {
-		return 0, fmt.Errorf("%w: %s refs are exhausted in this investigation (the highest is %s)",
-			domain.ErrConflict, t, domain.FormatRecordRef(t, domain.MaxRefNum))
+		return 0, fmt.Errorf("%w: no more %s refs are available in this question (the highest is %s)",
+			domain.ErrConflict, t.PlainWord(), domain.FormatRecordRef(t, domain.MaxRefNum))
 	}
 	return n, nil
 }

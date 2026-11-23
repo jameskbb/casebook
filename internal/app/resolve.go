@@ -39,7 +39,7 @@ func (a *App) resolveInvestigation(ctx context.Context, q store.Querier, invRef 
 	}
 	inv, err := store.GetInvestigationByNum(ctx, q, n)
 	if errors.Is(err, sql.ErrNoRows) {
-		return domain.Investigation{}, fmt.Errorf("%w: investigation %s", domain.ErrNotFound, domain.FormatInvestigationRef(n))
+		return domain.Investigation{}, fmt.Errorf("%w: question %s", domain.ErrNotFound, domain.FormatInvestigationRef(n))
 	}
 	if err != nil {
 		return inv, err
@@ -59,9 +59,9 @@ type recordTarget struct {
 }
 
 // notFound is the ErrNotFound error naming the record and its investigation,
-// e.g. "not found: evidence E-009 in INV-0001".
+// e.g. "not found: source E-009 in INV-0001".
 func (r recordTarget) notFound() error {
-	return fmt.Errorf("%w: %s %s in %s", domain.ErrNotFound, r.Type, r.Ref, r.Inv.Ref)
+	return fmt.Errorf("%w: %s %s in %s", domain.ErrNotFound, r.Type.PlainWord(), r.Ref, r.Inv.Ref)
 }
 
 // resolveRecord resolves a record ref of type t inside a transaction. The ref

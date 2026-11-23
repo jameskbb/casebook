@@ -18,14 +18,15 @@ type ReportOptions struct {
 	MoreActivity  bool
 }
 
-// RenderReport renders a snapshot as a Markdown write-up for a pull request
-// description, an incident document or a postmortem: the title, the primary
-// question, the conclusion with its confidence and rationale, current
-// and disputed claims with their evidence (source label and ref), what was
-// ruled out (disproven hypotheses and rejected claims with the evidence that
-// contradicted them), hypotheses still open or supported, answered and open
-// questions, every evidence item, and a dated timeline (UTC) of material
-// changes with their actors, oldest first.
+// RenderReport renders a snapshot as the full shared answer in Markdown,
+// in the words a person reads (question, answer, finding, source): the
+// title, the question, the answer with the count of sources checked, its
+// check and review labels and why, the findings with their sources (source
+// label and ref), where sources disagree, what was ruled out (disproven
+// hypotheses and rejected claims with the sources that contradicted them),
+// findings still being tested, answered and open follow-up questions, every
+// source, and a dated list (UTC) of how the answer was reached, oldest
+// first. Confidence is never printed.
 //
 // Like Build, it is pure and deterministic: inputs are copied and sorted by
 // ref number (activity by id), no clock is read and no map is iterated.
@@ -70,7 +71,7 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 				if e, ok := evByRef(ref); ok {
 					line += ": " + oneLine(e.Title) + " (" + sourceText(e) + "; " + verificationLabel(e.Verification) + ")"
 				} else {
-					line += " [Verification unavailable]"
+					line += " (" + checkUnknown + ")"
 				}
 				out = append(out, line)
 			}
@@ -85,27 +86,15 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 	}
 
 	para("# " + oneLine(inv.Ref) + ": " + oneLine(inv.Title))
-	para("- Status: "+inv.Status.Label(),
-		"- Opened: "+datePart(inv.CreatedAt),
+	para("- Opened: "+datePart(inv.CreatedAt),
 		"- Last updated: "+datePart(inv.UpdatedAt))
 
 	para("## Question")
 	para(orText(mdText(inv.ProblemStatement), "Not recorded."))
 
-	para("## Conclusion")
-	if c := mdText(inv.Conclusion); c != "" {
-		para(c)
-		conclusion := PackConclusion{Verification: inv.ConclusionVerification, SupportingClaims: conclusionClaimBasis(inv.ConclusionSupportingClaims, s.Claims), ContradictingClaims: conclusionClaimBasis(inv.ConclusionContradictingClaims, s.Claims), ReviewedAt: inv.ConclusionReviewedAt, ReviewBasis: inv.ConclusionReviewBasis, NeedsReview: inv.ConclusionNeedsReview}
-		for _, label := range conclusionAccountabilityLines(conclusion, basisParens) {
-			para(label)
-		}
-		conf := "Confidence: " + inv.ConclusionConfidence.Label() + "."
-		if r := oneLine(inv.ConclusionRationale); r != "" {
-			conf += " " + r
-		}
-		para(conf)
-	} else {
-		para("No conclusion recorded yet.")
+	para("## Answer")
+	for _, line := range answerLines(s, evidence) {
+		para(line)
 	}
 
 	claims := slices.Clone(s.Claims)
@@ -119,14 +108,13 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 	for _, c := range claims {
 		switch {
 		case c.Status == domain.ClaimStatusRejected:
-			rejected = append(rejected, claimItem(c, "claim rejected, "+c.Verification.Label())...)
+			rejected = append(rejected, claimItem(c, BriefStateLabel(c.Status.PlainLabel(), c.Verification))...)
 		default:
 			switch claimState(c) {
 			case domain.ClaimStatusActive:
-				established = append(established, claimItem(c,
-					c.Confidence.Label()+" confidence, "+c.Verification.Label())...)
+				established = append(established, claimItem(c, verificationLabel(c.Verification))...)
 			case domain.ClaimStatusDisputed:
-				disputed = append(disputed, claimItem(c, c.Confidence.Label()+" confidence, "+c.Verification.Label())...)
+				disputed = append(disputed, claimItem(c, verificationLabel(c.Verification))...)
 			}
 		}
 	}
@@ -141,25 +129,24 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 		head := fmt.Sprintf("- **%s** %s", refTag(h.Ref, h.Imported), oneLine(h.Statement))
 		switch h.Status {
 		case domain.HypothesisStatusOpen, domain.HypothesisStatusSupported:
-			standing = append(standing, fmt.Sprintf("%s (%s, %s confidence, %s)", head,
-				h.Status.Label(), h.Confidence.Label(), h.Verification.Label()))
+			standing = append(standing, head+" ("+BriefStateLabel(h.Status.PlainLabel(), h.Verification)+")")
 			standing = append(standing, why(h.Rationale)...)
 			standing = append(standing, evidenceLines(h.Links)...)
 		case domain.HypothesisStatusDisproven:
-			disproven = append(disproven, head+" (disproven, "+h.Verification.Label()+")")
+			disproven = append(disproven, head+" ("+BriefStateLabel(h.Status.PlainLabel(), h.Verification)+")")
 			disproven = append(disproven, why(h.Rationale)...)
 			disproven = append(disproven, evidenceLines(h.Links)...)
 		}
 	}
 
-	para("## Current claims")
+	para("## Findings")
 	if len(established) > 0 {
 		para(established...)
 	} else {
 		para("None yet.")
 	}
 	if len(disputed) > 0 {
-		para("## Disputed claims")
+		para("## Where sources disagree")
 		para(disputed...)
 	}
 	if ruledOut := slices.Concat(disproven, rejected); len(ruledOut) > 0 {
@@ -167,7 +154,7 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 		para(ruledOut...)
 	}
 	if len(standing) > 0 {
-		para("## Hypotheses still open or supported")
+		para("## Still being tested")
 		para(standing...)
 	}
 
@@ -194,10 +181,10 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 		}
 	}
 	if len(answered) > 0 {
-		para("## Answered questions")
+		para("## Answered follow-up questions")
 		para(answered...)
 	}
-	para("## Open questions")
+	para("## Open follow-up questions")
 	if len(open) > 0 {
 		para(open...)
 	} else {
@@ -205,7 +192,7 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 	}
 
 	if len(evidence) > 0 {
-		para("## Evidence")
+		para("## Sources")
 		var lines []string
 		for _, e := range evidence {
 			lines = append(lines, fmt.Sprintf("- **%s** %s", refTag(e.Ref, e.Imported), oneLine(e.Title)))
@@ -213,7 +200,7 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 			if d := datePart(e.CapturedAt); d != "" {
 				detail += ", captured " + d
 			}
-			lines = append(lines, detail+", "+e.Verification.Label())
+			lines = append(lines, detail+", "+verificationLabel(e.Verification))
 			if sum := oneLine(e.Summary); sum != "" {
 				lines = append(lines, "  - "+sum)
 			}
@@ -223,7 +210,7 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 
 	timeline, earlier := reportTimeline(s.Activity, o)
 	if len(timeline) > 0 || earlier {
-		para("## Timeline (UTC)")
+		para("## How we got here (UTC)")
 		if earlier {
 			para("Earlier changes are not shown.")
 		}
@@ -238,11 +225,11 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 				day = d
 				para("### " + orText(d, "Undated"))
 			}
-			who := string(a.Actor.Kind) + " " + oneLine(a.Actor.Client)
+			who := actorWords(a.Actor)
 			if a.Imported {
 				who += " (imported)"
 			}
-			lines = append(lines, fmt.Sprintf("- %s %s: %s", timePart(a.CreatedAt), who, timelinePhrase(a)))
+			lines = append(lines, fmt.Sprintf("- %s %s: %s", timePart(a.CreatedAt), who, timelinePhrase(a, verificationLabel)))
 		}
 		if len(lines) > 0 {
 			para(lines...)
@@ -251,6 +238,33 @@ func RenderReport(s Snapshot, o ReportOptions) string {
 
 	para("_Generated by Casebook from " + oneLine(inv.Ref) + "._")
 	return b.String()
+}
+
+// actorWords names who made a change for a reader of the shared answer:
+// "A person", "Claude Code (AI)". The reader is not the person who did the
+// checking, so a person is never "You".
+func actorWords(a domain.Actor) string {
+	client := oneLine(a.Client)
+	switch client {
+	case "claude-code":
+		client = "Claude Code"
+	case "codex":
+		client = "Codex"
+	}
+	switch a.Kind {
+	case domain.ActorHuman:
+		return "A person"
+	case domain.ActorAI:
+		if client == "" || client == "mcp-client" {
+			return "An AI client (AI)"
+		}
+		return client + " (AI)"
+	case domain.ActorImport:
+		return "Import"
+	case domain.ActorSystem:
+		return "Casebook"
+	}
+	return strings.TrimSpace(string(a.Kind) + " " + client)
 }
 
 // reportTimeline returns the material activity rows the timeline shows,

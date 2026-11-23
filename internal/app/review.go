@@ -80,12 +80,12 @@ func reviewFinding(k stmtKind, row store.StatementRow, evidence map[string]Evide
 			supports++
 			switch e.Verification {
 			case domain.VerificationDisputed, domain.VerificationSuperseded:
-				out.Warnings = append(out.Warnings, fmt.Sprintf("Supporting evidence %s is %s.", e.Ref, e.Verification.Label()))
+				out.Warnings = append(out.Warnings, fmt.Sprintf("Source %s is marked %s.", e.Ref, e.Verification.PlainLabel()))
 			}
 		}
 	}
 	if supports == 0 {
-		out.Warnings = append(out.Warnings, "No supporting evidence is linked.")
+		out.Warnings = append(out.Warnings, "No source backs this finding.")
 	}
 	if len(out.Warnings) > 0 {
 		out.Filters = append(out.Filters, "support_attention")
@@ -147,7 +147,7 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 		return ReviewFinding{}, a.fail(op, err)
 	}
 	if actor.Kind != domain.ActorHuman {
-		return ReviewFinding{}, a.fail(op, domain.NewValidationError("actor", "only a person can review findings"))
+		return ReviewFinding{}, a.fail(op, domain.NewValidationError("actor", "only a person can check findings"))
 	}
 	k, err := reviewKind(in.Kind)
 	if err != nil {
@@ -167,7 +167,7 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 			return err
 		}
 		if !reviewCurrent(row) {
-			return fmt.Errorf("%w: %s is retired; review current findings instead", domain.ErrConflict, row.Ref)
+			return fmt.Errorf("%w: finding %s was replaced or ruled out; check a current finding instead", domain.ErrConflict, row.Ref)
 		}
 		evidence, err := store.ListEvidenceRaw(ctx, tx, t.Inv.ID, true)
 		if err != nil {
@@ -179,10 +179,10 @@ func (a *App) ReviewStatement(ctx context.Context, actor Actor, invRef string, i
 		}
 		current := reviewFinding(k, row, byRef)
 		if in.Basis == "" || in.Basis != current.Basis {
-			return fmt.Errorf("%w: this finding or its evidence changed; show the latest version before reviewing", domain.ErrConflict)
+			return fmt.Errorf("%w: this finding or its sources changed; show the latest version before checking it", domain.ErrConflict)
 		}
 		if row.Verification == domain.VerificationDisputed && in.Verification == domain.VerificationHumanVerified && !in.SettleDispute {
-			return domain.NewValidationError("settle_dispute", "confirm that you want to settle this dispute")
+			return domain.NewValidationError("settle_dispute", "confirm that you checked this even though its sources disagree")
 		}
 		updated, _, err := a.updateStatementTx(ctx, tx, actor, invRef, in.Ref, k, pp)
 		if err != nil {

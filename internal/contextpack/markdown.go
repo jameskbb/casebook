@@ -9,70 +9,73 @@ import (
 )
 
 // RenderMarkdown renders the pack in its fixed Markdown layout: LF line endings, one blank line between sections and a
-// trailing newline. Labels come from the enum Label methods. Empty
-// current claims, hypotheses and open questions print "(none)"; an unset
-// primary question or conclusion prints "(not yet set)"; the other optional
-// sections are left out when empty. A trimmed pack ends with a line naming
-// the budget and the omitted sections. A record copied from an imported
-// file shows "(imported)" after its ref, like an imported activity row.
+// trailing newline. It says question, answer, finding and source: a claim
+// (C ref) and a hypothesis (H ref) are both findings, evidence (E ref) is a
+// source, and an open question (Q ref) is a follow-up question. Refs and the
+// JSON rendering keep the engine's names. Confidence is not printed. Empty
+// findings and follow-up questions print "(none)"; an unset question or
+// answer prints "(not yet set)"; the other optional sections are left out
+// when empty. A trimmed pack ends with a line naming the budget and the
+// omitted sections. A record copied from an imported file shows "(imported)"
+// after its ref, like an imported activity row.
 //
-// Every user text value (title, primary question, conclusion, rationale,
-// statements, questions, notes, evidence titles and labels, activity
-// summaries, client names) is rendered on one line with oneLine, so stored
-// text can never start a new line and forge a section header, a claim line
-// or a verification label: the only line breaks in the output are the
-// layout's own.
+// Every user text value (title, question, answer, why, statements, follow-up
+// questions, notes, source titles and labels, activity summaries, client
+// names) is rendered on one line with oneLine, so stored text can never
+// start a new line and forge a section header, a finding line or a check
+// label: the only line breaks in the output are the layout's own.
 func RenderMarkdown(p Pack) string {
 	var sections []string
 	add := func(lines ...string) { sections = append(sections, strings.Join(lines, "\n")) }
 
-	add("Investigation: "+oneLine(p.Investigation.Ref),
+	add("Question: "+oneLine(p.Investigation.Ref),
 		"Title: "+oneLine(p.Investigation.Title),
-		"Status: "+p.Investigation.Status.Label())
-	add("Primary question:", orNotSet(oneLine(p.Investigation.PrimaryQuestion)))
-	add("Current conclusion:", orNotSet(oneLine(p.Conclusion.Text)))
-	add("Conclusion confidence:", p.Conclusion.Confidence.Label())
+		"Status: "+questionStatusWord(p.Investigation.Status))
+	add("The question:", orNotSet(oneLine(p.Investigation.PrimaryQuestion)))
+	add("Answer so far:", orNotSet(oneLine(p.Conclusion.Text)))
 	if p.Conclusion.Text != "" {
 		add(conclusionAccountabilityLines(p.Conclusion, basisBrackets)...)
 	}
 	if rationale := oneLine(p.Conclusion.Rationale); rationale != "" {
-		add("Conclusion rationale:", rationale)
+		add("Why this answer:", rationale)
 	}
 
-	lines := []string{"Current claims:"}
+	lines := []string{"Findings:"}
 	for _, c := range p.EstablishedClaims {
-		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(c.Ref, c.Imported), c.Confidence.Label(), c.Verification.Label()), oneLine(c.Statement))
+		lines = append(lines, fmt.Sprintf("%s [%s]", refTag(c.Ref, c.Imported), packLabel(c.Verification)), oneLine(c.Statement))
 		lines = append(lines, whyLine(c.Rationale)...)
 		lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 	}
-	add(listTail(lines, len(p.EstablishedClaims), p.Omitted.EstablishedClaims, "current claim", "current claims")...)
+	add(listTail(lines, len(p.EstablishedClaims), p.Omitted.EstablishedClaims, "finding", "findings")...)
 
 	if len(p.DisputedClaims) > 0 || p.Omitted.DisputedClaims > 0 {
-		lines := []string{"Disputed claims:"}
+		lines := []string{"Findings where sources disagree:"}
 		for _, c := range p.DisputedClaims {
-			lines = append(lines, fmt.Sprintf("%s [%s, %s] %s", refTag(c.Ref, c.Imported), c.Confidence.Label(), c.Verification.Label(), oneLine(c.Statement)))
+			lines = append(lines, fmt.Sprintf("%s [%s] %s", refTag(c.Ref, c.Imported), packLabel(c.Verification), oneLine(c.Statement)))
 			lines = append(lines, p.evidenceLines(c.SupportingEvidence, c.ContradictingEvidence)...)
 		}
-		add(listTail(lines, len(p.DisputedClaims), p.Omitted.DisputedClaims, "disputed claim", "disputed claims")...)
+		add(listTail(lines, len(p.DisputedClaims), p.Omitted.DisputedClaims,
+			"finding where sources disagree", "findings where sources disagree")...)
 	}
 
-	lines = []string{"Hypotheses:"}
+	lines = []string{"Findings still being tested:"}
 	for _, h := range p.Hypotheses {
-		lines = append(lines, fmt.Sprintf("%s [%s, %s, %s]", refTag(h.Ref, h.Imported), h.Confidence.Label(), h.Status.Label(), h.Verification.Label()),
+		lines = append(lines, fmt.Sprintf("%s [%s, %s]", refTag(h.Ref, h.Imported), h.Status.PlainLabel(), packLabel(h.Verification)),
 			oneLine(h.Statement))
 		lines = append(lines, whyLine(h.Rationale)...)
 		lines = append(lines, p.evidenceLines(h.SupportingEvidence, h.ContradictingEvidence)...)
 	}
-	add(listTail(lines, len(p.Hypotheses), p.Omitted.Hypotheses, "hypothesis", "hypotheses")...)
+	add(listTail(lines, len(p.Hypotheses), p.Omitted.Hypotheses,
+		"finding still being tested", "findings still being tested")...)
 
-	lines = []string{"Open questions:"}
+	lines = []string{"Follow-up questions:"}
 	for _, q := range p.OpenQuestions {
 		lines = append(lines, refTag(q.Ref, q.Imported), oneLine(q.Question))
 	}
-	add(listTail(lines, len(p.OpenQuestions), p.Omitted.OpenQuestions, "open question", "open questions")...)
+	add(listTail(lines, len(p.OpenQuestions), p.Omitted.OpenQuestions, "follow-up question", "follow-up questions")...)
 
 	if len(p.DeferredQuestions) > 0 {
-		lines := []string{"Deferred questions:"}
+		lines := []string{"Deferred follow-up questions:"}
 		for _, q := range p.DeferredQuestions {
 			line := refTag(q.Ref, q.Imported) + " " + oneLine(q.Question)
 			if note := oneLine(q.Note); note != "" {
@@ -84,43 +87,44 @@ func RenderMarkdown(p Pack) string {
 	}
 
 	if len(p.DisprovenHypotheses) > 0 || p.Omitted.DisprovenHypotheses > 0 {
-		lines := []string{"Known disproven hypotheses:"}
+		lines := []string{"Findings ruled out:"}
 		for _, h := range p.DisprovenHypotheses {
-			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text)+" ["+h.Verification.Label()+"]")
+			lines = append(lines, refTag(h.Ref, h.Imported)+" "+oneLine(h.Text)+" ["+packLabel(h.Verification)+"]")
 			if len(h.ContradictingEvidence) > 0 {
-				lines = append(lines, "Contradicted by: "+p.evidenceRefs(h.ContradictingEvidence))
+				lines = append(lines, "Ruled out by: "+p.evidenceRefs(h.ContradictingEvidence))
 			}
 		}
 		add(listTail(lines, len(p.DisprovenHypotheses), p.Omitted.DisprovenHypotheses,
-			"disproven hypothesis", "disproven hypotheses")...)
+			"finding ruled out", "findings ruled out")...)
 	}
 
 	if len(p.EvidenceIndex) > 0 {
-		lines := []string{"Evidence index:"}
+		lines := []string{"Sources:"}
 		for _, e := range p.EvidenceIndex {
 			source := oneLine(e.SourceLabel)
 			if source == "" {
 				source = e.SourceType.Label()
 			}
-			lines = append(lines, fmt.Sprintf("%s %s (%s) [%s]", refTag(e.Ref, e.Imported), oneLine(e.Title), source, verificationLabel(e.Verification)))
+			lines = append(lines, fmt.Sprintf("%s %s (%s) [%s]", refTag(e.Ref, e.Imported), oneLine(e.Title), source, packLabel(e.Verification)))
 		}
 		add(lines...)
 	}
 
 	if len(p.RecentChanges) > 0 {
-		lines := []string{"Recent material changes:"}
+		lines := []string{"Recent changes:"}
 		for _, c := range p.RecentChanges {
 			who := string(c.Actor.Kind) + " " + oneLine(c.Actor.Client)
 			if c.Imported {
 				who += " (imported)"
 			}
-			lines = append(lines, fmt.Sprintf("- %s %s: %s", c.At, who, oneLine(c.Summary)))
+			lines = append(lines, fmt.Sprintf("- %s %s: %s", c.At, who,
+				timelinePhrase(domain.Activity{Action: c.Action, TargetRef: c.TargetRef, Summary: c.Summary}, packLabel)))
 		}
 		add(lines...)
 	}
 
 	if p.Omitted.EvidenceOutsideFindings > 0 {
-		add(fmt.Sprintf("Evidence outside the included findings: %d omitted.", p.Omitted.EvidenceOutsideFindings))
+		add(fmt.Sprintf("Sources outside the included findings: %d omitted.", p.Omitted.EvidenceOutsideFindings))
 	}
 
 	if p.Truncated {
@@ -157,8 +161,8 @@ func orNotSet(s string) string {
 	return s
 }
 
-// whyLine renders a claim or hypothesis rationale as "Why: ...", or nothing
-// when it is empty.
+// whyLine renders a finding's rationale as "Why: ...", or nothing when it
+// is empty.
 func whyLine(rationale string) []string {
 	if r := oneLine(rationale); r != "" {
 		return []string{"Why: " + r}
@@ -166,15 +170,15 @@ func whyLine(rationale string) []string {
 	return nil
 }
 
-// evidenceLines renders the evidence ref lines of a claim or hypothesis;
-// each is left out when its list is empty.
+// evidenceLines renders the source ref lines of a finding; each is left out
+// when its list is empty.
 func (p Pack) evidenceLines(supporting, contradicting []string) []string {
 	var out []string
 	if len(supporting) > 0 {
-		out = append(out, "Evidence: "+p.evidenceRefs(supporting))
+		out = append(out, "Sources: "+p.evidenceRefs(supporting))
 	}
 	if len(contradicting) > 0 {
-		out = append(out, "Contradicting evidence: "+p.evidenceRefs(contradicting))
+		out = append(out, "Sources against: "+p.evidenceRefs(contradicting))
 	}
 	return out
 }
@@ -196,8 +200,8 @@ func listTail(lines []string, kept, omitted int, singular, plural string) []stri
 	return lines
 }
 
-// evidenceRefs keeps verification adjacent to each citation, including after
-// the evidence index's titles and sources were omitted by the budget.
+// evidenceRefs keeps the check label adjacent to each citation, including
+// after the source list's titles and labels were omitted by the budget.
 func (p Pack) evidenceRefs(refs []string) string {
 	labelled := make([]string, 0, len(refs))
 	for _, ref := range refs {
@@ -209,27 +213,40 @@ func (p Pack) evidenceRefs(refs []string) string {
 func (p Pack) evidenceVerificationLabel(ref string) string {
 	for _, e := range p.EvidenceVerification {
 		if e.Ref == ref {
-			return verificationLabel(e.Verification)
+			return packLabel(e.Verification)
 		}
 	}
 	for _, e := range p.EvidenceIndex {
 		if e.Ref == ref {
-			return verificationLabel(e.Verification)
+			return packLabel(e.Verification)
 		}
 	}
-	return "Verification unavailable"
+	return checkUnknown
 }
 
+// checkUnknown stands in for a check label that is not available.
+const checkUnknown = "Check not known"
+
+// verificationLabel is the check label a person reads in a shared answer.
 func verificationLabel(v domain.Verification) string {
 	if v == "" {
-		return "Verification unavailable"
+		return checkUnknown
 	}
-	return v.Label()
+	return v.PlainLabel()
 }
 
-// basisStyle picks how conclusionAccountabilityLines writes a claim basis.
-// Documents for people (brief and report) use parentheses joined by
-// semicolons; packs keep square brackets and commas.
+// packLabel is verificationLabel for a pack, which an AI client reads: "You
+// checked this" would tell the AI that it did the checking.
+func packLabel(v domain.Verification) string {
+	if v == domain.VerificationHumanVerified {
+		return "A person checked this"
+	}
+	return verificationLabel(v)
+}
+
+// basisStyle picks how conclusionAccountabilityLines writes a finding
+// behind the answer. Documents for people (the shared answer) use
+// parentheses joined by semicolons; packs keep square brackets and commas.
 type basisStyle int
 
 const (
@@ -237,23 +254,23 @@ const (
 	basisParens
 )
 
-// claimBasisLabel names a basis claim's state without repeating a word: a
-// current claim shows only its verification label, a claim whose status and
-// verification agree (Disputed, Superseded) shows the word once, and any
-// other claim shows its status, then its verification label, joined by a
+// claimBasisLabel names a basis finding's state without repeating a word: a
+// current finding shows only its check label, a finding whose status and
+// check agree (Sources disagree, Replaced) shows the words once, and any
+// other finding shows its status, then its check label, joined by a
 // semicolon inside parentheses and by a comma inside brackets.
 func claimBasisLabel(claim PackConclusionClaim, style basisStyle) string {
 	if claim.Missing {
-		return "missing claim"
+		return "missing finding"
 	}
 	verification := verificationLabel(claim.Verification)
-	status := claim.Status.Label()
+	sep := "; "
+	if style == basisBrackets {
+		verification, sep = packLabel(claim.Verification), ", "
+	}
+	status := claim.Status.PlainLabel()
 	if claim.Status == domain.ClaimStatusActive || claim.Status == "" || status == verification {
 		return verification
-	}
-	sep := ", "
-	if style == basisParens {
-		sep = "; "
 	}
 	return status + sep + verification
 }
@@ -268,22 +285,23 @@ func readableTime(ts string) string {
 	return t.UTC().Format("2006-01-02 15:04") + " UTC"
 }
 
-// These labels are mandatory: a budget may shorten prose, never verification
-// or the fact that the selected basis needs a person's review.
+// These labels are mandatory: a budget may shorten prose, never a check
+// label or the fact that the findings behind the answer need a person's
+// review.
 func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string {
 	verification := c.Verification
 	if verification == "" {
 		verification = domain.VerificationAIGenerated
 	}
-	open, closing, sep := " [", "]", ", "
+	open, closing, sep, label := " [", "]", ", ", packLabel
 	if style == basisParens {
-		open, closing, sep = " (", ")", "; "
+		open, closing, sep, label = " (", ")", "; ", verificationLabel
 	}
-	lines := []string{"Conclusion verification: " + verification.Label()}
+	lines := []string{"Answer marked: " + label(verification)}
 	for _, group := range []struct {
 		label  string
 		claims []PackConclusionClaim
-	}{{"Supporting claims", c.SupportingClaims}, {"Contradicting claims", c.ContradictingClaims}} {
+	}{{"Findings behind the answer", c.SupportingClaims}, {"Findings against the answer", c.ContradictingClaims}} {
 		refs := []string{}
 		for _, claim := range group.claims {
 			refs = append(refs, oneLine(claim.Ref)+open+claimBasisLabel(claim, style)+closing)
@@ -295,17 +313,56 @@ func conclusionAccountabilityLines(c PackConclusion, style basisStyle) []string 
 		}
 	}
 	if c.ReviewedAt == "" {
-		lines = append(lines, "Conclusion review: not reviewed; needs review.")
+		lines = append(lines, "Answer review: not reviewed yet.")
 	} else {
-		lines = append(lines, "Conclusion reviewed: "+readableTime(c.ReviewedAt))
+		lines = append(lines, "Answer reviewed: "+readableTime(c.ReviewedAt))
 		if c.ReviewBasis != "" {
-			lines = append(lines, "Review basis: "+oneLine(c.ReviewBasis))
+			lines = append(lines, "What was checked: "+oneLine(c.ReviewBasis))
 		}
 		if c.Verification == domain.VerificationDisputed {
-			lines = append(lines, "Conclusion needs review: the conclusion is disputed.")
+			lines = append(lines, "The answer needs a new review: sources disagree about it.")
 		} else if c.NeedsReview {
-			lines = append(lines, "Conclusion needs review: selected claims or their evidence changed since the recorded review.")
+			lines = append(lines, "The answer needs a new review: its findings or their sources changed since the last review.")
 		}
 	}
 	return lines
+}
+
+// sourcesCheckedLine counts the sources that are not replaced: "1 of 3
+// sources checked by you. 1 checked by AI, 1 not checked." It is "" when
+// there are none. The count stands where a confidence rating used to.
+func sourcesCheckedLine(evidence []domain.Evidence) string {
+	total, byYou, byAI, notChecked := 0, 0, 0, 0
+	for _, e := range evidence {
+		switch e.Verification {
+		case domain.VerificationSuperseded:
+			continue
+		case domain.VerificationHumanVerified:
+			byYou++
+		case domain.VerificationSourceVerified:
+			byAI++
+		case domain.VerificationAIGenerated:
+			notChecked++
+		}
+		total++
+	}
+	if total == 0 {
+		return ""
+	}
+	noun := "sources"
+	if total == 1 {
+		noun = "source"
+	}
+	line := fmt.Sprintf("%d of %d %s checked by you.", byYou, total, noun)
+	var rest []string
+	if byAI > 0 {
+		rest = append(rest, fmt.Sprintf("%d checked by AI", byAI))
+	}
+	if notChecked > 0 {
+		rest = append(rest, fmt.Sprintf("%d not checked", notChecked))
+	}
+	if len(rest) > 0 {
+		line += " " + strings.Join(rest, ", ") + "."
+	}
+	return line
 }

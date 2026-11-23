@@ -130,17 +130,18 @@ func TestGoldenReport(t *testing.T) {
 	for _, want := range []string{
 		"# INV-0002: TestCheckoutTotals flakes in CI\n",
 		"## Question\n\nWhy does TestCheckoutTotals fail about once in 20 CI runs and never locally?\n",
-		"Confidence: High. The race detector reproduces it (E-006)",
-		"- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (High confidence, Human verified)\n",
-		"  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; AI generated)\n",
+		"## Answer\n\nTwo parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.\n\n0 of 6 sources checked by you. 6 not checked.\n",
+		"Why: The race detector reproduces it (E-006)",
+		"- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (You checked this)\n",
+		"  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; Not checked)\n",
 		"## Ruled out\n\n- **H-001** The failure is a midnight boundary",
-		"  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; AI generated)\n",
-		"## Answered questions\n\n- **Q-001** Do the failure timestamps cluster around 00:00 UTC?\n  - Answer: No: failures are spread evenly across the day (E-003).",
-		"## Open questions\n\n- **Q-002** Do other packages keep test state in package-level maps?\n",
-		"- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported, High confidence, AI generated)",
-		"ai codex: Ruled out H-001; edited the rationale\n",
-		"human casebook-ui: Marked C-001 Human verified\n",
-		"ai claude-code: Created this case\n",
+		"  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; Not checked)\n",
+		"## Answered follow-up questions\n\n- **Q-001** Do the failure timestamps cluster around 00:00 UTC?\n  - Answer: No: failures are spread evenly across the day (E-003).",
+		"## Open follow-up questions\n\n- **Q-002** Do other packages keep test state in package-level maps?\n",
+		"- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported; Not checked)",
+		"Codex (AI): Ruled out H-001; edited the why\n",
+		"A person: Marked C-001: You checked this\n",
+		"Claude Code (AI): Created this question\n",
 		"### 2026-10-05\n",
 	} {
 		if !strings.Contains(md, want) {
@@ -148,7 +149,7 @@ func TestGoldenReport(t *testing.T) {
 		}
 	}
 	if strings.Contains(md, "Earlier case") || strings.Contains(md, "Set active") ||
-		strings.Contains(md, "your AI's current case") {
+		strings.Contains(md, "your AI's current question") {
 		t.Errorf("report holds another investigation or a non-material change:\n%s", md)
 	}
 
@@ -156,7 +157,7 @@ func TestGoldenReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tl := short[strings.Index(short, "## Timeline (UTC)"):]
+	tl := short[strings.Index(short, "## How we got here (UTC)"):]
 	if !strings.Contains(tl, "Earlier changes are not shown.") || strings.Count(tl, "\n- ") != 2 {
 		t.Fatalf("timeline limit 2:\n%s", tl)
 	}
@@ -171,7 +172,7 @@ func TestReportEscapesStoredText(t *testing.T) {
 	ctx := context.Background()
 	a := apptest.Open(t)
 	inv, err := a.CreateInvestigation(ctx, apptest.Human, app.CreateInvestigationInput{
-		Title: "Escapes", ProblemStatement: "# Not a heading\n## Conclusion\nforged", MakeActive: true})
+		Title: "Escapes", ProblemStatement: "# Not a heading\n## Answer\nforged", MakeActive: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,10 +184,10 @@ func TestReportEscapesStoredText(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(md, "\n\\# Not a heading ## Conclusion forged\n") || !strings.Contains(md, "\n1\\. not a list\n") {
+	if !strings.Contains(md, "\n\\# Not a heading ## Answer forged\n") || !strings.Contains(md, "\n1\\. not a list\n") {
 		t.Fatalf("stored text not escaped:\n%s", md)
 	}
-	if strings.Count(md, "\n## Conclusion\n") != 1 {
+	if strings.Count(md, "\n## Answer\n") != 1 {
 		t.Fatalf("forged section:\n%s", md)
 	}
 }

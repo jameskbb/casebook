@@ -9,9 +9,9 @@ import (
 )
 
 // BriefOmitted counts and names the records outside the person's selected
-// leadership brief. The ref lists are in ref order; when they are empty but a
+// short answer. The ref lists are in ref order; when they are empty but a
 // count is not (an older caller), the notice falls back to the counts. The
-// complete report remains available, including the activity history.
+// full version remains available, including the history.
 type BriefOmitted struct {
 	Claims         int      `json:"claims"`
 	Hypotheses     int      `json:"hypotheses"`
@@ -24,9 +24,12 @@ type BriefOmitted struct {
 }
 
 // RenderBrief renders only supplied records without inventing a summary or
-// recommendations. The app selects records and always keeps disputed findings,
-// contradicting evidence and the claims behind the answer.
-func RenderBrief(s Snapshot, omitted BriefOmitted) string {
+// recommendations. The app selects records and always keeps findings where
+// sources disagree, contradicting sources and the findings behind the
+// answer. allEvidence is every source of the question, selected or not: the
+// "N of M sources checked by you" line counts them all, so leaving a source
+// out of the selection cannot improve the count.
+func RenderBrief(s Snapshot, omitted BriefOmitted, allEvidence []domain.Evidence) string {
 	var b strings.Builder
 	para := func(lines ...string) {
 		if b.Len() > 0 {
@@ -39,18 +42,10 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 	}
 	inv := s.Investigation
 	para("# " + oneLine(inv.Ref) + ": " + oneLine(inv.Title))
-	para("Leadership brief. Status: " + inv.Status.Label() + ".")
 	para("## Question", orText(mdText(inv.ProblemStatement), "Not recorded."))
 	para("## Answer")
-	if inv.Conclusion == "" {
-		para("No conclusion recorded yet.")
-	} else {
-		para(mdText(inv.Conclusion))
-		c := PackConclusion{Verification: inv.ConclusionVerification, SupportingClaims: conclusionClaimBasis(inv.ConclusionSupportingClaims, s.Claims), ContradictingClaims: conclusionClaimBasis(inv.ConclusionContradictingClaims, s.Claims), ReviewedAt: inv.ConclusionReviewedAt, ReviewBasis: inv.ConclusionReviewBasis, NeedsReview: inv.ConclusionNeedsReview}
-		for _, line := range conclusionAccountabilityLines(c, basisParens) {
-			para(line)
-		}
-		para(strings.TrimSpace("Confidence: " + briefConfidenceWord(inv.ConclusionConfidence) + ". " + oneLine(inv.ConclusionRationale)))
+	for _, line := range answerLines(s, allEvidence) {
+		para(line)
 	}
 	links := func(rows []domain.EvidenceLink) {
 		support, contra := linkRefs(rows)
@@ -59,7 +54,7 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 			refs  []string
 		}{{"Supported by", support}, {"Contradicted by", contra}} {
 			for _, ref := range g.refs {
-				line := "  - " + g.label + " " + ref + " [Verification unavailable]"
+				line := "  - " + g.label + " " + ref + " (" + checkUnknown + ")"
 				for _, e := range s.Evidence {
 					if e.Ref == ref {
 						line = "  - " + g.label + " " + ref + ": " + oneLine(e.Title) + " (" + verificationLabel(e.Verification) + ")"
@@ -97,20 +92,20 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 	sortByRef(live, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
 	sortByRef(disproven, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
 	hypothesis := func(h domain.Hypothesis) {
-		para(fmt.Sprintf("- **%s** %s (%s)", refTag(h.Ref, h.Imported), oneLine(h.Statement), briefStateTail(h.Status.Label(), h.Confidence, h.Verification, h.Status != domain.HypothesisStatusDisproven)))
+		para(fmt.Sprintf("- **%s** %s (%s)", refTag(h.Ref, h.Imported), oneLine(h.Statement), BriefStateLabel(h.Status.PlainLabel(), h.Verification)))
 		if h.Rationale != "" {
 			para("  - Why: " + oneLine(h.Rationale))
 		}
 		links(h.Links)
 	}
 	claim := func(c domain.Claim) {
-		para(fmt.Sprintf("- **%s** %s (%s)", refTag(c.Ref, c.Imported), oneLine(c.Statement), briefStateTail(c.Status.Label(), c.Confidence, c.Verification, c.Status != domain.ClaimStatusRejected)))
+		para(fmt.Sprintf("- **%s** %s (%s)", refTag(c.Ref, c.Imported), oneLine(c.Statement), BriefStateLabel(c.Status.PlainLabel(), c.Verification)))
 		if c.ConfidenceRationale != "" {
 			para("  - Why: " + oneLine(c.ConfidenceRationale))
 		}
 		links(c.Links)
 	}
-	para("## Selected findings and what is still in doubt")
+	para("## Findings")
 	if len(claims) == 0 && len(hyps) == 0 {
 		para("None recorded or selected.")
 	}
@@ -120,7 +115,7 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 	for _, h := range hyps {
 		hypothesis(h)
 	}
-	para("## Explanations still open or supported")
+	para("## Still being tested")
 	if len(live) == 0 {
 		para("None selected.")
 	}
@@ -139,7 +134,7 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 	}
 	questions := slices.Clone(s.Questions)
 	sortByRef(questions, domain.RecordQuestion, func(q domain.Question) string { return q.Ref })
-	para("## Selected questions")
+	para("## Follow-up questions")
 	if len(questions) == 0 {
 		para("None selected.")
 	}
@@ -154,7 +149,7 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 	}
 	evidence := slices.Clone(s.Evidence)
 	sortByRef(evidence, domain.RecordEvidence, func(e domain.Evidence) string { return e.Ref })
-	para("## Evidence and source caveats")
+	para("## Sources")
 	if len(evidence) == 0 {
 		para("None linked.")
 	}
@@ -164,44 +159,63 @@ func RenderBrief(s Snapshot, omitted BriefOmitted) string {
 			para("  - " + oneLine(e.Summary))
 		}
 	}
-	para("## Scope and omissions")
+	para(BriefScopeHeading)
 	para(briefLabels)
 	para(briefOmissionNotice(omitted))
-	para("Disputed findings, contradicting evidence and the claims behind the answer are always included.")
+	para("Findings where sources disagree, sources that contradict a finding and the findings behind the answer are always included.")
 	para("_Prepared by Casebook from the saved records of " + oneLine(inv.Ref) + ". Casebook did not rewrite them or add to them._")
 	return b.String()
 }
 
+// answerLines renders the body of the Answer section of a shared answer:
+// the answer text, the count of sources checked (in place of a confidence
+// rating), the check and review labels, and why. evidence is every source
+// of the question.
+func answerLines(s Snapshot, evidence []domain.Evidence) []string {
+	inv := s.Investigation
+	if inv.Conclusion == "" {
+		return []string{"No answer yet."}
+	}
+	lines := []string{mdText(inv.Conclusion)}
+	if count := sourcesCheckedLine(evidence); count != "" {
+		lines = append(lines, count)
+	}
+	c := PackConclusion{Verification: inv.ConclusionVerification, SupportingClaims: conclusionClaimBasis(inv.ConclusionSupportingClaims, s.Claims), ContradictingClaims: conclusionClaimBasis(inv.ConclusionContradictingClaims, s.Claims), ReviewedAt: inv.ConclusionReviewedAt, ReviewBasis: inv.ConclusionReviewBasis, NeedsReview: inv.ConclusionNeedsReview}
+	lines = append(lines, conclusionAccountabilityLines(c, basisParens)...)
+	if why := oneLine(inv.ConclusionRationale); why != "" {
+		lines = append(lines, "Why: "+why)
+	}
+	return lines
+}
+
+// BriefScopeHeading opens the last section of the short answer, which says
+// what was left out. A surface that cuts a long answer keeps everything from
+// this heading on.
+const BriefScopeHeading = "## What is included"
+
 // briefLabels is the fixed legend a recipient without Casebook reads to
-// understand every verification label in the brief. It is constant text.
-const briefLabels = "Labels: Human verified means a person checked this and vouched for it. Source verified means it was marked as checked against its source, usually by an AI. AI generated means it has not been marked as checked by a person in Casebook. Disputed means evidence contradicts it; it stays on record until it is settled. Superseded means it was replaced by a newer statement."
+// understand every check label in the shared answer. It is constant text.
+const briefLabels = "Labels: You checked this means the person who shared this checked it against its source. AI checked the source means an AI compared it with its source and no person has. Not checked means nobody has checked it. Sources disagree means a source contradicts it; it stays here until someone decides. Replaced means a newer finding took its place."
 
-// BriefStateLabel is briefStateTail for the Share summary selection list, so
-// the sender sees each record's state in the words the brief prints.
-func BriefStateLabel(status string, confidence domain.Confidence, v domain.Verification, withConfidence bool) string {
-	return briefStateTail(status, confidence, v, withConfidence)
+// BriefStateLabel writes the state in a finding line of a shared answer, and
+// in the selection list, so the sender sees each record's state in the words
+// the answer prints: the status (left out when it is Current), then the
+// check label unless it repeats the status. status is the record's
+// PlainLabel.
+func BriefStateLabel(status string, v domain.Verification) string {
+	label := verificationLabel(v)
+	if status == "" || status == "Current" || status == label {
+		return label
+	}
+	return status + "; " + label
 }
 
-// briefStateTail writes the state in a brief finding line: status, then
-// confidence when it means something (not on a rejected claim or a disproven
-// hypothesis), then the verification label unless it repeats the status word.
-func briefStateTail(status string, confidence domain.Confidence, v domain.Verification, withConfidence bool) string {
-	parts := []string{status}
-	if withConfidence {
-		parts = append(parts, briefConfidence(confidence))
-	}
-	if label := verificationLabel(v); label != status {
-		parts = append(parts, label)
-	}
-	return strings.Join(parts, "; ")
-}
-
-// briefOmissionNotice says what the brief leaves out: the omitted refs in
-// order (claims, hypotheses, questions, evidence), or nonzero counts when no
-// refs were supplied, then the activity history and where the recipient can
-// get the complete report.
+// briefOmissionNotice says what the short answer leaves out: the omitted refs
+// in order (claims, hypotheses, questions, evidence), or nonzero counts when
+// no refs were supplied, then the history and where the recipient can get
+// the full version.
 func briefOmissionNotice(o BriefOmitted) string {
-	const tail = " Activity history is not included. Ask the person who shared this for the complete report."
+	const tail = " The history is not included. Ask the person who shared this for the full version."
 	if refs := slices.Concat(o.ClaimRefs, o.HypothesisRefs, o.QuestionRefs, o.EvidenceRefs); len(refs) > 0 {
 		return "Not included: " + joinList(refs) + "." + tail
 	}
@@ -209,7 +223,7 @@ func briefOmissionNotice(o BriefOmitted) string {
 	for _, n := range []struct {
 		count            int
 		singular, plural string
-	}{{o.Claims, "claim", "claims"}, {o.Hypotheses, "hypothesis", "hypotheses"}, {o.Questions, "question", "questions"}, {o.Evidence, "evidence item", "evidence items"}} {
+	}{{o.Claims + o.Hypotheses, "finding", "findings"}, {o.Questions, "follow-up question", "follow-up questions"}, {o.Evidence, "source", "sources"}} {
 		switch {
 		case n.count == 1:
 			counts = append(counts, "1 "+n.singular)
@@ -217,7 +231,7 @@ func briefOmissionNotice(o BriefOmitted) string {
 			counts = append(counts, fmt.Sprintf("%d %s", n.count, n.plural))
 		}
 	}
-	notice := "Every claim, hypothesis, question and evidence item in the case is included."
+	notice := "Every finding, follow-up question and source is included."
 	if len(counts) > 0 {
 		notice = "Not included: " + joinList(counts) + "."
 	}
@@ -230,20 +244,4 @@ func joinList(items []string) string {
 		return strings.Join(items, "")
 	}
 	return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
-}
-
-// briefConfidence and briefConfidenceWord say "Not assessed" where the enum
-// label says Unknown: a person reads the brief, and the app uses those words.
-func briefConfidence(c domain.Confidence) string {
-	if c == domain.ConfidenceUnknown || c == "" {
-		return "Confidence not assessed"
-	}
-	return c.Label() + " confidence"
-}
-
-func briefConfidenceWord(c domain.Confidence) string {
-	if c == domain.ConfidenceUnknown || c == "" {
-		return "Not assessed"
-	}
-	return c.Label()
 }

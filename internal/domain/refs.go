@@ -44,7 +44,7 @@ func ParseInvestigationRef(s string) (int64, error) {
 	t := strings.TrimSpace(s)
 	n, ok := parsePrefixed(t, "INV")
 	if !ok {
-		return 0, NewValidationError("investigation_ref", "expected an investigation ref such as INV-0001, got %q", t)
+		return 0, NewValidationError("investigation_ref", "expected a question ref such as INV-0001, got %q", t)
 	}
 	return n, nil
 }
@@ -68,7 +68,7 @@ func ParseRecordRef(s string, want RecordType) (RecordRef, error) {
 	example := FormatRecordRef(want, 1)
 	bad := func() (RecordRef, error) {
 		return RecordRef{}, NewValidationError("ref", "expected %s %s ref such as %s, got %q",
-			article(string(want)), want, example, t)
+			article(want.PlainWord()), want.PlainWord(), example, t)
 	}
 	var ref RecordRef
 	rec := t

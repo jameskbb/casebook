@@ -37,10 +37,10 @@ import (
 const dbFileName = "casebook.db"
 
 const (
-	evidenceTitle       = "Four Q4 deals above $250k are already signed under the July playbook"
-	evidenceSummary     = "The deal desk pipeline export for October 8 shows four Northeast deals above $250k signed since October 1, every one on the white-glove tier with an onboarding fee of $0; none has started onboarding yet."
-	evidenceSourceLabel = "Deal desk pipeline export"
-	claimStatement      = "Unless the fee is restored before delivery starts, the four signed Q4 deals add about $800k of onboarding cost at no charge."
+	evidenceTitle       = "Refunds: 1,650 of the 1,900 customers were paid back by October 10"
+	evidenceSummary     = "The refund list for October 10 shows 1,650 refunds sent to customers who were charged twice on October 3. 250 customers are still waiting."
+	evidenceSourceLabel = "Refund list"
+	claimStatement      = "250 customers who were charged twice have not been paid back yet."
 )
 
 // usageError marks a command line problem (exit code 2).
@@ -178,7 +178,7 @@ func writeCheckpoint(ctx context.Context, a *app.App, actor app.Actor, ref strin
 	return nil
 }
 
-// logLines returns deal desk pipeline lines cut to exactly n bytes,
+// logLines returns refund list lines cut to exactly n bytes,
 // or "" for 0.
 func logLines(n int) string {
 	if n <= 0 {
@@ -186,7 +186,7 @@ func logLines(n int) string {
 	}
 	var b strings.Builder
 	for i := 1; b.Len() < n; i++ {
-		fmt.Fprintf(&b, "2026-10-%02d deal=NE-%04d acv_usd=%d onboarding_tier=white-glove fee_usd=0\n", 1+i%8, 2400+i%7600, 250000+(i%40)*10000)
+		fmt.Fprintf(&b, "October %d, refund %04d, customer %d, paid back $%d\n", 6+i%5, i, 2400+i%7600, 20+(i%40)*5)
 	}
 	return b.String()[:n]
 }

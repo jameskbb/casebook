@@ -522,3 +522,69 @@ func (t RecordType) Prefix() string {
 func ParseRecordType(s string) (RecordType, error) {
 	return enumParse("record_type", s, AllRecordTypes())
 }
+
+// PlainLabel returns the label a person reads on screens and in shared
+// answers (desktop/frontend/src/lib/labels.ts uses the same words). Label
+// stays the engine's own word, for output an AI client reads.
+func (v Verification) PlainLabel() string {
+	switch v {
+	case VerificationAIGenerated:
+		return "Not checked"
+	case VerificationHumanVerified:
+		return "You checked this"
+	case VerificationSourceVerified:
+		return "AI checked the source"
+	case VerificationDisputed:
+		return "Sources disagree"
+	case VerificationSuperseded:
+		return "Replaced"
+	}
+	return string(v)
+}
+
+// PlainLabel returns the label a person reads.
+func (s ClaimStatus) PlainLabel() string {
+	switch s {
+	case ClaimStatusActive:
+		return "Current"
+	case ClaimStatusDisputed:
+		return "Sources disagree"
+	case ClaimStatusSuperseded:
+		return "Replaced"
+	case ClaimStatusRejected:
+		return "Ruled out"
+	}
+	return string(s)
+}
+
+// PlainLabel returns the label a person reads.
+func (s HypothesisStatus) PlainLabel() string {
+	switch s {
+	case HypothesisStatusOpen:
+		return "Not tested yet"
+	case HypothesisStatusSupported:
+		return "Supported"
+	case HypothesisStatusDisproven:
+		return "Ruled out"
+	case HypothesisStatusSuperseded:
+		return "Replaced"
+	}
+	return string(s)
+}
+
+// PlainWord returns the noun a person reads for a record type: finding for
+// a claim or a hypothesis, source for evidence, question for an
+// investigation, follow-up question for a question.
+func (t RecordType) PlainWord() string {
+	switch t {
+	case RecordInvestigation:
+		return "question"
+	case RecordEvidence:
+		return "source"
+	case RecordClaim, RecordHypothesis:
+		return "finding"
+	case RecordQuestion:
+		return "follow-up question"
+	}
+	return string(t)
+}

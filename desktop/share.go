@@ -61,7 +61,7 @@ func (d *Desktop) SaveSharePreview(snapshotID string) (FileResult, error) {
 	if err != nil {
 		return FileResult{}, err
 	}
-	path, err := d.native.SaveFile(runtime.SaveDialogOptions{Title: "Save reviewed summary", DefaultFilename: p.InvestigationRef + "-" + p.Mode + ".md", Filters: mdFilter, CanCreateDirectories: true})
+	path, err := d.native.SaveFile(runtime.SaveDialogOptions{Title: "Save the answer", DefaultFilename: shareFileName(p.InvestigationRef, p.Mode), Filters: mdFilter, CanCreateDirectories: true})
 	if err != nil {
 		return FileResult{}, nativeErr("dialog", err)
 	}
@@ -75,4 +75,13 @@ func (d *Desktop) SaveSharePreview(snapshotID string) (FileResult, error) {
 		return FileResult{}, mapErr(err)
 	}
 	return FileResult{Path: path, FileName: filepath.Base(path)}, nil
+}
+
+// shareFileName is the suggested file name of a saved answer:
+// "INV-0002-answer.md", or "INV-0002-full-answer.md" for the full version.
+func shareFileName(ref, mode string) string {
+	if mode == "report" {
+		return ref + "-full-answer.md"
+	}
+	return ref + "-answer.md"
 }

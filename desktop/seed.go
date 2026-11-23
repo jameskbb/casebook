@@ -32,11 +32,11 @@ func checkSeedTarget(dbPath string) error {
 	return nil
 }
 
-// seedDemo fills the empty database at dbPath with the demo investigations
-// used for screenshots and smoke tests (see
-// internal/demo): the featured flaky-test case INV-0002, written by Claude
-// Code, Codex and a person over Monday to Thursday, plus an earlier case, a
-// blocked, a resolved and an archived investigation. stage
+// seedDemo fills the empty database at dbPath with the demo questions used
+// for screenshots and smoke tests (see internal/demo): the featured call
+// center question INV-0002, written by Claude Code, Codex and a person over
+// Monday to Thursday, plus an earlier answered question, one with no answer
+// yet, another answered one and an archived one. stage
 // demo.StageBeforeThursday stops before Thursday's Claude Code checkpoint so
 // it can be written live (aiwrite --checkpoint).
 func seedDemo(dbPath string, now time.Time, stage demo.Stage) error {

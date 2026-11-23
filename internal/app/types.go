@@ -108,6 +108,11 @@ const (
 	DefaultRecentChanges   = contextpack.DefaultRecentChanges
 )
 
+// BriefScopeHeading is the heading of the last section of a short shared
+// answer ("## What is included"), which lists what was left out. A surface
+// that cuts a long answer keeps everything from this heading on.
+const BriefScopeHeading = contextpack.BriefScopeHeading
+
 // Actor kinds.
 const (
 	ActorHuman  = domain.ActorHuman

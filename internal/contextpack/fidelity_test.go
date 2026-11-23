@@ -56,9 +56,9 @@ func TestEvidenceVerificationSurvivesEveryPackRendering(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			md := RenderMarkdown(p)
 			for _, want := range []string{
-				"Current claims:", "E-001 [Disputed]", "E-002 [Superseded]", "E-003 [Source verified]",
-				"H-001 Duplicate invoices caused the decline. [AI generated]",
-				"Evidence outside the included findings: 1 omitted.",
+				"Findings:", "E-001 [Sources disagree]", "E-002 [Replaced]", "E-003 [AI checked the source]",
+				"H-001 Duplicate invoices caused the decline. [Not checked]",
+				"Sources outside the included findings: 1 omitted.",
 			} {
 				if !strings.Contains(md, want) {
 					t.Errorf("Markdown lacks %q:\n%s", want, md)
@@ -88,18 +88,18 @@ func TestEvidenceVerificationSurvivesEveryPackRendering(t *testing.T) {
 func TestReportLabelsInlineEvidenceAndRuledOutFindings(t *testing.T) {
 	md := RenderReport(fidelitySnapshot(), ReportOptions{})
 	for _, want := range []string{
-		"## Current claims", "Supported by E-001: Contested rebate estimate (File; Disputed)",
-		"Supported by E-002: Prior margin extract (File; Superseded)",
-		"Contradicted by E-003: Regional ledger (File; Source verified)",
-		"- **H-001** Duplicate invoices caused the decline. (disproven, AI generated)",
-		"- **C-003** Exchange rates explain the gap. (claim rejected, AI generated)",
+		"## Findings", "Supported by E-001: Contested rebate estimate (File; Sources disagree)",
+		"Supported by E-002: Prior margin extract (File; Replaced)",
+		"Contradicted by E-003: Regional ledger (File; AI checked the source)",
+		"- **H-001** Duplicate invoices caused the decline. (Ruled out; Not checked)",
+		"- **C-003** Exchange rates explain the gap. (Ruled out; Not checked)",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("report lacks %q:\n%s", want, md)
 		}
 	}
 	html := ReportHTML(md)
-	for _, want := range []string{"File; Disputed", "File; Superseded", "disproven, AI generated", "claim rejected, AI generated"} {
+	for _, want := range []string{"File; Sources disagree", "File; Replaced", "(Ruled out; Not checked)"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("HTML report lacks %q", want)
 		}
@@ -113,7 +113,7 @@ func TestCompactWarningsAndVerificationStayHonestAtEveryBudget(t *testing.T) {
 		p := Build(s, Options{MaxBytes: limit})
 		md := RenderMarkdown(p)
 		if p.Omitted.DisputedClaims > 0 {
-			want := fmt.Sprintf("(%d more disputed claim omitted)", p.Omitted.DisputedClaims)
+			want := fmt.Sprintf("(%d more finding where sources disagree omitted)", p.Omitted.DisputedClaims)
 			if !strings.Contains(md, want) {
 				t.Fatalf("budget %d lost dispute count: %s", limit, md)
 			}
@@ -128,7 +128,7 @@ func TestCompactWarningsAndVerificationStayHonestAtEveryBudget(t *testing.T) {
 		if len(p.EstablishedClaims)+len(p.DisputedClaims)+len(p.Hypotheses)+len(p.DisprovenHypotheses) == 0 && len(p.EvidenceVerification) != 0 {
 			t.Fatalf("budget %d retained unused verification entries", limit)
 		}
-		if !strings.Contains(md, "Evidence outside the included findings: 1 omitted.") {
+		if !strings.Contains(md, "Sources outside the included findings: 1 omitted.") {
 			t.Fatalf("budget %d lost evidence omission warning", limit)
 		}
 	}
@@ -144,7 +144,7 @@ func TestMissingEvidenceNeverBorrowsFindingVerification(t *testing.T) {
 	s.Evidence = nil
 	p := Build(s, Options{})
 	for _, body := range []string{RenderMarkdown(p), RenderReport(s, ReportOptions{})} {
-		if !strings.Contains(body, "Verification unavailable") {
+		if !strings.Contains(body, "Check not known") {
 			t.Fatalf("missing evidence rendered as checked: %s", body)
 		}
 	}

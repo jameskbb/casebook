@@ -130,7 +130,7 @@ func TestAddClaimWithLinks(t *testing.T) {
 			t.Errorf("Claim JSON %s lacks %s", b, key)
 		}
 	}
-	wantLast(t, a, inv.Ref, "claim.add", "C-001", "Added claim C-001 [high] with 3 evidence links")
+	wantLast(t, a, inv.Ref, "claim.add", "C-001", "Added finding C-001 with 3 sources")
 	// One activity row for the claim and its links.
 	wantActions(t, a, inv.Ref, "investigation.create", "active.set",
 		"evidence.add", "evidence.add", "evidence.add", "claim.add")
@@ -157,7 +157,7 @@ func TestAddClaimWithLinks(t *testing.T) {
 		c2.Verification != app.VerificationAIGenerated || c2.Links == nil || len(c2.Links) != 0 {
 		t.Fatalf("AI claim defaults = %+v", c2)
 	}
-	wantLast(t, a, inv.Ref, "claim.add", "C-002", "Added claim C-002 [unknown]")
+	wantLast(t, a, inv.Ref, "claim.add", "C-002", "Added finding C-002")
 	apptest.AssertNoJSONNulls(t, c2)
 
 	// Get and List agree with what Add returned.
@@ -247,13 +247,13 @@ func TestAddClaimCrossInvestigationLinks(t *testing.T) {
 	_, err := a.AddClaim(ctx, apptest.AI, inv.Ref, app.ClaimInput{Statement: "s",
 		Links: []app.EvidenceLinkInput{{EvidenceRef: "INV-0002/E-001", Relation: app.RelationSupports}}})
 	wantErrIs(t, err, app.ErrConflict)
-	if !strings.Contains(err.Error(), "cross-investigation link") {
+	if !strings.Contains(err.Error(), "belongs to another question") {
 		t.Fatalf("conflict message = %q", err)
 	}
 	_, err = a.AddClaim(ctx, apptest.AI, inv.Ref, app.ClaimInput{Statement: "s",
 		Links: []app.EvidenceLinkInput{{EvidenceRef: "E-004", Relation: app.RelationSupports}}})
 	wantErrIs(t, err, app.ErrNotFound)
-	if !strings.Contains(err.Error(), "evidence E-004 in INV-0001") {
+	if !strings.Contains(err.Error(), "source E-004 in INV-0001") {
 		t.Fatalf("not found message = %q", err)
 	}
 	if list, _ := a.ListClaims(ctx, inv.Ref); len(list) != 0 {
@@ -279,7 +279,7 @@ func TestAddClaimRefErrors(t *testing.T) {
 	wantValidation(t, err, "ref")
 	_, err = a.GetClaim(ctx, "", "C-009")
 	wantErrIs(t, err, app.ErrNotFound)
-	if !strings.Contains(err.Error(), "claim C-009 in INV-0001") {
+	if !strings.Contains(err.Error(), "finding C-009 in INV-0001") {
 		t.Fatalf("not found message = %q", err)
 	}
 	_, err = a.UpdateClaim(ctx, apptest.AI, "", "H-001", app.ClaimPatch{Statement: ptr("x")})
@@ -380,7 +380,7 @@ func TestUpdateClaimSupersedeRules(t *testing.T) {
 		got.SupersededBy != "C-002" || got.Statement != "One, revised" {
 		t.Fatalf("superseded via patch = %+v", got)
 	}
-	wantLast(t, a, inv.Ref, "claim.supersede", "C-001", "C-001 superseded by C-002; also updated statement")
+	wantLast(t, a, inv.Ref, "claim.supersede", "C-001", "C-001 was replaced by C-002; also updated statement")
 
 	// Status superseded again is accepted (it already has a replacement) and
 	// changes nothing.
@@ -431,7 +431,7 @@ func TestSupersedeClaim(t *testing.T) {
 		got.SupersededBy != "C-002" || got.Statement != "Three" || got.Confidence != app.ConfidenceLow {
 		t.Fatalf("superseded claim = %+v", got)
 	}
-	wantLast(t, a, inv.Ref, "claim.supersede", "C-003", "C-003 superseded by C-002")
+	wantLast(t, a, inv.Ref, "claim.supersede", "C-003", "C-003 was replaced by C-002")
 	apptest.AssertNoJSONNulls(t, got)
 
 	n := activityCount(t, a, inv.Ref)
@@ -470,7 +470,7 @@ func TestSupersedeClaim(t *testing.T) {
 	if err != nil || got.SupersededBy != "C-001" {
 		t.Fatalf("re-pointed supersede = %+v, %v", got, err)
 	}
-	wantLast(t, a, inv.Ref, "claim.supersede", "C-003", "C-003 superseded by C-001")
+	wantLast(t, a, inv.Ref, "claim.supersede", "C-003", "C-003 was replaced by C-001")
 }
 
 func TestSetClaimVerification(t *testing.T) {
@@ -570,7 +570,7 @@ func TestUnlinkEvidenceFromClaim(t *testing.T) {
 	n := activityCount(t, a, inv.Ref)
 	_, err = a.UnlinkEvidenceFromClaim(ctx, apptest.Human, "", "C-001", "E-001")
 	wantErrIs(t, err, app.ErrNotFound)
-	if !strings.Contains(err.Error(), "no link between C-001 and E-001") {
+	if !strings.Contains(err.Error(), "C-001 is not linked to source E-001") {
 		t.Fatalf("missing link message = %q", err)
 	}
 	_, err = a.UnlinkEvidenceFromClaim(ctx, apptest.Human, "", "C-001", "E-003")

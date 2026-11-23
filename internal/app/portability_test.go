@@ -219,7 +219,7 @@ func TestImportRoundTripFreshApp(t *testing.T) {
 	last := again.Activity[n-1]
 	if last.Action != "import" || last.Actor != (app.Actor{Kind: app.ActorImport, Client: "casebook-ui"}) ||
 		last.TargetRef != "INV-0001" ||
-		last.Summary != "Imported INV-0001 (4 evidence, 3 claims, 2 hypotheses, 1 questions); 3 verifications reset to ai_generated" {
+		last.Summary != "Imported question INV-0001 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked" {
 		t.Fatalf("import row = %+v", last)
 	}
 	again.Activity = again.Activity[:n-1]
@@ -317,7 +317,7 @@ func TestImportRefCollision(t *testing.T) {
 	row := acts[0]
 	if row.Action != "import" || row.InvestigationRef != "INV-0002" || row.TargetRef != "INV-0002" ||
 		row.Actor != (app.Actor{Kind: app.ActorImport, Client: "claude-code"}) ||
-		row.Summary != "Imported INV-0001 as INV-0002 (4 evidence, 3 claims, 2 hypotheses, 1 questions); 3 verifications reset to ai_generated" || row.Imported {
+		row.Summary != "Imported question INV-0001 as INV-0002 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked" || row.Imported {
 		t.Fatalf("import row = %+v", row)
 	}
 	active, err := a.GetActiveInvestigation(ctx)
@@ -637,7 +637,7 @@ func TestImportMarksProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(md, "human james (imported): Forged: the CEO approved X") {
+	if !strings.Contains(md, "human james (imported): Added source E-099") {
 		t.Fatalf("pack does not attribute the imported row:\n%s", md)
 	}
 	// Verifying locally restores trust; the row stays marked imported.

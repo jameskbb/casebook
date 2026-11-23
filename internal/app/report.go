@@ -179,7 +179,7 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 			claimCount++
 		}
 		chosen := required || wants(c.Ref, refs, initial)
-		out.Candidates = append(out.Candidates, ShareCandidate{Ref: c.Ref, Text: c.Statement, Group: group, Label: contextpack.BriefStateLabel(c.Status.Label(), c.Confidence, c.Verification, c.Status != domain.ClaimStatusRejected), Required: required, Selected: chosen})
+		out.Candidates = append(out.Candidates, ShareCandidate{Ref: c.Ref, Text: c.Statement, Group: group, Label: contextpack.BriefStateLabel(c.Status.PlainLabel(), c.Verification), Required: required, Selected: chosen})
 		if chosen {
 			selected.Claims = append(selected.Claims, c)
 			addLinks(c.Links)
@@ -193,14 +193,14 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 		case domain.HypothesisStatusDisproven:
 			chosen = required || wants(h.Ref, o.RuledOutRefs, ruledCount < 2)
 			ruledCount++
-			out.Candidates = append(out.Candidates, ShareCandidate{Ref: h.Ref, Text: h.Statement, Group: "ruled_out", Label: contextpack.BriefStateLabel(h.Status.Label(), h.Confidence, h.Verification, false), Required: required, Selected: chosen})
+			out.Candidates = append(out.Candidates, ShareCandidate{Ref: h.Ref, Text: h.Statement, Group: "ruled_out", Label: contextpack.BriefStateLabel(h.Status.PlainLabel(), h.Verification), Required: required, Selected: chosen})
 		case domain.HypothesisStatusOpen, domain.HypothesisStatusSupported:
 			initial := hypothesisCount < 2 && h.Verification != domain.VerificationSuperseded
 			if initial {
 				hypothesisCount++
 			}
 			chosen = required || wants(h.Ref, o.HypothesisRefs, initial)
-			out.Candidates = append(out.Candidates, ShareCandidate{Ref: h.Ref, Text: h.Statement, Group: "hypotheses", Label: contextpack.BriefStateLabel(h.Status.Label(), h.Confidence, h.Verification, true), Required: required, Selected: chosen})
+			out.Candidates = append(out.Candidates, ShareCandidate{Ref: h.Ref, Text: h.Statement, Group: "hypotheses", Label: contextpack.BriefStateLabel(h.Status.PlainLabel(), h.Verification), Required: required, Selected: chosen})
 		}
 		if chosen {
 			selected.Hypotheses = append(selected.Hypotheses, h)
@@ -250,7 +250,7 @@ func (a *App) SharePreview(ctx context.Context, invRef string, o ShareOptions) (
 		out.Markdown = contextpack.RenderReport(s, contextpack.ReportOptions{MoreActivity: more})
 		out.Omitted = briefOmitted(s, s)
 	} else {
-		out.Markdown = contextpack.RenderBrief(selected, out.Omitted)
+		out.Markdown = contextpack.RenderBrief(selected, out.Omitted, s.Evidence)
 	}
 	out.HTML = contextpack.ReportHTML(out.Markdown)
 	raw, _ := json.Marshal(s)

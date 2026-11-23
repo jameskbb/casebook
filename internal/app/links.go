@@ -127,7 +127,7 @@ func (a *App) unlinkEvidence(ctx context.Context, actor Actor, invRef, recordRef
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("%w: no link between %s and %s", domain.ErrNotFound, cur.Ref, evRef)
+			return fmt.Errorf("%w: %s is not linked to source %s", domain.ErrNotFound, cur.Ref, evRef)
 		}
 		row, err := a.writeStatementChange(ctx, tx, actor, k, t, cur.ID, nil, op,
 			fmt.Sprintf("Unlinked %s from %s", evRef, cur.Ref), now)

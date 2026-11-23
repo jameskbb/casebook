@@ -134,3 +134,12 @@ func TestReviewedShareUnchangedDuringNativeSaveDialog(t *testing.T) {
 		t.Fatal("native dialog write changed reviewed bytes")
 	}
 }
+
+func TestShareFileName(t *testing.T) {
+	if got := shareFileName("INV-0002", "brief"); got != "INV-0002-answer.md" {
+		t.Errorf("short answer file name = %q", got)
+	}
+	if got := shareFileName("INV-0002", "report"); got != "INV-0002-full-answer.md" {
+		t.Errorf("full answer file name = %q", got)
+	}
+}

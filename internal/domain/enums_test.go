@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -173,5 +174,36 @@ func TestEnumsRecordTypePrefix(t *testing.T) {
 		if got := rt.Prefix(); got != want {
 			t.Errorf("%s.Prefix() = %q, want %q", rt, got, want)
 		}
+	}
+}
+
+// The labels a person reads match desktop/frontend/src/lib/labels.ts, and
+// none of them uses an engine word.
+func TestPlainLabels(t *testing.T) {
+	got := map[string]string{}
+	for _, v := range AllVerifications() {
+		got["verification "+string(v)] = v.PlainLabel()
+	}
+	for _, s := range AllClaimStatuses() {
+		got["claim "+string(s)] = s.PlainLabel()
+	}
+	for _, s := range AllHypothesisStatuses() {
+		got["hypothesis "+string(s)] = s.PlainLabel()
+	}
+	for _, r := range AllRecordTypes() {
+		got["record "+string(r)] = r.PlainWord()
+	}
+	want := map[string]string{
+		"verification ai_generated": "Not checked", "verification human_verified": "You checked this",
+		"verification source_verified": "AI checked the source", "verification disputed": "Sources disagree",
+		"verification superseded": "Replaced",
+		"claim active":            "Current", "claim disputed": "Sources disagree", "claim superseded": "Replaced", "claim rejected": "Ruled out",
+		"hypothesis open": "Not tested yet", "hypothesis supported": "Supported", "hypothesis disproven": "Ruled out",
+		"hypothesis superseded": "Replaced",
+		"record investigation":  "question", "record evidence": "source", "record claim": "finding", "record hypothesis": "finding",
+		"record question": "follow-up question",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("plain labels = %v, want %v", got, want)
 	}
 }

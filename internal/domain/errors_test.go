@@ -24,7 +24,7 @@ func TestErrorsMessages(t *testing.T) {
 		ErrBusy:                  "Casebook database is busy; try again",
 		ErrNotFound:              "not found",
 		ErrConflict:              "conflict",
-		ErrNoActiveInvestigation: "no active investigation is set; pass an investigation ref or set one active",
+		ErrNoActiveInvestigation: "no current question is set; pass an INV ref or make one current",
 		ErrInternal:              "casebook: internal storage error",
 		ErrSchemaTooNew:          "this database was saved by a newer version of Casebook; update Casebook to open it",
 	}

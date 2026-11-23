@@ -14,7 +14,7 @@ import (
 
 // demoNow is the fixed "now" the demo is seeded against; the brief carries
 // no time of its own, so any value gives the same bytes.
-var demoNow = time.Date(2026, 10, 9, 14, 0, 0, 0, time.UTC)
+var demoNow = time.Date(2026, 11, 1, 18, 0, 0, 0, time.UTC)
 
 // seedDemo writes the README demo (INV-0002 is the featured case).
 func seedDemo(t *testing.T) *app.App {
@@ -46,9 +46,9 @@ func TestGoldenBriefDemo(t *testing.T) {
 	if again.Markdown != p.Markdown {
 		t.Fatal("brief is not repeatable")
 	}
-	checkGolden(t, "margin_brief.md", p.Markdown)
+	checkGolden(t, "calls_brief.md", p.Markdown)
 
-	for _, banned := range []string{"Active", "Disputed, Disputed", "Disputed; Low confidence; Disputed", "retained automatically", "selected separately", "material caveats", "No new claims", "1 evidence items", " 0 "} {
+	for _, banned := range []string{"Active", "Current", "onfidence", "High", "Medium", "Sources disagree; Sources disagree", "laim", "vidence", "ypothes", "onclusion", "isputed", "erified", "uperseded", "nvestigation", " case", " flat", "2014", " 0 "} {
 		if strings.Contains(p.Markdown, banned) {
 			t.Errorf("brief contains %q", banned)
 		}
@@ -57,37 +57,41 @@ func TestGoldenBriefDemo(t *testing.T) {
 		t.Error("brief prints a raw timestamp")
 	}
 	for _, want := range []string{
-		"Supporting claims: C-002 (AI generated); C-003 (Human verified)",
-		"Contradicting claims: C-001 (Disputed)",
-		"(Disputed; Low confidence)",
-		"(Disproven; AI generated)",
-		"Labels: Human verified means a person checked this and vouched for it.",
-		"Superseded means it was replaced by a newer statement.",
-		"Not included: Q-001, Q-002 and E-002. Activity history is not included. Ask the person who shared this for the complete report.",
-		"## Explanations still open or supported\n\n- **H-003** ",
-		"- **H-004** Travel for on-site white-glove sessions is growing with the same accounts. (Open; Medium confidence; AI generated)",
-		"Disputed findings, contradicting evidence and the claims behind the answer are always included.",
+		"# INV-0002: Why did calls go up 30% in October when sales stayed the same?\n",
+		"2 of 9 sources checked by you. 1 checked by AI, 6 not checked.",
+		"Answer marked: You checked this",
+		"Findings behind the answer: C-002 (Not checked); C-003 (You checked this)",
+		"Findings against the answer: C-001 (Sources disagree)",
+		"- **C-001** Callers waited too long and hung up before buying. (Sources disagree)",
+		"(Ruled out; Not checked)",
+		"(AI checked the source)",
+		"Labels: You checked this means the person who shared this checked it against its source.",
+		"Replaced means a newer finding took its place.",
+		"Not included: Q-001 and Q-002. The history is not included. Ask the person who shared this for the full version.",
+		"## Still being tested\n\n- **H-003** ",
+		"- **H-004** Customers who were charged twice are less likely to buy again. (Not tested yet; Not checked)",
+		"Findings where sources disagree, sources that contradict a finding and the findings behind the answer are always included.",
 		"_Prepared by Casebook from the saved records of INV-0002. Casebook did not rewrite them or add to them._",
 	} {
 		if !strings.Contains(p.Markdown, want) {
 			t.Errorf("brief missing %q", want)
 		}
 	}
-	// The open explanation the confidence sentence cites sits under its own
-	// heading, after the findings and before the questions.
-	if f, h, q := strings.Index(p.Markdown, "## Selected findings"), strings.Index(p.Markdown, "- **H-004**"), strings.Index(p.Markdown, "## Selected questions"); !(f < h && h < q) {
+	// The finding not tested yet sits under its own heading, after the
+	// findings and before the follow-up questions.
+	if f, h, q := strings.Index(p.Markdown, "## Findings"), strings.Index(p.Markdown, "- **H-004**"), strings.Index(p.Markdown, "## Follow-up questions"); !(f < h && h < q) {
 		t.Error("H-004 is not between the findings and the questions")
 	}
 	// Ruled-out hypotheses sit under their own heading, after the open
 	// explanations and before the questions, not among the things in doubt.
-	if e, r, d, q := strings.Index(p.Markdown, "## Explanations still open"), strings.Index(p.Markdown, "## Ruled out\n\n- **H-"), strings.Index(p.Markdown, "(Disproven; AI generated)"), strings.Index(p.Markdown, "## Selected questions"); !(e < r && r < d && d < q) {
+	if e, r, d, q := strings.Index(p.Markdown, "## Still being tested"), strings.Index(p.Markdown, "## Ruled out\n\n- **H-"), strings.Index(p.Markdown, "(Ruled out; Not checked)"), strings.Index(p.Markdown, "## Follow-up questions"); !(e < r && r < d && d < q) {
 		t.Error("the Ruled out section is not between the open explanations and the questions")
 	}
 	// Every evidence line under a finding keeps its verification label; the
 	// source path prints once, under Evidence and source caveats.
 	for _, line := range strings.Split(p.Markdown, "\n") {
 		if strings.HasPrefix(line, "  - Supported by ") || strings.HasPrefix(line, "  - Contradicted by ") {
-			if !strings.HasSuffix(line, ")") || strings.Contains(line, "finance/") {
+			if !strings.HasSuffix(line, ")") || strings.Contains(line, "Call log, ") {
 				t.Errorf("finding evidence line lacks its label or repeats its source: %q", line)
 			}
 		}

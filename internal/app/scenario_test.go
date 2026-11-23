@@ -48,7 +48,7 @@ func TestBriefScenario(t *testing.T) {
 		if ev.Ref != "E-001" || ev.Verification != app.VerificationAIGenerated || ev.SourceType != app.SourceTypeCode {
 			t.Fatalf("evidence = %+v", ev)
 		}
-		wantLast(t, a, inv.Ref, "evidence.add", "E-001", `Added evidence E-001 "Service chart default log level set to debug"`)
+		wantLast(t, a, inv.Ref, "evidence.add", "E-001", `Added source E-001 "Service chart default log level set to debug"`)
 	})
 
 	t.Run("add claim", func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestBriefScenario(t *testing.T) {
 			len(c.Links) != 0 {
 			t.Fatalf("claim = %+v", c)
 		}
-		wantLast(t, a, inv.Ref, "claim.add", "C-001", "Added claim C-001 [high]")
+		wantLast(t, a, inv.Ref, "claim.add", "C-001", "Added finding C-001")
 	})
 
 	t.Run("link supporting evidence", func(t *testing.T) {
@@ -110,7 +110,7 @@ func TestBriefScenario(t *testing.T) {
 		if err != nil || h.Ref != "H-001" || h.Status != app.HypothesisStatusOpen || len(h.Links) != 1 {
 			t.Fatalf("add = %+v, %v", h, err)
 		}
-		wantLast(t, a, inv.Ref, "hypothesis.add", "H-001", "Added hypothesis H-001 [low] with 1 evidence link")
+		wantLast(t, a, inv.Ref, "hypothesis.add", "H-001", "Added finding H-001 with 1 source")
 		h, err = a.UpdateHypothesis(ctx, apptest.AI, "", "H-001", app.HypothesisPatch{Status: ptr(app.HypothesisStatusSupported)})
 		if err != nil || h.Status != app.HypothesisStatusSupported {
 			t.Fatalf("supported = %+v, %v", h, err)
@@ -201,7 +201,7 @@ func TestBriefScenario(t *testing.T) {
 			c.SupersededBy != "C-003" {
 			t.Fatalf("superseded claim = %+v, %v", c, err)
 		}
-		wantLast(t, a, inv.Ref, "claim.supersede", "C-002", "C-002 superseded by C-003")
+		wantLast(t, a, inv.Ref, "claim.supersede", "C-002", "C-002 was replaced by C-003")
 		if _, err := a.AddHypothesis(ctx, apptest.AI, "", app.HypothesisInput{Statement: "Debug logs drive the increase."}); err != nil {
 			t.Fatal(err)
 		}
@@ -209,6 +209,6 @@ func TestBriefScenario(t *testing.T) {
 		if err != nil || h.Status != app.HypothesisStatusSuperseded || h.SupersededBy != "H-002" {
 			t.Fatalf("superseded hypothesis = %+v, %v", h, err)
 		}
-		wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-001", "H-001 superseded by H-002")
+		wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-001", "H-001 was replaced by H-002")
 	})
 }

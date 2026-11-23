@@ -28,10 +28,10 @@ func TestExportCancelled(t *testing.T) {
 		t.Fatalf("save dialog shown %d times", len(fake.saveOpts))
 	}
 	o := fake.saveOpts[0]
-	if o.Title != "Export case" || o.DefaultFilename != "INV-0001-september-cloud-bill-up-38.json" {
+	if o.Title != "Export question" || o.DefaultFilename != "INV-0001-september-cloud-bill-up-38.json" {
 		t.Fatalf("dialog options = %+v", o)
 	}
-	if len(o.Filters) != 1 || o.Filters[0].DisplayName != "Casebook case (*.json)" || o.Filters[0].Pattern != "*.json" {
+	if len(o.Filters) != 1 || o.Filters[0].DisplayName != "Casebook question (*.json)" || o.Filters[0].Pattern != "*.json" {
 		t.Fatalf("filters = %+v", o.Filters)
 	}
 }
@@ -186,7 +186,7 @@ func TestImportRoundTrip(t *testing.T) {
 	if err != nil || !out.Cancelled {
 		t.Fatalf("cancelled import = %+v, %v", out, err)
 	}
-	if o := fake.openOpts[0]; o.Title != "Import case" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.json" {
+	if o := fake.openOpts[0]; o.Title != "Import question" || len(o.Filters) != 1 || o.Filters[0].Pattern != "*.json" {
 		t.Fatalf("open dialog options = %+v", o)
 	}
 
@@ -440,7 +440,7 @@ func TestSaveReport(t *testing.T) {
 	if err != nil || res.Cancelled || res.FileName != "saved.md" {
 		t.Fatalf("save = %+v, %v", res, err)
 	}
-	if got := fake.saveOpts[len(fake.saveOpts)-1].DefaultFilename; got != inv.Ref+"-summary.md" {
+	if got := fake.saveOpts[len(fake.saveOpts)-1].DefaultFilename; got != inv.Ref+"-answer.md" {
 		t.Fatalf("default file name = %q", got)
 	}
 	got, _ := os.ReadFile(fake.savePath)

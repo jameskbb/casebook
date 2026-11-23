@@ -31,20 +31,27 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	if len(list) != 5 {
 		t.Fatalf("seeded %d investigations, want 5", len(list))
 	}
-	if list[0].Ref != demo.FeaturedRef || !list[0].IsActive || list[0].Title != "Northeast margin down 6 points in Q3" {
-		t.Fatalf("top of the list = %+v, want the active featured case", list[0])
+	if list[0].Ref != demo.FeaturedRef || !list[0].IsActive || list[0].Title != demo.FeaturedTitle {
+		t.Fatalf("top of the list = %+v, want the active featured question", list[0])
 	}
 	byRef := map[string]app.InvestigationSummary{}
 	for _, s := range list {
 		byRef[s.Ref] = s
 	}
-	if s := byRef["INV-0001"]; s.Title != "TestCheckoutTotals flakes in CI" || s.Status != app.InvestigationStatusResolved {
+	if s := byRef["INV-0001"]; s.Title != "Why was March payroll $18k over budget?" || s.Status != app.InvestigationStatusResolved ||
+		s.Conclusion != "Two new hires started a month earlier than the budget assumed." || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 3 {
 		t.Fatalf("INV-0001 = %+v", s)
 	}
-	if s := byRef["INV-0003"]; s.Title != "Checkout outage on October 2" || s.Status != app.InvestigationStatusBlocked {
+	// The list carries what the sidebar and Home show: the answer, the
+	// count of sources checked and the findings where sources disagree.
+	if s := byRef[demo.FeaturedRef]; s.Conclusion != demo.Conclusion || s.SourcesTotal != 9 || s.SourcesCheckedByYou != 2 || s.FindingsDisagree != 1 {
+		t.Fatalf("%s = %+v", demo.FeaturedRef, s)
+	}
+	if s := byRef["INV-0003"]; s.Title != "Why are help desk tickets taking longer to close this month?" || s.Status != app.InvestigationStatusBlocked ||
+		s.Conclusion != "" || s.SourcesTotal != 2 || s.SourcesCheckedByYou != 0 || s.Counts.OpenQuestions != 2 {
 		t.Fatalf("INV-0003 = %+v", s)
 	}
-	if s := byRef["INV-0004"]; s.Status != app.InvestigationStatusResolved || s.Archived {
+	if s := byRef["INV-0004"]; s.Status != app.InvestigationStatusResolved || s.Archived || s.Conclusion == "" || s.SourcesTotal != 3 || s.SourcesCheckedByYou != 0 {
 		t.Fatalf("INV-0004 = %+v", s)
 	}
 	if s := byRef["INV-0005"]; !s.Archived {
@@ -88,12 +95,12 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 			t.Errorf("no %s question", st)
 		}
 	}
-	e5, err := a.GetEvidence(ctx, demo.FeaturedRef, "E-005", app.GetEvidenceOptions{IncludeRawDetail: true})
+	e6, err := a.GetEvidence(ctx, demo.FeaturedRef, "E-006", app.GetEvidenceOptions{IncludeRawDetail: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e5.RawDetail == "" || !strings.Contains(e5.Metadata, "implementation_services_usd") {
-		t.Errorf("E-005 raw detail %q, metadata %q", e5.RawDetail, e5.Metadata)
+	if e6.RawDetail == "" || !strings.Contains(e6.Metadata, "calls_about_a_bill_october") {
+		t.Errorf("E-006 raw detail %q, metadata %q", e6.RawDetail, e6.Metadata)
 	}
 
 	checkFeatured(t, a, true)
@@ -104,8 +111,10 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 	}
 	clients := map[string]bool{}
 	var prev string
+	reviewed := false
 	for i := len(rows) - 1; i >= 0; i-- {
 		r := rows[i]
+		reviewed = reviewed || (r.InvestigationRef == demo.FeaturedRef && r.Action == "conclusion.update" && r.Summary == "Recorded a review of the answer")
 		if r.Actor.Kind == app.ActorAI {
 			clients[r.Actor.Client] = true
 		}
@@ -120,6 +129,9 @@ func TestSeedDemoCoversEveryState(t *testing.T) {
 		if ts.Before(now.Add(-10*24*time.Hour)) || ts.After(now.Add(-30*time.Minute)) {
 			t.Errorf("activity at %s falls outside the demo window", r.CreatedAt)
 		}
+	}
+	if !reviewed {
+		t.Error("no history row records the person's review of the answer")
 	}
 	if !clients["claude-code"] || !clients["codex"] {
 		t.Errorf("AI activity clients = %v, want claude-code and codex", clients)
@@ -137,22 +149,21 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		t.Fatal(err)
 	}
 	inv := det.Investigation
-	if inv.ProblemStatement != "Why did gross margin in the Northeast fall from 41% to 35% in Q3 when revenue was up 4%?" {
-		t.Errorf("question = %q", inv.ProblemStatement)
+	if inv.Title != demo.FeaturedTitle || inv.ProblemStatement != "Calls to the call center went from 2,400 in September to 3,120 in October. Sales stayed the same. Why?" {
+		t.Errorf("question = %q, %q", inv.Title, inv.ProblemStatement)
 	}
 	wantEvidence := map[string]string{
-		"E-001": "Northeast Q3: revenue $27.0M (+4%), cost of delivery $17.6M (+15%), gross margin 35% against 41%",
-		"E-002": "Q3 bookings: 47 new Northeast deals, seven above $250k, the two biggest with Pinecrest Logistics",
-		"E-003": "Sales VP: we cut prices hard to win the quarter's two biggest deals",
-		"E-004": "Onboarding team added four contractors in July",
-		"E-005": "Implementation services are $1.9M of the $2.3M cost rise; contractor rate flat, hours up 78%",
-		"E-006": "Discounts are flat: 11.6% in Q3 against 11.8% in Q2; the two biggest deals got 12% and 14%",
-		"E-007": "Three accounts moved to white-glove onboarding in July carry $1.4M of the $1.9M",
+		"E-001": "Calls to buy: 2,000 in September, 2,050 in October. Sales: $510k in September, $512k in October",
+		"E-002": "Sales manager: we were two people short in October",
+		"E-003": "The average wait was 40 seconds in September and 40 seconds in October",
+		"E-004": "No new ads ran in October",
+		"E-005": "Prices were the same in September and October",
+		"E-006": "Calls about a bill: 400 in September, 1,070 in October",
 	}
 	if full {
-		wantEvidence["E-008"] = "July 6 playbook update: white-glove onboarding included free on every deal above $250k"
-		wantEvidence["E-009"] = "Deal desk: seven Northeast deals above $250k since July 6, onboarding fee $0 on every one"
-		wantEvidence["E-010"] = "Regional sales-ops lead: the free white-glove clause was written for the two Pinecrest deals only"
+		wantEvidence["E-007"] = "Notice dated October 4: 1,900 customers were charged twice on October 3"
+		wantEvidence["E-008"] = "Call notes: 9 in 10 October calls about a bill mention being charged twice"
+		wantEvidence["E-009"] = "Billing team lead: the mistake was fixed on October 5"
 	}
 	if len(det.Evidence) != len(wantEvidence) {
 		t.Errorf("%d evidence, want %d", len(det.Evidence), len(wantEvidence))
@@ -177,8 +188,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		return false
 	}
 	h1 := hyps["H-001"]
-	if h1.Status != app.HypothesisStatusDisproven || len(h1.Links) != 2 ||
-		!hasLink(h1.Links, "E-004", app.RelationSupports) || !hasLink(h1.Links, "E-005", app.RelationContradicts) {
+	if h1.Status != app.HypothesisStatusDisproven || len(h1.Links) != 1 || !hasLink(h1.Links, "E-004", app.RelationContradicts) {
 		t.Errorf("H-001 = %+v", h1)
 	}
 	h2 := hyps["H-002"]
@@ -190,15 +200,19 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		qs[q.Ref] = q
 	}
 	if q1 := qs["Q-001"]; q1.Status != app.QuestionStatusResolved ||
-		q1.Resolution != "Implementation services +$1.9M, travel +$210k, customer support +$110k, hosting +$90k, FX revaluation +$40k; everything else -$50k (E-005)." {
+		q1.Resolution != "They were about a bill: 400 calls in September, 1,070 in October (E-006)." {
 		t.Errorf("Q-001 = %+v", q1)
 	}
 	claims := map[string]app.Claim{}
 	for _, c := range det.Claims {
 		claims[c.Ref] = c
 	}
-	if c1 := claims["C-001"]; c1.Status != app.ClaimStatusDisputed || c1.Verification != app.VerificationDisputed {
+	if c1 := claims["C-001"]; c1.Status != app.ClaimStatusDisputed || c1.Verification != app.VerificationDisputed ||
+		!hasLink(c1.Links, "E-002", app.RelationSupports) || !hasLink(c1.Links, "E-003", app.RelationContradicts) {
 		t.Errorf("C-001 = %+v", c1)
+	}
+	if verif["E-001"] != app.VerificationSourceVerified {
+		t.Errorf("E-001 = %s, want the one source an AI checked", verif["E-001"])
 	}
 	if c2 := claims["C-002"]; c2.Status != app.ClaimStatusActive || c2.Verification != app.VerificationAIGenerated {
 		t.Errorf("C-002 = %+v", c2)
@@ -211,8 +225,11 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		}
 		return
 	}
-	if verif["E-008"] != app.VerificationSourceVerified || verif["E-009"] != app.VerificationAIGenerated {
+	if verif["E-007"] != app.VerificationHumanVerified || verif["E-008"] != app.VerificationAIGenerated || verif["E-009"] != app.VerificationHumanVerified {
 		t.Errorf("verifications = %v", verif)
+	}
+	if h4 := hyps["H-004"]; h4.Status != app.HypothesisStatusOpen {
+		t.Errorf("H-004 = %+v", h4)
 	}
 	if h3 := hyps["H-003"]; h3.Status != app.HypothesisStatusSupported || h3.Confidence != app.ConfidenceHigh {
 		t.Errorf("H-003 = %+v", h3)
@@ -225,7 +242,7 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 		len(c3.Links) != 4 || c3.CreatedBy != demo.ClaudeCode {
 		t.Errorf("C-003 = %+v", c3)
 	}
-	for _, ref := range []string{"E-007", "E-008", "E-009", "E-010"} {
+	for _, ref := range []string{"E-006", "E-007", "E-008", "E-009"} {
 		if !hasLink(c3.Links, ref, app.RelationSupports) {
 			t.Errorf("C-003 links = %+v, want %s supports", c3.Links, ref)
 		}
@@ -253,6 +270,11 @@ func checkFeatured(t *testing.T, a *app.App, full bool) {
 	for _, s := range strs {
 		if strings.ContainsRune(s, '\u2014') {
 			t.Errorf("em dash in %q", s)
+		}
+		for _, banned := range []string{"flat", "margin", "Q3", "Q4", "SLA", "P&L", "hypothes", "disputed", "verified", "superseded", "confidence", " case", "claim", "evidence", "conclusion", "investigation"} {
+			if strings.Contains(strings.ToLower(s), strings.ToLower(banned)) {
+				t.Errorf("demo text uses %q: %q", banned, s)
+			}
 		}
 	}
 }

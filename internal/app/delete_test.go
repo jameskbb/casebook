@@ -27,7 +27,7 @@ func TestDeleteRecords(t *testing.T) {
 	// C-002 replaces the superseded C-003: refused.
 	err = a.DeleteClaim(ctx, apptest.Human, inv, "C-002")
 	wantErrIs(t, err, app.ErrConflict)
-	if !strings.Contains(err.Error(), "C-002 replaces C-003") {
+	if !strings.Contains(err.Error(), "C-002 replaced C-003") {
 		t.Fatalf("err = %v", err)
 	}
 	wantErrIs(t, a.DeleteQuestion(ctx, apptest.Human, inv, "Q-099"), app.ErrNotFound)
@@ -37,7 +37,7 @@ func TestDeleteRecords(t *testing.T) {
 	if err := a.DeleteClaim(ctx, apptest.Human, inv, "C-003"); err != nil {
 		t.Fatal(err)
 	}
-	wantLast(t, a, inv, "claim.delete", "C-003", "Deleted claim C-003")
+	wantLast(t, a, inv, "claim.delete", "C-003", "Deleted finding C-003")
 	if _, err := a.GetClaim(ctx, inv, "C-003"); err == nil {
 		t.Fatal("C-003 still readable")
 	}
@@ -48,12 +48,12 @@ func TestDeleteRecords(t *testing.T) {
 	if err := a.DeleteHypothesis(ctx, apptest.Human, inv, "H-002"); err != nil {
 		t.Fatal(err)
 	}
-	wantLast(t, a, inv, "hypothesis.delete", "H-002", "Deleted hypothesis H-002")
+	wantLast(t, a, inv, "hypothesis.delete", "H-002", "Deleted finding H-002")
 	if err := a.DeleteEvidence(ctx, apptest.Human, inv, "E-003"); err != nil {
 		t.Fatal(err)
 	}
 	last := lastActivity(t, a, inv)
-	if last.Action != "evidence.delete" || !strings.HasPrefix(last.Summary, "Deleted evidence E-003 ") {
+	if last.Action != "evidence.delete" || !strings.HasPrefix(last.Summary, "Deleted source E-003 ") {
 		t.Fatalf("last activity = %+v", last)
 	}
 	if err := a.DeleteQuestion(ctx, apptest.AI, inv, "Q-001"); err != nil {
@@ -116,7 +116,7 @@ func TestDeleteInvestigation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r := rows[0]; r.Action != "investigation.delete" || r.InvestigationRef != "" || r.TargetRef != f.InvestigationRef ||
-		r.Summary != `Deleted INV-0001 "September cloud bill up 38%" (4 evidence, 3 claims, 2 hypotheses, 1 questions)` {
+		r.Summary != `Deleted question INV-0001 "September cloud bill up 38%" (4 sources, 5 findings, 1 follow-up question)` {
 		t.Fatalf("delete row = %+v", r)
 	}
 	if hits, err := a.Search(ctx, "debug", app.SearchOptions{IncludeArchived: true}); err != nil || len(hits) != 0 {

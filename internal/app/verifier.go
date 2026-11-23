@@ -16,7 +16,7 @@ import (
 func checkVerifier(actor domain.ActorKind, v domain.Verification) error {
 	if v == domain.VerificationHumanVerified && actor != domain.ActorHuman {
 		return domain.NewValidationError("verification",
-			"only a person can mark a record human_verified; use source_verified when you checked it against the source, or leave it for a person to verify")
+			"only a person can mark a record human_verified; use source_verified when you checked it against the source, or leave it for a person to check")
 	}
 	return nil
 }

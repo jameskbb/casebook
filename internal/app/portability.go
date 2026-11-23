@@ -467,10 +467,10 @@ func (a *App) insertImport(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 	if res.RefChanged {
 		as += " as " + res.InvestigationRef
 	}
-	summary := fmt.Sprintf("Imported %s (%d evidence, %d claims, %d hypotheses, %d questions)",
-		as, len(p.evidence), len(p.claims), len(p.hypotheses), len(p.questions))
+	summary := fmt.Sprintf("Imported question %s (%s)", as,
+		recordCounts(len(p.evidence), len(p.claims)+len(p.hypotheses), len(p.questions)))
 	if p.reset > 0 {
-		summary += fmt.Sprintf("; %s reset to ai_generated", plural(p.reset, "verification"))
+		summary += fmt.Sprintf("; %s set back to Not checked", plural(p.reset, "record"))
 	}
 	importer := domain.Actor{Kind: domain.ActorImport, Client: actor.Client}
 	if err := a.recordActivity(ctx, tx, importer, invID, "import", res.InvestigationRef, summary, "", now); err != nil {
@@ -573,7 +573,7 @@ func cleanImport(doc domain.ExportDocument) (importPlan, error) {
 		for _, ref := range refs {
 			rr, _ := domain.ParseRecordRef(ref, domain.RecordClaim)
 			if _, ok := claimNums[rr.Num]; !ok {
-				return p, domain.NewValidationError("investigation.conclusion_supporting_claims", "claim %s is not present in the import", ref)
+				return p, domain.NewValidationError("investigation.conclusion_supporting_claims", "finding %s is not in the file", ref)
 			}
 		}
 	}
@@ -689,7 +689,7 @@ func cleanImportInvestigation(in domain.ExportInvestigation) (int64, store.Impor
 		return 0, out, err
 	}
 	if out.ConclusionVerification == domain.VerificationSuperseded {
-		return 0, out, domain.NewValidationError(p+".conclusion_verification", "superseded is not a conclusion verification")
+		return 0, out, domain.NewValidationError(p+".conclusion_verification", "superseded cannot be set on an answer")
 	}
 	importInv := domain.Investigation{Ref: in.Ref}
 	if out.ConclusionSupportingClaims, err = canonicalConclusionRefs(importInv, p+".conclusion_supporting_claims", in.ConclusionSupportingClaims); err != nil {
@@ -701,12 +701,12 @@ func cleanImportInvestigation(in domain.ExportInvestigation) (int64, store.Impor
 	for _, s := range out.ConclusionSupportingClaims {
 		for _, c := range out.ConclusionContradictingClaims {
 			if s == c {
-				return 0, out, domain.NewValidationError(p+".conclusion_contradicting_claims", "%s cannot both support and contradict the conclusion", s)
+				return 0, out, domain.NewValidationError(p+".conclusion_contradicting_claims", "%s cannot both back and contradict the answer", s)
 			}
 		}
 	}
 	if out.Conclusion == "" && (len(out.ConclusionSupportingClaims) > 0 || len(out.ConclusionContradictingClaims) > 0) {
-		return 0, out, domain.NewValidationError(p+".conclusion", "an empty conclusion cannot select claims")
+		return 0, out, domain.NewValidationError(p+".conclusion", "an empty answer cannot select findings")
 	}
 	// Review timestamps and basis are untrusted file assertions. No imported
 	// conclusion retains a trusted review or a material-basis fingerprint.
@@ -895,7 +895,7 @@ func cleanImportStatements(name string, k stmtKind, in []rawImportStmt, nums map
 		cur := st.supersededBy
 		for steps := 0; cur != 0 && steps <= len(out); steps++ {
 			if cur == st.row.RefNum {
-				return nil, domain.NewValidationError(p, "forms a supersede cycle")
+				return nil, domain.NewValidationError(p, "replaces itself in a loop")
 			}
 			cur = next[cur]
 		}

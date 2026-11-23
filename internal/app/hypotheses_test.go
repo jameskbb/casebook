@@ -30,7 +30,7 @@ func TestAddHypothesisDefaultsAndLinks(t *testing.T) {
 		h.SupersededBy != "" || h.CreatedBy != apptest.AI || h.Links == nil || len(h.Links) != 0 {
 		t.Fatalf("hypothesis defaults = %+v", h)
 	}
-	wantLast(t, a, inv.Ref, "hypothesis.add", "H-001", "Added hypothesis H-001 [unknown]")
+	wantLast(t, a, inv.Ref, "hypothesis.add", "H-001", "Added finding H-001")
 	apptest.AssertNoJSONNulls(t, h)
 
 	h2 := mustAddHypothesis(t, a, apptest.Human, inv.Ref, app.HypothesisInput{
@@ -48,7 +48,7 @@ func TestAddHypothesisDefaultsAndLinks(t *testing.T) {
 		h2.Links[1].EvidenceTitle != "Evidence 3" {
 		t.Fatalf("hypothesis with links = %+v", h2)
 	}
-	wantLast(t, a, inv.Ref, "hypothesis.add", "H-002", "Added hypothesis H-002 [medium] with 2 evidence links")
+	wantLast(t, a, inv.Ref, "hypothesis.add", "H-002", "Added finding H-002 with 2 sources")
 	b, _ := json.Marshal(h2)
 	for _, key := range []string{`"rationale":"Two shippers seen."`, `"superseded_by":""`, `"links":[{"evidence_ref":"E-001"`} {
 		if !strings.Contains(string(b), key) {
@@ -186,7 +186,7 @@ func TestSupersedeHypothesis(t *testing.T) {
 	if got.Status != app.HypothesisStatusSuperseded || got.Verification != app.VerificationSuperseded || got.SupersededBy != "H-002" {
 		t.Fatalf("superseded hypothesis = %+v", got)
 	}
-	wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-001", "H-001 superseded by H-002")
+	wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-001", "H-001 was replaced by H-002")
 	_, err = a.SupersedeHypothesis(ctx, apptest.Human, "", "H-002", "H-001")
 	wantErrIs(t, err, app.ErrConflict)
 
@@ -196,7 +196,7 @@ func TestSupersedeHypothesis(t *testing.T) {
 	if err != nil || got.Status != app.HypothesisStatusSuperseded || got.SupersededBy != "H-002" {
 		t.Fatalf("patch supersede = %+v, %v", got, err)
 	}
-	wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-003", "H-003 superseded by H-002")
+	wantLast(t, a, inv.Ref, "hypothesis.supersede", "H-003", "H-003 was replaced by H-002")
 
 	// Reopening clears the replacement.
 	got, err = a.UpdateHypothesis(ctx, apptest.Human, "", "H-003", app.HypothesisPatch{Status: ptr(app.HypothesisStatusOpen)})
@@ -247,7 +247,7 @@ func TestLinkEvidenceToHypothesis(t *testing.T) {
 	wantLast(t, a, inv.Ref, "link.remove", "H-001", "Unlinked E-001 from H-001")
 	_, err = a.UnlinkEvidenceFromHypothesis(ctx, apptest.Human, "", "H-001", "E-001")
 	wantErrIs(t, err, app.ErrNotFound)
-	if !strings.Contains(err.Error(), "no link between H-001 and E-001") {
+	if !strings.Contains(err.Error(), "H-001 is not linked to source E-001") {
 		t.Fatalf("missing link message = %q", err)
 	}
 }

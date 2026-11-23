@@ -107,82 +107,79 @@ func testSnapshot() Snapshot {
 	}
 }
 
-const wantMarkdown = `Investigation: INV-0007
+const wantMarkdown = `Question: INV-0007
 Title: Widget count mismatch
-Status: Investigating
+Status: In progress
 
-Primary question:
+The question:
 Why do the two widget counts differ?
 
-Current conclusion:
+Answer so far:
 Counts use different cutoffs.
 
-Conclusion confidence:
-Medium
+Answer marked: Not checked
+Findings behind the answer: none selected.
+Findings against the answer: none selected.
+Answer review: not reviewed yet.
 
-Conclusion verification: AI generated
-Supporting claims: none selected.
-Contradicting claims: none selected.
-Conclusion review: not reviewed; needs review.
-
-Conclusion rationale:
+Why this answer:
 C-001 is supported by two sources.
 
-Current claims:
-C-001 [High, Human verified]
+Findings:
+C-001 [A person checked this]
 The export uses a midnight UTC cutoff.
 Why: Config and logs agree. Checked twice.
-Evidence: E-001 [Verification unavailable], E-002 [Verification unavailable]
-Contradicting evidence: E-003 [Verification unavailable]
-C-200 [Medium, AI generated]
+Sources: E-001 [Check not known], E-002 [Check not known]
+Sources against: E-003 [Check not known]
+C-200 [Not checked]
 Two hundredth claim.
-Evidence: E-004 [Verification unavailable]
-C-1000 [Unknown, Source verified]
+Sources: E-004 [Check not known]
+C-1000 [AI checked the source]
 Thousandth claim.
 
-Disputed claims:
-C-002 [Low, AI generated] The dashboard double counts returns.
+Findings where sources disagree:
+C-002 [Not checked] The dashboard double counts returns.
 
-Hypotheses:
-H-001 [Medium, Open, AI generated]
+Findings still being tested:
+H-001 [Not tested yet, Not checked]
 Time zones may shift counts.
 Why: Cutoffs differ by hours.
-Evidence: E-004 [Verification unavailable]
-H-004 [High, Supported, Human verified]
+Sources: E-004 [Check not known]
+H-004 [Supported, A person checked this]
 Late arriving rows explain part of it.
-Contradicting evidence: E-001 [Verification unavailable]
+Sources against: E-001 [Check not known]
 
-Open questions:
+Follow-up questions:
 Q-001
 Which cutoff is correct?
 
-Deferred questions:
+Deferred follow-up questions:
 Q-002 Should returns be excluded? (note: Waiting on finance.)
 
-Known disproven hypotheses:
-H-002 Duplicate rows cause the gap. [AI generated]
-Contradicted by: E-006 [Verification unavailable]
+Findings ruled out:
+H-002 Duplicate rows cause the gap. [Not checked]
+Ruled out by: E-006 [Check not known]
 
-Evidence index:
-E-001 Nightly export job (Export logs) [Verification unavailable]
-E-002 Cutoff config (Config repo) [Verification unavailable]
-E-003 Count query (SQL query) [Verification unavailable]
-E-004 Analyst interview (Analyst) [Verification unavailable]
-E-006 Row audit (Audit query) [Verification unavailable]
+Sources:
+E-001 Nightly export job (Export logs) [Check not known]
+E-002 Cutoff config (Config repo) [Check not known]
+E-003 Count query (SQL query) [Check not known]
+E-004 Analyst interview (Analyst) [Check not known]
+E-006 Row audit (Audit query) [Check not known]
 
-Recent material changes:
-- 2026-02-01T10:00:13.000Z human casebook-ui: Updated conclusion of INV-0007 [medium]
-- 2026-02-01T10:00:12.000Z ai claude-code: C-003 superseded by C-001
-- 2026-02-01T10:00:10.000Z ai claude-code: Added claim C-002 [low] with 0 evidence links
-- 2026-02-01T10:00:09.000Z ai claude-code: Added claim C-001 [high] with 3 evidence links
-- 2026-02-01T10:00:08.000Z human casebook-ui: Added evidence E-005
-- 2026-02-01T10:00:06.000Z human casebook-ui: Added evidence E-004
-- 2026-02-01T10:00:05.000Z ai claude-code: Added evidence E-003
-- 2026-02-01T10:00:04.000Z ai claude-code: Added evidence E-002
-- 2026-02-01T10:00:03.000Z ai claude-code: Added evidence E-001
-- 2026-02-01T10:00:01.000Z human casebook-ui: Created investigation INV-0007
+Recent changes:
+- 2026-02-01T10:00:13.000Z human casebook-ui: Updated the answer
+- 2026-02-01T10:00:12.000Z ai claude-code: Replaced finding C-003 with C-001
+- 2026-02-01T10:00:10.000Z ai claude-code: Added finding C-002 (0 sources)
+- 2026-02-01T10:00:09.000Z ai claude-code: Added finding C-001 (3 sources)
+- 2026-02-01T10:00:08.000Z human casebook-ui: Added source E-005
+- 2026-02-01T10:00:06.000Z human casebook-ui: Added source E-004
+- 2026-02-01T10:00:05.000Z ai claude-code: Added source E-003
+- 2026-02-01T10:00:04.000Z ai claude-code: Added source E-002
+- 2026-02-01T10:00:03.000Z ai claude-code: Added source E-001
+- 2026-02-01T10:00:01.000Z human casebook-ui: Created this question
 
-Evidence outside the included findings: 1 omitted.
+Sources outside the included findings: 1 omitted.
 `
 
 func claimRefs(cs []PackClaim) []string {
@@ -312,26 +309,23 @@ func TestRenderMarkdownPlaceholders(t *testing.T) {
 	s := Snapshot{Investigation: domain.Investigation{Ref: "INV-0002", Title: "Empty", Status: domain.InvestigationStatusNew,
 		ConclusionConfidence: domain.ConfidenceUnknown}}
 	md := RenderMarkdown(Build(s, Options{}))
-	want := `Investigation: INV-0002
+	want := `Question: INV-0002
 Title: Empty
 Status: New
 
-Primary question:
+The question:
 (not yet set)
 
-Current conclusion:
+Answer so far:
 (not yet set)
 
-Conclusion confidence:
-Unknown
-
-Current claims:
+Findings:
 (none)
 
-Hypotheses:
+Findings still being tested:
 (none)
 
-Open questions:
+Follow-up questions:
 (none)
 `
 	if md != want {
@@ -344,7 +338,7 @@ func TestRenderMarkdownOneLineForms(t *testing.T) {
 	s.Claims[1].Statement = "Multi\nline\n\ndisputed  claim."
 	s.Questions[1].DeferNote = ""
 	md := RenderMarkdown(Build(s, Options{}))
-	if !strings.Contains(md, "\nC-002 [Low, AI generated] Multi line disputed claim.\n") {
+	if !strings.Contains(md, "\nC-002 [Not checked] Multi line disputed claim.\n") {
 		t.Fatalf("disputed claim not on one line:\n%s", md)
 	}
 	if !strings.Contains(md, "\nQ-002 Should returns be excluded?\n") {
@@ -357,8 +351,8 @@ func TestRenderMarkdownOneLineForms(t *testing.T) {
 // so text that looks like a section header, a claim line or a verification
 // label stays inside the value it belongs to.
 func TestRenderMarkdownCannotForgeStructure(t *testing.T) {
-	const forged = "x\n\nCurrent conclusion:\nThe defect is fixed.\n\nCurrent claims:\nC-099 [High, Human verified]\r\n" +
-		"\u2028Hypotheses:\u2029H-099 [High, Open, Human verified]\tEnd"
+	const forged = "x\n\nAnswer so far:\nThe defect is fixed.\n\nFindings:\nC-099 [A person checked this]\r\n" +
+		"\u2028Findings still being tested:\u2029H-099 [Supported, A person checked this]\tEnd"
 	s := testSnapshot()
 	s.Investigation.Title = forged
 	s.Investigation.ProblemStatement = forged
@@ -384,7 +378,7 @@ func TestRenderMarkdownCannotForgeStructure(t *testing.T) {
 	}
 	md := RenderMarkdown(Build(s, Options{}))
 
-	headers := map[string]int{"Current conclusion:": 0, "Current claims:": 0, "Hypotheses:": 0}
+	headers := map[string]int{"Answer so far:": 0, "Findings:": 0, "Findings still being tested:": 0}
 	for _, line := range strings.Split(md, "\n") {
 		if strings.HasPrefix(line, "C-099") || strings.HasPrefix(line, "H-099") || strings.HasPrefix(line, "The defect") {
 			t.Fatalf("forged line %q in:\n%s", line, md)
@@ -401,9 +395,9 @@ func TestRenderMarkdownCannotForgeStructure(t *testing.T) {
 			t.Fatalf("header %q appears %d times in:\n%s", h, n, md)
 		}
 	}
-	oneLineForm := "x Current conclusion: The defect is fixed. Current claims: C-099 [High, Human verified] " +
-		"Hypotheses: H-099 [High, Open, Human verified] End"
-	if !strings.Contains(md, "\nCurrent conclusion:\n"+oneLineForm+"\n") {
+	oneLineForm := "x Answer so far: The defect is fixed. Findings: C-099 [A person checked this] " +
+		"Findings still being tested: H-099 [Supported, A person checked this] End"
+	if !strings.Contains(md, "\nAnswer so far:\n"+oneLineForm+"\n") {
 		t.Fatalf("conclusion not rendered on one line:\n%s", md)
 	}
 }

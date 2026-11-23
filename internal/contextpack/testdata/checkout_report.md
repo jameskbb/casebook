@@ -1,6 +1,5 @@
 # INV-0002: TestCheckoutTotals flakes in CI
 
-- Status: Investigating
 - Opened: 2026-10-05
 - Last updated: 2026-10-07
 
@@ -8,98 +7,100 @@
 
 Why does TestCheckoutTotals fail about once in 20 CI runs and never locally?
 
-## Conclusion
+## Answer
 
 Two parallel tests share a package-level cart cache; the slower 4-core runners widen the race window.
 
-Conclusion verification: AI generated
+0 of 6 sources checked by you. 6 not checked.
 
-Supporting claims: none selected.
+Answer marked: Not checked
 
-Contradicting claims: none selected.
+Findings behind the answer: none selected.
 
-Conclusion review: not reviewed; needs review.
+Findings against the answer: none selected.
 
-Confidence: High. The race detector reproduces it (E-006), the code shows the shared map (E-005), and every failure was on the 4-core pool (E-004).
+Answer review: not reviewed yet.
 
-## Current claims
+Why: The race detector reproduces it (E-006), the code shows the shared map (E-005), and every failure was on the 4-core pool (E-004).
 
-- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (High confidence, Human verified)
+## Findings
+
+- **C-001** TestCheckoutTotals fails when TestCheckoutDiscounts runs concurrently and overwrites the package-level cartCache map. (You checked this)
   - Why: Reproduced 50 of 50 times with -race; the map is written under t.Parallel().
-  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; AI generated)
-  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; AI generated)
-  - Supported by E-006: go test -race reproduces a data race on cartCache, 50 of 50 runs (Local race run; AI generated)
+  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; Not checked)
+  - Supported by E-005: cartCache is a package-level map written under t.Parallel() (Code: internal/checkout/cache.go:18; Not checked)
+  - Supported by E-006: go test -race reproduces a data race on cartCache, 50 of 50 runs (Local race run; Not checked)
 
 ## Ruled out
 
-- **H-001** The failure is a midnight boundary: the fixture's date flips between seeding and assertion. (disproven, AI generated)
+- **H-001** The failure is a midnight boundary: the fixture's date flips between seeding and assertion. (Ruled out; Not checked)
   - Why: No failure is near midnight (E-003).
-  - Supported by E-002: Fixture seeds order dates from time.Now() truncated to the day (Code: internal/checkout/totals_test.go:41; AI generated)
-  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; AI generated)
+  - Supported by E-002: Fixture seeds order dates from time.Now() truncated to the day (Code: internal/checkout/totals_test.go:41; Not checked)
+  - Contradicted by E-003: Failure times are spread across the day; none within 30 min of 00:00 UTC (CI runs query; Not checked)
 
-## Hypotheses still open or supported
+## Still being tested
 
-- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported, High confidence, AI generated)
-  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; AI generated)
+- **H-002** The two checkout tests share cartCache when the package runs in parallel on slow runners. (Supported; Not checked)
+  - Supported by E-004: All 23 failures ran on the 4-core runner pool (CI runs query; Not checked)
 
-## Answered questions
+## Answered follow-up questions
 
 - **Q-001** Do the failure timestamps cluster around 00:00 UTC?
   - Answer: No: failures are spread evenly across the day (E-003). (2026-10-06)
 
-## Open questions
+## Open follow-up questions
 
 - **Q-002** Do other packages keep test state in package-level maps?
 
-## Evidence
+## Sources
 
 - **E-001** 23 of the last 400 CI runs fail on the totals assertion
-  - CI failure log: ci/logs/checkout-2026-10.txt, captured 2026-10-05, AI generated
+  - CI failure log: ci/logs/checkout-2026-10.txt, captured 2026-10-05, Not checked
   - All 23 failures are the same assertion: expected 3 line items, got 2.
 - **E-002** Fixture seeds order dates from time.Now() truncated to the day
-  - Code: internal/checkout/totals_test.go:41, captured 2026-10-05, AI generated
+  - Code: internal/checkout/totals_test.go:41, captured 2026-10-05, Not checked
   - The fixture computes the order date once and the assertion recomputes it.
 - **E-003** Failure times are spread across the day; none within 30 min of 00:00 UTC
-  - CI runs query, captured 2026-10-05, AI generated
+  - CI runs query, captured 2026-10-05, Not checked
   - Failures spread evenly over 24 hours.
 - **E-004** All 23 failures ran on the 4-core runner pool
-  - CI runs query, captured 2026-10-06, AI generated
+  - CI runs query, captured 2026-10-06, Not checked
   - 0 of 23 on the 8-core pool, which ran 61% of the jobs.
 - **E-005** cartCache is a package-level map written under t.Parallel()
-  - Code: internal/checkout/cache.go:18, captured 2026-10-06, AI generated
+  - Code: internal/checkout/cache.go:18, captured 2026-10-06, Not checked
   - Both tests write the same map without a lock.
 - **E-006** go test -race reproduces a data race on cartCache, 50 of 50 runs
-  - Local race run, captured 2026-10-06, AI generated
+  - Local race run, captured 2026-10-06, Not checked
   - The race detector reports concurrent map writes in every run.
 
-## Timeline (UTC)
+## How we got here (UTC)
 
 ### 2026-10-05
 
-- 11:13 ai claude-code: Created this case
-- 13:26 ai claude-code: Added evidence E-001 "23 of the last 400 CI runs fail on the totals assertion"
-- 15:39 ai claude-code: Added evidence E-002 "Fixture seeds order dates from time.Now() truncated to the day"
-- 17:52 ai claude-code: Added hypothesis H-001 (Medium confidence, 1 evidence link)
-- 20:05 ai claude-code: Asked Q-001: Do the failure timestamps cluster around 00:00 UTC?
-- 22:18 ai codex: Added evidence E-003 "Failure times are spread across the day; none within 30 min of 00:00 UTC"
+- 11:13 Claude Code (AI): Created this question
+- 13:26 Claude Code (AI): Added source E-001 "23 of the last 400 CI runs fail on the totals assertion"
+- 15:39 Claude Code (AI): Added source E-002 "Fixture seeds order dates from time.Now() truncated to the day"
+- 17:52 Claude Code (AI): Added finding H-001 (1 source)
+- 20:05 Claude Code (AI): Asked Q-001: Do the failure timestamps cluster around 00:00 UTC?
+- 22:18 Codex (AI): Added source E-003 "Failure times are spread across the day; none within 30 min of 00:00 UTC"
 
 ### 2026-10-06
 
-- 00:31 ai codex: Added evidence E-004 "All 23 failures ran on the 4-core runner pool"
-- 02:44 ai codex: Linked evidence E-003 to H-001, which it contradicts
-- 04:57 ai codex: Ruled out H-001; edited the rationale
-- 07:10 ai codex: Resolved Q-001: No: failures are spread evenly across the day (E-003).
-- 09:23 ai codex: Added hypothesis H-002 (Medium confidence, 1 evidence link)
-- 11:36 ai claude-code: Added evidence E-005 "cartCache is a package-level map written under t.Parallel()"
-- 13:49 ai claude-code: Added evidence E-006 "go test -race reproduces a data race on cartCache, 50 of 50 runs"
-- 16:02 ai claude-code: Added claim C-001 (High confidence, 3 evidence links)
-- 18:15 ai claude-code: Marked H-002 Supported; confidence now High
-- 20:28 ai claude-code: Asked Q-002: Do other packages keep test state in package-level maps?
-- 22:41 ai claude-code: Updated the conclusion (Medium confidence)
+- 00:31 Codex (AI): Added source E-004 "All 23 failures ran on the 4-core runner pool"
+- 02:44 Codex (AI): Linked source E-003 to H-001, which it contradicts
+- 04:57 Codex (AI): Ruled out H-001; edited the why
+- 07:10 Codex (AI): Resolved Q-001: No: failures are spread evenly across the day (E-003).
+- 09:23 Codex (AI): Added finding H-002 (1 source)
+- 11:36 Claude Code (AI): Added source E-005 "cartCache is a package-level map written under t.Parallel()"
+- 13:49 Claude Code (AI): Added source E-006 "go test -race reproduces a data race on cartCache, 50 of 50 runs"
+- 16:02 Claude Code (AI): Added finding C-001 (3 sources)
+- 18:15 Claude Code (AI): Marked H-002: Supported
+- 20:28 Claude Code (AI): Asked Q-002: Do other packages keep test state in package-level maps?
+- 22:41 Claude Code (AI): Updated the answer
 
 ### 2026-10-07
 
-- 00:54 human casebook-ui: Marked C-001 Human verified
-- 03:07 human casebook-ui: Updated the conclusion (High confidence)
+- 00:54 A person: Marked C-001: You checked this
+- 03:07 A person: Updated the answer
 
 _Generated by Casebook from INV-0002._

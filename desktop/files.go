@@ -49,7 +49,7 @@ type RestorePick struct {
 }
 
 var (
-	jsonFilter = []runtime.FileFilter{{DisplayName: "Casebook case (*.json)", Pattern: "*.json"}}
+	jsonFilter = []runtime.FileFilter{{DisplayName: "Casebook question (*.json)", Pattern: "*.json"}}
 	dbFilter   = []runtime.FileFilter{{DisplayName: "Casebook backup (*.db)", Pattern: "*.db"}}
 )
 
@@ -64,7 +64,7 @@ func (d *Desktop) ExportInvestigation(invRef string) (FileResult, error) {
 		return FileResult{}, mapErr(err)
 	}
 	path, err := d.native.SaveFile(runtime.SaveDialogOptions{
-		Title:                "Export case",
+		Title:                "Export question",
 		DefaultFilename:      exportFileName(inv.Ref, inv.Title),
 		Filters:              jsonFilter,
 		CanCreateDirectories: true,
@@ -105,8 +105,8 @@ func (d *Desktop) SaveReport(invRef string) (FileResult, error) {
 		return FileResult{}, mapErr(err)
 	}
 	path, err := d.native.SaveFile(runtime.SaveDialogOptions{
-		Title:                "Save summary",
-		DefaultFilename:      inv.Ref + "-summary.md",
+		Title:                "Save the answer",
+		DefaultFilename:      inv.Ref + "-answer.md",
 		Filters:              mdFilter,
 		CanCreateDirectories: true,
 	})
@@ -178,7 +178,7 @@ func (d *Desktop) ImportInvestigation() (ImportOutcome, error) {
 		return ImportOutcome{}, err
 	}
 	path, err := d.native.OpenFile(runtime.OpenDialogOptions{
-		Title:   "Import case",
+		Title:   "Import question",
 		Filters: jsonFilter,
 	})
 	if err != nil {

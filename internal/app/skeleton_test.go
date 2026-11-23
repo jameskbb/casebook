@@ -108,7 +108,7 @@ func TestWalkingSkeleton(t *testing.T) {
 			t.Fatalf("activity refs = %q/%q, want INV-0001", act.InvestigationRef, act.TargetRef)
 		}
 	}
-	if want := `Created investigation INV-0001 "September cloud bill up 38%"`; acts[1].Summary != want {
+	if want := `Created question INV-0001 "September cloud bill up 38%"`; acts[1].Summary != want {
 		t.Fatalf("create summary = %q, want %q", acts[1].Summary, want)
 	}
 	scoped, err := b.ListActivity(ctx, app.ActivityFilter{InvestigationRef: "INV-1", AfterID: acts[1].ID})

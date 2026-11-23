@@ -182,7 +182,7 @@
       },
       "action": "claim.add",
       "target_ref": "C-004",
-      "summary": "Added claim C-004 [medium] with 1 evidence link",
+      "summary": "Added finding C-004 with 1 source",
       "imported": false
     },
     {
@@ -193,7 +193,7 @@
       },
       "action": "evidence.add",
       "target_ref": "E-005",
-      "summary": "Added evidence E-005 \"Local check: payments values file still lacks the debug override\"",
+      "summary": "Added source E-005 \"Local check: payments values file still lacks the debug override\"",
       "imported": false
     },
     {
@@ -204,7 +204,7 @@
       },
       "action": "import",
       "target_ref": "INV-0001",
-      "summary": "Imported INV-0001 (4 evidence, 3 claims, 2 hypotheses, 1 questions); 3 verifications reset to ai_generated",
+      "summary": "Imported question INV-0001 (4 sources, 5 findings, 1 follow-up question); 3 records set back to Not checked",
       "imported": false
     },
     {
@@ -248,7 +248,7 @@
       },
       "action": "hypothesis.add",
       "target_ref": "H-002",
-      "summary": "Added hypothesis H-002 [low] with 1 evidence link",
+      "summary": "Added finding H-002 with 1 source",
       "imported": true
     },
     {
@@ -259,7 +259,7 @@
       },
       "action": "hypothesis.add",
       "target_ref": "H-001",
-      "summary": "Added hypothesis H-001 [medium]",
+      "summary": "Added finding H-001",
       "imported": true
     },
     {
@@ -270,7 +270,7 @@
       },
       "action": "claim.supersede",
       "target_ref": "C-003",
-      "summary": "C-003 superseded by C-002",
+      "summary": "C-003 was replaced by C-002",
       "imported": true
     }
   ],

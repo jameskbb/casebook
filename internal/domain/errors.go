@@ -15,7 +15,7 @@ var (
 	ErrConflict = errors.New("conflict")
 	// ErrNoActiveInvestigation means an empty investigation ref was given and
 	// no active investigation is set. It is distinct from ErrNotFound.
-	ErrNoActiveInvestigation = errors.New("no active investigation is set; pass an investigation ref or set one active")
+	ErrNoActiveInvestigation = errors.New("no current question is set; pass an INV ref or make one current")
 	// ErrBusy means the database stayed locked past the retry budget.
 	ErrBusy = errors.New("Casebook database is busy; try again")
 	// ErrInternal replaces any unexpected storage failure so that raw SQLite

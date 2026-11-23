@@ -126,7 +126,7 @@ func (a *App) addEvidenceTx(ctx context.Context, tx *sql.Tx, actor domain.Actor,
 	}
 	title := domain.TruncateLine(f.title, 120)
 	if err := a.recordActivity(ctx, tx, actor, inv.ID, "evidence.add", ref,
-		fmt.Sprintf("Added evidence %s %q", ref, title), "", now); err != nil {
+		fmt.Sprintf("Added source %s %q", ref, title), "", now); err != nil {
 		return Evidence{}, err
 	}
 	if err := store.TouchInvestigation(ctx, tx, inv.ID, now); err != nil {

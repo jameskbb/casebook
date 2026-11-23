@@ -69,7 +69,7 @@ func TestRefsParseRecordWrongPrefix(t *testing.T) {
 	if !ok || ve.Field != "ref" {
 		t.Fatalf("ParseRecordRef(C-001, evidence) = %v, want ValidationError on ref", err)
 	}
-	if !strings.Contains(ve.Message, "expected an evidence ref such as E-001") || !strings.Contains(ve.Message, "C-001") {
+	if !strings.Contains(ve.Message, "expected a source ref such as E-001") || !strings.Contains(ve.Message, "C-001") {
 		t.Fatalf("message = %q", ve.Message)
 	}
 	for _, s := range []string{"", "E-", "E-0", "E-1x", "E--1", "X-001", "INV-1/", "INV-1/E-1/E-2", "INV-0/E-1", "/E-1", "INV-1 / E-1"} {

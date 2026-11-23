@@ -174,7 +174,7 @@
       },
       "action": "hypothesis.add",
       "target_ref": "H-002",
-      "summary": "Added hypothesis H-002 [low] with 1 evidence link",
+      "summary": "Added finding H-002 with 1 source",
       "imported": false
     },
     {
@@ -185,7 +185,7 @@
       },
       "action": "hypothesis.add",
       "target_ref": "H-001",
-      "summary": "Added hypothesis H-001 [medium]",
+      "summary": "Added finding H-001",
       "imported": false
     },
     {
@@ -196,7 +196,7 @@
       },
       "action": "claim.supersede",
       "target_ref": "C-003",
-      "summary": "C-003 superseded by C-002",
+      "summary": "C-003 was replaced by C-002",
       "imported": false
     },
     {
@@ -207,7 +207,7 @@
       },
       "action": "claim.add",
       "target_ref": "C-003",
-      "summary": "Added claim C-003 [low] with 1 evidence link",
+      "summary": "Added finding C-003 with 1 source",
       "imported": false
     },
     {
@@ -218,7 +218,7 @@
       },
       "action": "claim.add",
       "target_ref": "C-002",
-      "summary": "Added claim C-002 [high] with 2 evidence links",
+      "summary": "Added finding C-002 with 2 sources",
       "imported": false
     },
     {
@@ -229,7 +229,7 @@
       },
       "action": "claim.add",
       "target_ref": "C-001",
-      "summary": "Added claim C-001 [high] with 2 evidence links",
+      "summary": "Added finding C-001 with 2 sources",
       "imported": false
     },
     {
@@ -240,7 +240,7 @@
       },
       "action": "evidence.add",
       "target_ref": "E-004",
-      "summary": "Added evidence E-004 \"Head of platform: debug was requested for payments only\"",
+      "summary": "Added source E-004 \"Head of platform: debug was requested for payments only\"",
       "imported": false
     }
   ],

@@ -57,7 +57,7 @@ func (a *App) CreateInvestigation(ctx context.Context, actor Actor, in CreateInv
 			return err
 		}
 		if err := a.recordActivity(ctx, tx, actor, id, "investigation.create", ref,
-			fmt.Sprintf("Created investigation %s %q", ref, title), "", now); err != nil {
+			fmt.Sprintf("Created question %s %q", ref, title), "", now); err != nil {
 			return err
 		}
 		if in.MakeActive {
@@ -178,7 +178,7 @@ func (a *App) UpdateInvestigation(ctx context.Context, actor Actor, invRef strin
 		}
 		if problem != nil && *problem != inv.ProblemStatement {
 			newProblem = *problem
-			changed = append(changed, "problem_statement")
+			changed = append(changed, "question text")
 		}
 		textChanged := len(changed) > 0
 
@@ -207,11 +207,11 @@ func (a *App) UpdateInvestigation(ctx context.Context, actor Actor, invRef strin
 		}
 
 		action := "investigation.update"
-		summary := fmt.Sprintf("Updated investigation %s: %s", inv.Ref, strings.Join(changed, ", "))
+		summary := fmt.Sprintf("Updated question %s: %s", inv.Ref, strings.Join(changed, ", "))
 		switch change {
 		case statusArchive:
 			action = "investigation.archive"
-			summary = fmt.Sprintf("Archived investigation %s", inv.Ref)
+			summary = fmt.Sprintf("Archived question %s", inv.Ref)
 			if textChanged {
 				summary += fmt.Sprintf(" and updated %s", strings.Join(changed[:len(changed)-1], ", "))
 			}
@@ -289,9 +289,9 @@ func (a *App) moveStatus(ctx context.Context, actor Actor, invRef, op string, ar
 		if err := store.SetInvestigationStatus(ctx, tx, inv.ID, su); err != nil {
 			return err
 		}
-		summary := fmt.Sprintf("Archived investigation %s", inv.Ref)
+		summary := fmt.Sprintf("Archived question %s", inv.Ref)
 		if !archive {
-			summary = fmt.Sprintf("Unarchived investigation %s (status %s)", inv.Ref, su.Status)
+			summary = fmt.Sprintf("Unarchived question %s (status %s)", inv.Ref, su.Status)
 		}
 		if err := a.recordActivity(ctx, tx, actor, inv.ID, op, inv.Ref, summary, "", now); err != nil {
 			return err
@@ -372,10 +372,10 @@ func prepareConclusion(in ConclusionInput) (preparedConclusion, error) {
 		// Clearing the conclusion clears its confidence and rationale too, so
 		// a pack never shows "(not yet set)" next to a confidence.
 		if c.confidence != domain.ConfidenceUnknown {
-			return c, domain.NewValidationError("confidence", "must be empty or unknown when the conclusion is empty")
+			return c, domain.NewValidationError("confidence", "must be empty or unknown when the answer is empty")
 		}
 		if c.rationale != "" {
-			return c, domain.NewValidationError("rationale", "must be empty when the conclusion is empty")
+			return c, domain.NewValidationError("rationale", "must be empty when the answer is empty")
 		}
 	}
 	c.verification = in.Verification
@@ -384,7 +384,7 @@ func prepareConclusion(in ConclusionInput) (preparedConclusion, error) {
 			return c, err
 		}
 		if c.verification == domain.VerificationSuperseded {
-			return c, domain.NewValidationError("verification", "superseded is not a conclusion verification")
+			return c, domain.NewValidationError("verification", "superseded cannot be set on an answer")
 		}
 	}
 	c.supporting, c.contradicting = in.SupportingClaims, in.ContradictingClaims
@@ -400,7 +400,7 @@ func prepareConclusion(in ConclusionInput) (preparedConclusion, error) {
 		return c, domain.NewValidationError("review_basis", "explain what you checked when recording a review")
 	}
 	if c.conclusion == "" && (c.review || c.reviewBasis != "" || len(c.supporting) > 0 || len(c.contradicting) > 0 || c.verification != "") {
-		return c, domain.NewValidationError("conclusion", "an empty conclusion cannot carry verification, claims or a review")
+		return c, domain.NewValidationError("conclusion", "an empty answer cannot carry a check, findings or a review")
 	}
 	return c, nil
 }
@@ -418,7 +418,7 @@ func (a *App) conclusionTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 		return Investigation{}, false, err
 	}
 	if c.review && actor.Kind != domain.ActorHuman {
-		return Investigation{}, false, domain.NewValidationError("review", "only a person can record a conclusion review")
+		return Investigation{}, false, domain.NewValidationError("review", "only a person can record a review of the answer")
 	}
 	next, snapshot, changed, err := a.prepareConclusionAccountability(ctx, tx, actor, inv, c, now)
 	if err != nil {
@@ -437,8 +437,11 @@ func (a *App) conclusionTx(ctx context.Context, tx *sql.Tx, actor domain.Actor, 
 	if inv.ConclusionVerification != next.ConclusionVerification && next.ConclusionVerification == domain.VerificationAIGenerated && actor.Kind != domain.ActorHuman && inv.Conclusion != c.conclusion {
 		summary += resetNote(actor.Kind)
 	}
-	if c.conclusion == "" {
-		summary = fmt.Sprintf("Cleared conclusion of %s", inv.Ref)
+	switch {
+	case c.conclusion == "":
+		summary = "Cleared the answer"
+	case c.review:
+		summary = "Recorded a review of the answer"
 	}
 	if err := a.recordActivity(ctx, tx, actor, inv.ID, "conclusion.update", inv.Ref, summary, "", now); err != nil {
 		return Investigation{}, false, err

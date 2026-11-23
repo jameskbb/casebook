@@ -102,9 +102,9 @@ func TestGoldenImported(t *testing.T) {
 	}
 	checkGolden(t, "imported.md", md)
 	for _, want := range []string{
-		"C-001 (imported) [High", "C-002 (imported) [High", "H-001 (imported) [Medium",
+		"C-001 (imported) [", "C-002 (imported) [", "H-001 (imported) [Not tested yet",
 		"H-002 (imported) Data transfer", "Q-001 (imported)\n", "E-001 (imported) ",
-		"\nC-004 [Medium", "\nQ-002\nWho owns the chart default now?", "\nE-005 Local check",
+		"\nC-004 [A person checked this]", "\nQ-002\nWho owns the chart default now?", "\nE-005 Local check",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("markdown lacks %q:\n%s", want, md)
@@ -171,22 +171,21 @@ func TestGoldenCloudSpend(t *testing.T) {
 	// Content checks independent of the golden file, so a wrong golden
 	// cannot hide a regression.
 	for _, want := range []string{
-		"Investigation: INV-0001\n",
+		"Question: INV-0001\n",
 		"Title: September cloud bill up 38%\n",
-		"Primary question:\nWhy did the cloud bill rise 38% in September when traffic was flat?\n",
-		"Current conclusion:\nDebug logging requested for payments only reached every service and drove most of the increase.\n",
-		"Conclusion confidence:\nHigh\n",
-		"C-001 [High",
-		"Evidence: E-001 [AI generated], E-004 [Human verified]",
-		"C-002 [High",
-		"Evidence: E-002 [AI generated], E-003 [AI generated]",
-		"H-001 [Medium, Open",
+		"The question:\nWhy did the cloud bill rise 38% in September when traffic was flat?\n",
+		"Answer so far:\nDebug logging requested for payments only reached every service and drove most of the increase.\n",
+		"C-001 [A person checked this]",
+		"Sources: E-001 [Not checked], E-004 [A person checked this]",
+		"C-002 [Not checked]",
+		"Sources: E-002 [Not checked], E-003 [Not checked]",
+		"H-001 [Not tested yet, Not checked]",
 		"Q-001",
 		"Can every service except payments go back to info level today?",
-		"Current claims:",
-		"Known disproven hypotheses:",
-		"Recent material changes:",
-		"Evidence index:",
+		"Findings:",
+		"Findings ruled out:",
+		"Recent changes:",
+		"Sources:",
 	} {
 		if !strings.Contains(md, want) {
 			t.Fatalf("markdown lacks %q:\n%s", want, md)
@@ -195,20 +194,20 @@ func TestGoldenCloudSpend(t *testing.T) {
 	if strings.Contains(md, "The increase comes from the August autoscaling change adding compute nodes.") {
 		t.Fatal("markdown contains the superseded C-003 statement")
 	}
-	claims := section(md, "Current claims:")
+	claims := section(md, "Findings:")
 	if !strings.Contains(claims, "C-001 [") || !strings.Contains(claims, "C-002 [") || strings.Contains(claims, "C-003") {
 		t.Fatalf("established claims section:\n%s", claims)
 	}
-	hyps := section(md, "Hypotheses:")
+	hyps := section(md, "Findings still being tested:")
 	if !strings.Contains(hyps, "H-001 [") || strings.Contains(hyps, "H-002") {
 		t.Fatalf("hypotheses section:\n%s", hyps)
 	}
-	disproven := section(md, "Known disproven hypotheses:")
-	if disproven != "Known disproven hypotheses:\nH-002 Data transfer from the region move doubled the network line. [AI generated]\nContradicted by: E-003 [AI generated]" {
+	disproven := section(md, "Findings ruled out:")
+	if disproven != "Findings ruled out:\nH-002 Data transfer from the region move doubled the network line. [Not checked]\nRuled out by: E-003 [Not checked]" {
 		t.Fatalf("disproven section:\n%s", disproven)
 	}
-	if !strings.Contains(section(md, "Open questions:"), "Q-001\nCan every service except payments") {
-		t.Fatalf("open questions section:\n%s", section(md, "Open questions:"))
+	if !strings.Contains(section(md, "Follow-up questions:"), "Q-001\nCan every service except payments") {
+		t.Fatalf("open questions section:\n%s", section(md, "Follow-up questions:"))
 	}
 
 	js := render("json", app.ContextOptions{})
@@ -242,7 +241,7 @@ func TestGoldenCloudSpend(t *testing.T) {
 		t.Fatalf("compact pack omitted %v (truncated %v)", p.OmittedSections, p.Truncated)
 	}
 	for _, want := range []string{
-		"Investigation: INV-0001\n", "Title: September cloud bill up 38%\n",
+		"Question: INV-0001\n", "Title: September cloud bill up 38%\n",
 		"Why did the cloud bill rise 38% in September when traffic was flat?",
 		"Debug logging requested for payments only reached every service and drove most of the increase.",
 		"Trimmed to fit",

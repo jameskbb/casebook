@@ -45,7 +45,7 @@ func (a *App) DeleteInvestigation(ctx context.Context, actor Actor, invRef strin
 		return a.fail(op, err)
 	}
 	if strings.TrimSpace(invRef) == "" {
-		return a.fail(op, domain.NewValidationError("investigation_ref", "is required to delete an investigation"))
+		return a.fail(op, domain.NewValidationError("investigation_ref", "is required to delete a question"))
 	}
 	err = a.db.WithWriteTx(ctx, func(tx *sql.Tx) error {
 		now := a.timestamp()
@@ -54,7 +54,7 @@ func (a *App) DeleteInvestigation(ctx context.Context, actor Actor, invRef strin
 			return err
 		}
 		if !inv.Archived {
-			return fmt.Errorf("%w: %s is not archived; archive it before deleting it", domain.ErrConflict, inv.Ref)
+			return fmt.Errorf("%w: question %s is not archived; archive it before deleting it", domain.ErrConflict, inv.Ref)
 		}
 		counts, err := store.InvestigationCounts(ctx, tx, inv.ID)
 		if err != nil {
@@ -70,9 +70,8 @@ func (a *App) DeleteInvestigation(ctx context.Context, actor Actor, invRef strin
 		if err := store.DeleteInvestigation(ctx, tx, inv.ID); err != nil {
 			return err
 		}
-		summary := fmt.Sprintf("Deleted %s %q (%d evidence, %d claims, %d hypotheses, %d questions)", inv.Ref,
-			domain.TruncateLine(inv.Title, deleteSummaryTitle), counts.Evidence, counts.Claims, counts.Hypotheses,
-			counts.Questions)
+		summary := fmt.Sprintf("Deleted question %s %q (%s)", inv.Ref, domain.TruncateLine(inv.Title, deleteSummaryTitle),
+			recordCounts(counts.Evidence, counts.Claims+counts.Hypotheses, counts.Questions))
 		return a.recordActivity(ctx, tx, actor, 0, op, inv.Ref, summary, "", now)
 	})
 	if err != nil {
@@ -104,13 +103,13 @@ func (a *App) DeleteEvidence(ctx context.Context, actor Actor, invRef, evidenceR
 			return t, "", err
 		}
 		if claims+hyps > 0 {
-			return t, "", fmt.Errorf("%w: %s is linked by %s and %s; unlink it first", domain.ErrConflict, t.Ref,
-				plural(claims, "claim link"), plural(hyps, "hypothesis link"))
+			return t, "", fmt.Errorf("%w: source %s is linked to %s; unlink it first", domain.ErrConflict, t.Ref,
+				plural(claims+hyps, "finding"))
 		}
 		if err := store.DeleteEvidence(ctx, tx, ev.ID); err != nil {
 			return t, "", err
 		}
-		return t, fmt.Sprintf("Deleted evidence %s %q", t.Ref, domain.TruncateLine(ev.Title, deleteSummaryTitle)), nil
+		return t, fmt.Sprintf("Deleted source %s %q", t.Ref, domain.TruncateLine(ev.Title, deleteSummaryTitle)), nil
 	})
 }
 
@@ -156,7 +155,7 @@ func (a *App) deleteStatement(ctx context.Context, actor Actor, invRef, ref stri
 		if k.rec == domain.RecordClaim {
 			for _, selected := range append(append([]string{}, t.Inv.ConclusionSupportingClaims...), t.Inv.ConclusionContradictingClaims...) {
 				if selected == t.Ref {
-					return t, "", fmt.Errorf("%w: %s is selected in the conclusion; remove it from the conclusion before deleting it", domain.ErrConflict, t.Ref)
+					return t, "", fmt.Errorf("%w: finding %s is part of the answer; remove it from the answer before deleting it", domain.ErrConflict, t.Ref)
 				}
 			}
 		}
@@ -169,13 +168,13 @@ func (a *App) deleteStatement(ctx context.Context, actor Actor, invRef, ref stri
 			for i, n := range deps {
 				names[i] = domain.FormatRecordRef(k.rec, n)
 			}
-			return t, "", fmt.Errorf("%w: %s replaces %s; reinstate or delete %s first", domain.ErrConflict, t.Ref,
+			return t, "", fmt.Errorf("%w: finding %s replaced %s; bring back or delete %s first", domain.ErrConflict, t.Ref,
 				strings.Join(names, ", "), strings.Join(names, ", "))
 		}
 		if err := store.DeleteStatement(ctx, tx, k.target, cur.ID); err != nil {
 			return t, "", err
 		}
-		return t, fmt.Sprintf("Deleted %s %s", k.rec, t.Ref), nil
+		return t, fmt.Sprintf("Deleted finding %s", t.Ref), nil
 	})
 }
 

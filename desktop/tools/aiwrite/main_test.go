@@ -206,7 +206,7 @@ func TestCheckpointWritesThursdayToFeaturedCase(t *testing.T) {
 	if err := run([]string{"--data-dir", dir, "--checkpoint"}, &out); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if got := out.String(); !strings.HasPrefix(got, demo.FeaturedRef+" checkpoint created E-008,E-009,C-003") {
+	if got := out.String(); !strings.HasPrefix(got, demo.FeaturedRef+" checkpoint created E-007,E-008,C-003,H-004") {
 		t.Fatalf("output %q", got)
 	}
 	a := apptest.Reopen(t, filepath.Join(dir, dbFileName))

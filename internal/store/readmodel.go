@@ -30,14 +30,18 @@ func ListInvestigationSummaries(ctx context.Context, q Querier, f SummaryQuery) 
 		where = append(where, "i.status = ?")
 		args = append(args, string(f.Status))
 	}
-	query := `SELECT i.id, i.ref_num, i.title, i.status, i.conclusion_confidence, i.created_at, i.updated_at,
+	query := `SELECT i.id, i.ref_num, i.title, i.status, i.conclusion, i.conclusion_confidence, i.created_at, i.updated_at,
     COALESCE(i.archived_at, ''),
     COALESCE((SELECT s.value = CAST(i.id AS TEXT) FROM settings s WHERE s.key = 'active_investigation_id'), 0),
     (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id),
     (SELECT count(*) FROM claims c WHERE c.investigation_id = i.id),
     (SELECT count(*) FROM hypotheses h WHERE h.investigation_id = i.id),
     (SELECT count(*) FROM questions qq WHERE qq.investigation_id = i.id),
-    (SELECT count(*) FROM questions qq WHERE qq.investigation_id = i.id AND qq.status = 'open')
+    (SELECT count(*) FROM questions qq WHERE qq.investigation_id = i.id AND qq.status = 'open'),
+    (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id AND e.verification != 'superseded'),
+    (SELECT count(*) FROM evidence e WHERE e.investigation_id = i.id AND e.verification = 'human_verified'),
+    (SELECT count(*) FROM claims c WHERE c.investigation_id = i.id AND c.verification = 'disputed'
+        AND c.status NOT IN ('superseded', 'rejected'))
 FROM investigations i`
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")
@@ -57,9 +61,9 @@ FROM investigations i`
 			refNum       int64
 			status, conf string
 		)
-		if err := rows.Scan(&s.ID, &refNum, &s.Title, &status, &conf, &s.CreatedAt, &s.UpdatedAt, &s.ArchivedAt,
+		if err := rows.Scan(&s.ID, &refNum, &s.Title, &status, &s.Conclusion, &conf, &s.CreatedAt, &s.UpdatedAt, &s.ArchivedAt,
 			&s.IsActive, &s.Counts.Evidence, &s.Counts.Claims, &s.Counts.Hypotheses, &s.Counts.Questions,
-			&s.Counts.OpenQuestions); err != nil {
+			&s.Counts.OpenQuestions, &s.SourcesTotal, &s.SourcesCheckedByYou, &s.FindingsDisagree); err != nil {
 			return nil, err
 		}
 		s.Ref = domain.FormatInvestigationRef(refNum)

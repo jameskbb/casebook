@@ -12,9 +12,9 @@ import (
 var dropOrder = []string{"recent_changes", "statement_rationales", "evidence_index", "deferred_questions", "rationale", "disputed_claims", "disproven_hypotheses"}
 
 var headerParts = []string{
-	"Investigation: INV-0007\n", "Title: Widget count mismatch\n", "Status: Investigating\n",
-	"Primary question:\nWhy do the two widget counts differ?\n",
-	"Current conclusion:\nCounts use different cutoffs.\n", "Conclusion confidence:\nMedium\n",
+	"Question: INV-0007\n", "Title: Widget count mismatch\n", "Status: In progress\n",
+	"The question:\nWhy do the two widget counts differ?\n",
+	"Answer so far:\nCounts use different cutoffs.\n",
 }
 
 // longSnapshot is testSnapshot with 400-byte statements and questions so
@@ -168,7 +168,7 @@ func TestBudgetFirstStepDropsRecentChanges(t *testing.T) {
 		t.Fatal("first budget step changed more than recent changes")
 	}
 	md := RenderMarkdown(p)
-	if strings.Contains(md, "Recent material changes:") || !strings.HasSuffix(md, "\n\n(Trimmed to fit "+fmt.Sprint(p.MaxBytes)+" bytes; omitted: recent_changes)\n") {
+	if strings.Contains(md, "Recent changes:") || !strings.HasSuffix(md, "\n\n(Trimmed to fit "+fmt.Sprint(p.MaxBytes)+" bytes; omitted: recent_changes)\n") {
 		t.Fatalf("markdown:\n%s", md)
 	}
 }
@@ -210,18 +210,18 @@ func TestBudgetTinyKeepsHeader(t *testing.T) {
 		}
 	}
 	for _, line := range []string{
-		"Current claims:\n(3 more current claims omitted)\n",
-		"Disputed claims:\n(1 more disputed claim omitted)\n",
-		"Known disproven hypotheses:\n(1 more disproven hypothesis omitted)\n",
-		"Hypotheses:\n(2 more hypotheses omitted)\n",
-		"Open questions:\n(1 more open question omitted)\n",
+		"Findings:\n(3 more findings omitted)\n",
+		"Findings where sources disagree:\n(1 more finding where sources disagree omitted)\n",
+		"Findings ruled out:\n(1 more finding ruled out omitted)\n",
+		"Findings still being tested:\n(2 more findings still being tested omitted)\n",
+		"Follow-up questions:\n(1 more follow-up question omitted)\n",
 		"(Trimmed to fit 10 bytes; omitted: recent_changes, statement_rationales, evidence_index, deferred_questions, rationale, disputed_claims, disproven_hypotheses)\n",
 	} {
 		if !strings.Contains(md, line) {
 			t.Fatalf("markdown lacks %q:\n%s", line, md)
 		}
 	}
-	if strings.Contains(md, "Conclusion rationale:") {
+	if strings.Contains(md, "Why this answer:") {
 		t.Fatalf("dropped sections rendered:\n%s", md)
 	}
 	if p.Conclusion.Text != "Counts use different cutoffs." || p.Conclusion.Confidence != domain.ConfidenceMedium {
@@ -296,7 +296,7 @@ func TestBudgetKeepsDisprovenHypotheses(t *testing.T) {
 	if !anyShortened(p) {
 		t.Fatalf("expected statements to be shortened first:\n%s", md)
 	}
-	if !strings.Contains(md, "Known disproven hypotheses:\nH-001 ") {
+	if !strings.Contains(md, "Findings ruled out:\nH-001 ") {
 		t.Fatalf("markdown lacks disproven hypotheses:\n%s", md)
 	}
 }
@@ -317,7 +317,10 @@ func TestBudgetDisprovenPartialRemoval(t *testing.T) {
 			continue
 		}
 		md := RenderMarkdown(p)
-		want := fmt.Sprintf("(%d more disproven hypothes", p.Omitted.DisprovenHypotheses)
+		want := fmt.Sprintf("(%d more findings ruled out omitted)", p.Omitted.DisprovenHypotheses)
+		if p.Omitted.DisprovenHypotheses == 1 {
+			want = "(1 more finding ruled out omitted)"
+		}
 		if !strings.Contains(md, want) || len(p.DisputedClaims) != 0 {
 			t.Fatalf("limit %d: partial removal not rendered:\n%s", limit, md)
 		}

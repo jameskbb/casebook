@@ -134,7 +134,7 @@ func TestRenderContextFormats(t *testing.T) {
 	if err != nil || again != md {
 		t.Fatalf("second render differs (err %v)", err)
 	}
-	if !strings.HasPrefix(md, "Investigation: INV-0001\nTitle: September cloud bill up 38%\nStatus: Investigating\n") {
+	if !strings.HasPrefix(md, "Question: INV-0001\nTitle: September cloud bill up 38%\nStatus: In progress\n") {
 		t.Fatalf("markdown header:\n%s", md)
 	}
 
@@ -181,7 +181,7 @@ func TestRenderContextFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(empty, "Current claims:\n(none)") || !strings.Contains(empty, "Current conclusion:\n(not yet set)") {
+	if !strings.Contains(empty, "Findings:\n(none)") || !strings.Contains(empty, "Answer so far:\n(not yet set)") {
 		t.Fatalf("empty pack:\n%s", empty)
 	}
 	emptyJSON, err := a.RenderContext(ctx, other.Ref, "json", app.ContextOptions{})
