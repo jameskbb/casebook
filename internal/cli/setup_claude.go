@@ -68,8 +68,8 @@ Inside mcpServers.casebook only type, command and args are set: env and any
 other member you added there are kept. A
 backup of the previous file is written first, and a rerun that would change
 nothing writes nothing. --remove deletes only mcpServers.casebook, any
-Casebook hook handlers in settings.json and the Casebook skill; the mcpServers and hooks objects and
-the hook event arrays stay, even when that leaves them empty. --print shows
+Casebook hook handlers in settings.json and the Casebook skill; the mcpServers object
+stays, while a hook event array (and then the hooks object) it leaves empty is deleted. --print shows
 the configuration (with --hooks, the hooks too) and changes nothing.`,
 		Args: usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {

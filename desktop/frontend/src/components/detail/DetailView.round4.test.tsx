@@ -143,7 +143,10 @@ describe('round 4 on the question page', () => {
     // C-004 was ruled out after the answer was saved; C-003 was replaced long ago.
     renderPage({ ...detail, investigation: inv, claims: detail.claims.map((c) => (c.ref === 'C-004' ? { ...c, status: 'rejected' as const, verification: 'ai_generated' as const } : c)) })
     const panel = await screen.findByRole('region', { name: 'The answer' })
-    expect(within(panel).getByText('2 findings back it')).toBeInTheDocument()
+    // The same count as What backs this up on the page: C-001, C-002 and H-003, not the stored list.
+    const listed = new Set([...screen.getByRole('region', { name: 'What backs this up' }).querySelectorAll('[data-ref]')].map((e) => e.getAttribute('data-ref')).filter((r) => /^[CH]-/.test(r ?? ''))).size
+    expect(listed).toBe(3)
+    expect(within(panel).getByText('3 findings back it')).toBeInTheDocument()
     expect(within(panel).queryByText(/goes? against it/)).toBeNull()
   })
 

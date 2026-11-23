@@ -29,7 +29,8 @@
   --kind-rule-color: var(--question);
 }
 
-.kind-rule-retired {
+.kind-rule-retired,
+.kind-rule-untested {
   --kind-rule-color: var(--rule);
 }
 

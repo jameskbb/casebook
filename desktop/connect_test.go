@@ -225,7 +225,7 @@ func TestConnectRefusesAndExplains(t *testing.T) {
 	for _, change := range []func(string) (ClientChange, error){d.ConnectClient, d.DisconnectClient} {
 		e := uiErrOf(t, errOnly(change("claude_desktop")))
 		if e.Kind != kindConflict || e.Field != "settings" ||
-			e.Message != "Casebook could not read the Claude desktop app's settings safely, so it changed nothing. Use the steps under Technical details instead." {
+			e.Message != "The settings file has a mistake in it, so Casebook changed nothing. Ask the person who set up the Claude desktop app to fix it, then try again." {
 			t.Fatalf("refusal = %+v", e)
 		}
 	}
@@ -256,7 +256,7 @@ func TestClientErr(t *testing.T) {
 		kind, field string
 		message     string
 	}{
-		{"refused", nil, refused, kindConflict, "settings", "Casebook could not read Codex's settings safely, so it changed nothing. Use the steps under Technical details instead."},
+		{"refused", nil, refused, kindConflict, "settings", "The settings file has a mistake in it, so Casebook changed nothing. Ask the person who set up Codex to fix it, then try again."},
 		{"changed underneath", nil, changed, kindConflict, "changed", "Codex's settings changed while Casebook was updating them. Nothing was changed. Try again."},
 		{"second file changed underneath", first, changed, kindOther, "", "Casebook could not finish changing Codex's settings. Try again. A backup was kept at a.casebook-backup-1."},
 		{"disk", nil, errors.New("disk full"), kindOther, "", "Casebook could not finish changing Codex's settings. Try again."},

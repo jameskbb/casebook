@@ -18,13 +18,13 @@
 // sources are all checked, so it starts on the findings where sources
 // disagree), the answer editor or the answer check. A finding where sources
 // disagree has its own Decide button, which opens the check on it. When the
-// check closes, focus goes back to the answer's first button.
+// check closes, focus goes back to that Decide button, or else to the
+// answer's first button.
 //
 // Still to find out holds findings not tested yet and the things a person
 // or an AI still wants to find out, in one list. A finding not tested yet
-// offers This turned out right, Rule this out and Later on its row (Later
-// only puts it under Show N left for later in this window, lib/later);
-// something to find out offers Answer and Later. Answered ones collapse
+// offers This turned out right and Rule this out on its row; something to
+// find out offers Answer and Later. Answered ones collapse
 // under Show N answered. Focus moves to a new row.
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert, CircleQuestionMark, FileText, Pencil, Plus, Quote, Trash2 } from 'lucide-react'
@@ -32,7 +32,6 @@ import { api } from '../../api/api'
 import { plainError, toApiError } from '../../api/errors'
 import type { Evidence, Hypothesis, InvestigationDetail, Question } from '../../api/types'
 import { useDelayedFlag } from '../../hooks/useDelayedFlag'
-import { getLater, setLater } from '../../lib/later'
 import { evidenceByRef, groupFindings, partitionQuestions, type Finding } from '../../lib/records'
 import { useAppData } from '../../state/appData'
 import { useWrite } from '../../state/useWrite'
@@ -120,17 +119,24 @@ function Page({ detail }: { detail: InvestigationDetail }) {
   // The check is open; startAt is the finding a Decide button opened it on.
   const [checking, setChecking] = useState<{ startAt?: string } | null>(null)
   const [answerIntent, setAnswerIntent] = useState<AnswerIntent | null>(null)
-  const [focusAnswer, setFocusAnswer] = useState(false)
+  // Set when the check closes: the finding its Decide button was for, or '' for none.
+  const [refocus, setRefocus] = useState<string | null>(null)
 
-  // After the check closes (Escape, Done, Not now) focus goes to the answer's
-  // first button, Check the next source while one is left: whatever opened
-  // the window may be gone by then.
+  // After the check closes (Escape, Done, Not now) focus goes back to the
+  // Decide button that opened it while that finding still has one, without
+  // moving the page; otherwise to the answer's first button, Check the next
+  // source while one is left: whatever opened the window may be gone by then.
   useEffect(() => {
-    if (!focusAnswer) return
-    setFocusAnswer(false)
+    if (refocus === null) return
+    setRefocus(null)
+    const decide = refocus ? document.querySelector<HTMLElement>(`[aria-labelledby="section-disagree"] [data-ref="${refocus}"] button[aria-label^="${DECIDE_ACTION}: "]`) : null
+    if (decide) {
+      decide.focus({ preventScroll: true })
+      return
+    }
     const panel = document.querySelector('.conclusion-panel')
-    ;(panel?.querySelector<HTMLElement>('.btn-primary') ?? panel?.querySelector<HTMLElement>('button'))?.focus()
-  }, [focusAnswer])
+    ;(panel?.querySelector<HTMLElement>('.btn-primary') ?? panel?.querySelector<HTMLElement>('button'))?.focus({ preventScroll: Boolean(refocus) })
+  }, [refocus])
 
   // Consumes pendingOpen once the matching detail is loaded.
   useEffect(() => {
@@ -174,7 +180,7 @@ function Page({ detail }: { detail: InvestigationDetail }) {
           startAt={checking.startAt}
           onClose={() => {
             setChecking(null)
-            setFocusAnswer(true)
+            setRefocus(checking.startAt ?? '')
           }}
           onWriteAnswer={() => {
             setChecking(null)
@@ -240,7 +246,6 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
   const [reopening, setReopening] = useState<string | null>(null)
   const [legendOpen, setLegendOpen] = useState(false)
   const [testing, setTesting] = useState<string | null>(null)
-  const [later, setLaterState] = useState(() => getLater(invRef))
   const sectionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -287,18 +292,6 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
     <>
       <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'supported')}>{TURNED_OUT_RIGHT_ACTION}</Button>
       <Button variant="ghost" disabled={testing === h.ref} onClick={() => void settle(h, 'disproven')}>{RULE_OUT_ACTION}</Button>
-      {!later.includes(h.ref) && (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            const next = [...later, h.ref]
-            setLater(invRef, next)
-            setLaterState(next)
-          }}
-        >
-          Later
-        </Button>
-      )}
     </>
   )
 
@@ -346,8 +339,7 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
   const close = () => setDialog(null)
   const findingRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} />
   const findingKey = (f: Finding) => f.record.ref
-  const leftForLater = findings.notTested.filter((f) => later.includes(f.record.ref))
-  const toFind: ToFind[] = [...findings.notTested.filter((f) => !later.includes(f.record.ref)).map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
+  const toFind: ToFind[] = [...findings.notTested.map((finding) => ({ finding })), ...questions.visible.map((question) => ({ question }))]
   const toFindRow = (f: Finding) => <RecordRow {...f} sources={sources} onOpen={open} actions={f.kind === 'hypothesis' && testActions(f.record)} />
   const decideButton = (f: Finding) => (
     <Button variant="ghost" aria-label={`${DECIDE_ACTION}: ${f.record.statement}`} onClick={() => onDecide(f.record.ref)}>{DECIDE_ACTION}</Button>
@@ -358,8 +350,9 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
         <FirstFindingGuide onAddSource={() => setDialog({ type: 'evidence' })} onAddFinding={() => setDialog({ type: 'claim' })} />
       ) : (
         <div className="reading-add" role="group" aria-label="Add to this question">
-          <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'claim' })}>{ADD_FINDING}</Button>
+          {/* The same order as the first screen's buttons, so a second press lands on the same one. */}
           <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'evidence' })}>{ADD_SOURCE}</Button>
+          <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'claim' })}>{ADD_FINDING}</Button>
           <Button variant="secondary" icon={Plus} onClick={() => setDialog({ type: 'question' })}>{ADD_TO_FIND_OUT}</Button>
           <button type="button" className="text-button reading-add-legend" onClick={() => setLegendOpen(true)}>
             {LABELS_LINK}
@@ -386,7 +379,6 @@ function ReadingSections({ detail, onDecide }: { detail: InvestigationDetail; on
             <QuestionRow question={x.question} actions={questionActions(x.question)} />
           )
         }
-        footer={leftForLater.length > 0 && <Collapsed items={leftForLater} noun={['left for later', 'left for later']} itemKey={findingKey} renderItem={toFindRow} />}
       />
       <SectionList<Evidence>
         id="evidence"

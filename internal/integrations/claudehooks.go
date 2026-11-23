@@ -599,12 +599,10 @@ func isCasebookEvent(event string) bool {
 // A group left with no handlers is dropped; a user group keeps its
 // other handlers and members (such as matcher) in order.
 //
-// Containers are never deleted, the same rule as for mcpServers in
-// .claude.json: Casebook cannot tell whether the user created the hooks
-// object or an event array, so an event array the removal empties stays as
-// [] and the hooks object stays even when it holds only empty arrays. After
-// an install that created them, that leaves empty arrays behind; Claude Code
-// treats an empty array like a missing event.
+// An event array the removal empties is deleted, and so is the hooks object
+// when that leaves it empty, so a connect then disconnect leaves no empty
+// lists behind. An array or hooks object that was already empty, or still
+// holds the user's hooks, stays.
 //
 // hooks that is not an object, or a Casebook event that is not an array, is
 // refused; another event that is not an array is skipped. events lists the
@@ -634,12 +632,20 @@ func removeHooks(settings *jsonObject) (events []string, err error) {
 			continue
 		}
 		events = append(events, claudeHooksKey+"."+m.Key)
-		hooks.Set(m.Key, encodeRawArray(kept))
+		if len(kept) == 0 {
+			hooks.Delete(m.Key)
+		} else {
+			hooks.Set(m.Key, encodeRawArray(kept))
+		}
 	}
 	if len(events) == 0 {
 		return nil, nil
 	}
 	events = sortHookEvents(events)
+	if len(hooks.Members) == 0 {
+		settings.Delete(claudeHooksKey)
+		return events, nil
+	}
 	enc, err := hooks.Encode()
 	if err != nil {
 		return nil, err

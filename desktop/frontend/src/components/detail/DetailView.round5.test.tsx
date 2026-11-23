@@ -1,10 +1,10 @@
 // What the third tester found, kept fixed: a finding where sources disagree
 // has its own Decide button that opens the check on it, and a finding not
-// tested yet can be left for later from its row.
+// tested yet offers This turned out right and Rule this out, with no Later.
 import { useEffect, useRef } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../../api/api'
 import type { InvestigationDetail } from '../../api/types'
 import { AppDataProvider, useAppData } from '../../state/appData'
@@ -49,9 +49,7 @@ function renderPage(d: InvestigationDetail) {
 describe('round 5 on the question page', () => {
   beforeEach(() => {
     Object.assign(mocks.api, mockApi())
-    window.localStorage.clear()
   })
-  afterEach(() => window.localStorage.clear())
 
   it('opens the check on a finding where sources disagree from its own Decide button, before any source', async () => {
     // Sources are still unchecked: the button goes straight to the finding.
@@ -64,21 +62,27 @@ describe('round 5 on the question page', () => {
     expect(within(dialog).getByText(statement)).toBeInTheDocument()
   })
 
-  it('puts a finding not tested yet under Show 1 left for later, and keeps it there next time', async () => {
-    const { user, view, ui } = renderPage(detail)
+  it('gives focus back to the Decide button that opened the check on Escape, without moving the page', async () => {
+    const { user } = renderPage(detail)
+    const disagree = await screen.findByRole('region', { name: 'Where sources disagree' })
+    const decide = within(disagree).getByRole('button', { name: `${DECIDE_ACTION}: Callers waited too long and hung up before buying.` })
+    await user.click(decide)
+    await screen.findByRole('dialog', { name: CHECK_SOURCES_TITLE })
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(decide))
+    expect(focus.mock.instances.filter((el) => (el as unknown as HTMLElement).closest('.conclusion-panel'))).toHaveLength(0)
+    expect(focus.mock.calls.at(-1)?.[0]).toEqual({ preventScroll: true })
+    focus.mockRestore()
+  })
+
+  it('offers This turned out right and Rule this out on a finding not tested yet, and no Later', async () => {
+    renderPage(detail)
     const open = await screen.findByRole('region', { name: 'Still to find out' })
     const row = open.querySelector<HTMLElement>('[data-ref="H-001"]')!
-    await user.click(within(row).getByRole('button', { name: 'Later' }))
-    expect(open.querySelector('[data-ref="H-001"]')).toBeNull()
-    expect(within(open).getByRole('button', { name: 'Show 1 left for later' })).toBeInTheDocument()
-    expect(mocks.api.updateHypothesis).not.toHaveBeenCalled()
-    view.unmount()
-    render(ui)
-    const again = await screen.findByRole('region', { name: 'Still to find out' })
-    await waitFor(() => expect(within(again).getByRole('button', { name: 'Show 1 left for later' })).toBeInTheDocument())
-    await user.click(within(again).getByRole('button', { name: 'Show 1 left for later' }))
-    const hidden = again.querySelector<HTMLElement>('[data-ref="H-001"]')!
-    expect(within(hidden).queryByRole('button', { name: 'Later' })).toBeNull()
-    expect(within(hidden).getByRole('button', { name: 'Rule this out' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'This turned out right' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Rule this out' })).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Later' })).toBeNull()
+    expect(within(open).queryByRole('button', { name: /left for later/ })).toBeNull()
   })
 })

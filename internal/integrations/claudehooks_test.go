@@ -596,8 +596,8 @@ func TestRemoveHooks(t *testing.T) {
 		orig := readFixture(t, "settings-typical.json")
 		opts, claudePath, path := hooksFixture(t, orig)
 		// The fixture has no PreCompact event: install adds one and remove
-		// leaves it as an empty array (containers are never deleted).
-		want := []byte(replaceOnce(t, string(orig), "    ]\n  },\n  \"statusLine\"", "    ],\n    \"PreCompact\": []\n  },\n  \"statusLine\""))
+		// deletes the array it emptied, so the file is back as it was.
+		want := orig
 		claudeOrig := readBytes(t, claudePath)
 		if _, err := SetupClaude(testCLI, opts); err != nil {
 			t.Fatal(err)
@@ -636,14 +636,15 @@ func TestRemoveHooks(t *testing.T) {
 			t.Fatalf("settings.json; %s", firstDiff(got, []byte(want)))
 		}
 	})
-	t.Run("only Casebook hooks leaves empty containers", func(t *testing.T) {
-		// Casebook cannot tell an event array or hooks object it created from
-		// one the user created, so remove never deletes either.
-		emptied := "  \"hooks\": {\n    \"SessionStart\": [],\n    \"Stop\": [],\n    \"PreCompact\": []\n  }"
+	t.Run("only Casebook hooks leaves no empty lists", func(t *testing.T) {
+		// Remove deletes every event array it empties, then the hooks object
+		// once nothing is left in it. An empty array it did not touch stays.
 		for _, c := range []struct{ orig, want string }{
-			{"{\n  \"theme\": \"dark\"\n}\n", "{\n  \"theme\": \"dark\",\n" + emptied + "\n}\n"},
-			{"{\n  \"hooks\": {}\n}\n", "{\n" + emptied + "\n}\n"},
-			{"{\n  \"hooks\": {\n    \"Stop\": []\n  }\n}\n", "{\n  \"hooks\": {\n    \"Stop\": [],\n    \"SessionStart\": [],\n    \"PreCompact\": []\n  }\n}\n"},
+			{"{\n  \"theme\": \"dark\"\n}\n", "{\n  \"theme\": \"dark\"\n}\n"},
+			{"{\"theme\": \"dark\"}", "{\n  \"theme\": \"dark\"\n}\n"},
+			{"{\n  \"hooks\": {}\n}\n", "{}\n"},
+			{"{\n  \"hooks\": {\n    \"Stop\": []\n  }\n}\n", "{}\n"},
+			{"{\n  \"hooks\": {\n    \"Notification\": []\n  }\n}\n", "{\n  \"hooks\": {\n    \"Notification\": []\n  }\n}\n"},
 		} {
 			opts, _, path := hooksFixture(t, []byte(c.orig))
 			if _, err := SetupClaude(testCLI, opts); err != nil {
@@ -667,9 +668,8 @@ func TestRemoveHooks(t *testing.T) {
 		if c := settingsChange(t, changes, path); strings.Join(c.Entries, ",") != "hooks.PostToolUse" {
 			t.Errorf("entries = %v", c.Entries)
 		}
-		// The user's empty Stop array stays, and so does the emptied
-		// PostToolUse array.
-		want := "{\n  \"hooks\": {\n    \"PostToolUse\": [],\n    \"Stop\": []\n  }\n}\n"
+		// The user's empty Stop array stays; the emptied PostToolUse array goes.
+		want := "{\n  \"hooks\": {\n    \"Stop\": []\n  }\n}\n"
 		if got := string(readBytes(t, path)); got != want {
 			t.Errorf("settings.json = %q, want %q", got, want)
 		}

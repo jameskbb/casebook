@@ -5,9 +5,9 @@
 // sources disagree are left, then I checked this answer, then Share the
 // answer; the first one that applies is the main button, and I checked this
 // answer waits until nothing else is left) and how the person knows; the
-// findings that back it, and how many of them sources disagree about,
-// counted from the page as it is now (ruled out and replaced ones are not
-// counted). Once the person checked the answer, Undo my check sets it back to
+// findings under What backs this up, and apart from them the findings where
+// sources disagree, counted from the page as it is now (ruled out and
+// replaced ones are not counted). Once the person checked the answer, Undo my check sets it back to
 // not checked. Edit mode is inline in the same panel:
 // the answer and how you know, saved together through UpdateConclusion with
 // the findings on the page behind it (lib/records answerFindings). Confidence
@@ -276,12 +276,12 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
     } catch (e) { showErrors(e) } finally { setBusy(false) }
   }
 
-  const findingText = (ref: string) => claims.find((c) => c.ref === ref)?.statement ?? 'A finding that is no longer here'
-
-  // The findings on the page now, so one ruled out or replaced since the save is not counted.
+  // The same groups as What backs this up and Where sources disagree on the page now,
+  // so one ruled out or replaced since the save is not counted.
   const sources = evidenceByRef({ evidence })
-  const backing = answerFindings(claims, sources).supporting_claims
-  const disagreeing = groupFindings(claims, [], sources).disagree.map((f) => f.record.ref)
+  const groups = groupFindings(claims, hypotheses, sources)
+  const backing = groups.backing.map((f) => f.record)
+  const disagreeing = groups.disagree.map((f) => f.record)
   const checkedAt = inv.conclusion_reviewed_at
   const upToDate = answerChecked(inv)
   const checkStale = checking !== null && checking.conclusion_review_token !== inv.conclusion_review_token
@@ -291,7 +291,7 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
   // left is the main button, so Share the answer is never the main one before
   // the checking is done, and the answer cannot be checked before its sources.
   const sourcesLeft = sourcesToCheck(evidence).length > 0
-  const decideLeft = groupFindings(claims, hypotheses, sources).disagree.length > 0
+  const decideLeft = disagreeing.length > 0
   const next = Boolean(onCheckSources) && (sourcesLeft || decideLeft)
   const canCheck = has && !upToDate && !sourcesLeft && !decideLeft
   const canShare = share && has
@@ -391,14 +391,12 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
         <div className="conclusion-view">
           <p className="conclusion-text"><CodedText text={inv.conclusion} /></p>
           <SourcesChecked evidence={evidence} />
-          <p className="conclusion-check-state" role="status">
-            {!checkedAt ? (justWrote ? JUST_WROTE_ANSWER : NOT_CHECKED_ANSWER) : !upToDate ? CHECK_ANSWER_AGAIN : <>You checked this answer on <time dateTime={checkedAt}>{formatDate(checkedAt)}</time>.</>}
-          </p>
-          {upToDate && !checking && (
-            <div>
-              <Button variant="ghost" busy={busy} busyLabel="Saving..." onClick={() => void undoCheck()}>{UNDO_ANSWER_CHECK}</Button>
-            </div>
-          )}
+          <div className="conclusion-check-line">
+            <p className="conclusion-check-state" role="status">
+              {!checkedAt ? (justWrote ? JUST_WROTE_ANSWER : NOT_CHECKED_ANSWER) : !upToDate ? CHECK_ANSWER_AGAIN : <>You checked this answer on <time dateTime={checkedAt}>{formatDate(checkedAt)}</time>.</>}
+            </p>
+            {upToDate && !checking && <Button variant="ghost" busy={busy} busyLabel="Saving..." onClick={() => void undoCheck()}>{UNDO_ANSWER_CHECK}</Button>}
+          </div>
           {actions}
           {!checking && summary && <p className="conclusion-summary" role="alert">{summary}</p>}
           {checking && (
@@ -413,14 +411,14 @@ export function ConclusionPanel({ investigation: inv, claims = [], evidence = []
             </div>
           )}
           {inv.conclusion_verification === 'disputed' && <Banner>Sources disagree about this answer. Read them before you use it.</Banner>}
-          {backing.length > 0 && <details className="conclusion-basis"><summary>{countOf(backing.length, 'finding backs it', 'findings back it')}</summary><ul>{backing.map((ref) => <li key={ref}>{findingText(ref)}</li>)}</ul></details>}
-          {disagreeing.length > 0 && <details className="conclusion-basis"><summary>{`${disagreeing.length} where sources disagree`}</summary><ul>{disagreeing.map((ref) => <li key={ref}>{findingText(ref)}</li>)}</ul></details>}
+          {backing.length > 0 && <details className="conclusion-basis"><summary>{countOf(backing.length, 'finding backs it', 'findings back it')}</summary><ul>{backing.map((f) => <li key={f.ref}>{f.statement}</li>)}</ul></details>}
+          {disagreeing.length > 0 && <details className="conclusion-basis"><summary>{`${disagreeing.length} where sources disagree`}</summary><ul>{disagreeing.map((f) => <li key={f.ref}>{f.statement}</li>)}</ul></details>}
           {inv.conclusion_rationale.trim() !== '' && <p className="conclusion-rationale"><span className="conclusion-why">How you know:</span> <CodedText text={inv.conclusion_rationale} /></p>}
           {upToDate && inv.conclusion_review_basis && <p className="conclusion-rationale"><span className="conclusion-why">What you checked:</span> <CodedText text={inv.conclusion_review_basis} /></p>}
         </div>
       ) : (
         <div className="conclusion-empty">
-          <p className="conclusion-empty-text">{bare ? 'No answer yet.' : 'No answer yet. Write it here when the findings back one.'}</p>
+          <p className="conclusion-empty-text">{bare ? 'No answer yet.' : 'No answer yet. Write it once a finding holds.'}</p>
           {!bare && (
             <Button variant="ghost" icon={Pencil} ref={editButtonRef} onClick={begin}>
               Write the answer

@@ -195,7 +195,7 @@ func clientErr(name string, done []integrations.FileChange, err error) error {
 	var refused *integrations.RefusedError
 	switch {
 	case errors.As(err, &refused) && !written(done):
-		return uiErr(kindConflict, "settings", "Casebook could not read "+name+"'s settings safely, so it changed nothing. Use the steps under Technical details instead.")
+		return uiErr(kindConflict, "settings", "The settings file has a mistake in it, so Casebook changed nothing. Ask the person who set up "+name+" to fix it, then try again.")
 	case errors.Is(err, integrations.ErrChangedUnderneath) && !written(done):
 		return uiErr(kindConflict, "changed", upperFirst(name)+"'s settings changed while Casebook was updating them. Nothing was changed. Try again.")
 	}

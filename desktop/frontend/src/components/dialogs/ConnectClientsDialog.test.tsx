@@ -106,6 +106,21 @@ describe('ConnectClientsDialog', () => {
     expect(await within(screen.getByRole('region', { name: 'Claude Code' })).findByRole('status')).toHaveTextContent(/took itself out of Claude Code's settings/)
   })
 
+  it('shows a result under the tool it was for only, until another tool is pressed or the window opens again', async () => {
+    const user = userEvent.setup()
+    const first = render(<ToastProvider><ConnectClientsDialog onClose={() => {}} /></ToastProvider>)
+    await user.click(await screen.findByRole('button', { name: `${DISCONNECT_ACTION}: Claude Code` }))
+    const claude = screen.getByRole('region', { name: 'Claude Code' })
+    expect(await within(claude).findByRole('status')).toHaveTextContent(/took itself out/)
+    await user.click(screen.getByRole('button', { name: `${CONNECT_ACTION}: Codex` }))
+    expect(await within(screen.getByRole('region', { name: 'Codex' })).findByRole('status')).toBeInTheDocument()
+    expect(within(claude).queryByRole('status')).toBeNull()
+    first.unmount()
+    renderDialog()
+    await screen.findByRole('region', { name: 'Claude Code' })
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   it('a tool Casebook cannot connect by itself points to the steps under Technical details', async () => {
     Object.assign(mocks.api, mockApi({
       clientConnections: async () => ({ ...clientConnections, claude_desktop: { ...clientConnections.claude_desktop!, found: true } }),
@@ -122,7 +137,7 @@ describe('ConnectClientsDialog', () => {
   })
 
   it('shows a refused connect in the words Casebook sent', async () => {
-    const message = "Casebook could not read Codex's settings safely, so it changed nothing. Use the steps under Technical details instead."
+    const message = "The settings file has a mistake in it, so Casebook changed nothing. Ask the person who set up Codex to fix it, then try again."
     Object.assign(mocks.api, mockApi({ connectClient: rejectWith({ kind: 'conflict', field: 'settings', message }) }))
     const user = userEvent.setup()
     renderDialog()

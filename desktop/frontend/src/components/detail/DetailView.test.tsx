@@ -48,10 +48,10 @@ describe('DetailView reading column', () => {
     Object.assign(mocks.api, mockApi())
   })
 
-  it('offers one row of add buttons for a finding, a source and something to find out, with no Evernote capture', async () => {
+  it('offers one row of add buttons for a source, a finding and something to find out, in the same order as the first screen, with no Evernote capture', async () => {
     renderDetail()
     const add = await screen.findByRole('group', { name: 'Add to this question' })
-    expect(within(add).getAllByRole('button').map((b) => b.textContent)).toEqual([ADD_FINDING, ADD_SOURCE, ADD_TO_FIND_OUT, 'What the labels mean'])
+    expect(within(add).getAllByRole('button').map((b) => b.textContent)).toEqual([ADD_SOURCE, ADD_FINDING, ADD_TO_FIND_OUT, 'What the labels mean'])
     expect(screen.queryByText(/evernote/i)).toBeNull()
   })
 
@@ -265,7 +265,7 @@ describe('DetailView reading column', () => {
     renderDetail(partialDetail())
     await screen.findByRole('region', { name: 'What backs this up' })
     expect(screen.getByRole('region', { name: 'The question' })).toHaveTextContent('Why did calls go up 30% in October when sales stayed the same?')
-    expect(screen.getByText('No answer yet. Write it here when the findings back one.')).toBeInTheDocument()
+    expect(screen.getByText('No answer yet. Write it once a finding holds.')).toBeInTheDocument()
     expect(section('What backs this up').querySelector('button[data-ref="E-001"]')).not.toBeNull()
   })
 

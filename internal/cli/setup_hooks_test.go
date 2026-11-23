@@ -98,17 +98,15 @@ func TestSetupClaudeHooks(t *testing.T) {
 		t.Error("rerun wrote a settings.json backup")
 	}
 
-	// Remove reports both files and restores the user's settings, except
-	// that the event arrays install added stay as empty arrays (remove never
-	// deletes a hooks container).
+	// Remove reports both files and restores the user's settings: the event
+	// arrays install added and remove emptied are deleted.
 	r = runClientCLI(t, d, exe, "", "setup", "claude", "--remove")
 	wantCode(t, r, 0)
 	wantContains(t, r.Stdout,
 		d.Paths.ClaudeJSON+": removed mcpServers.casebook",
 		d.Paths.ClaudeSettings+": removed hooks.SessionStart, hooks.Stop, hooks.PreCompact")
-	wantUser := strings.Replace(user, "    ]\n  }\n}\n", "    ],\n    \"SessionStart\": [],\n    \"PreCompact\": []\n  }\n}\n", 1)
-	if b, _ := os.ReadFile(d.Paths.ClaudeSettings); string(b) != wantUser {
-		t.Errorf("settings.json after remove = %q, want %q", b, wantUser)
+	if b, _ := os.ReadFile(d.Paths.ClaudeSettings); string(b) != user {
+		t.Errorf("settings.json after remove = %q, want %q", b, user)
 	}
 
 	r = runClientCLI(t, d, exe, "", "--json", "setup", "claude", "--remove")

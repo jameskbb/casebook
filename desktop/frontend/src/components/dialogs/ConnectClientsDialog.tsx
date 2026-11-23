@@ -78,10 +78,13 @@ interface ToolSectionProps {
   canConnect: boolean
   /** Called after a change, with what it did, so the window reads the settings again. */
   onChanged: (change: ClientChange) => void
+  /** This tool's button was the last one pressed: only then is its result shown. */
+  current: boolean
+  onPressed: (tool: ClientTool) => void
 }
 
 /** One AI tool found on this computer: what it is, whether it is connected, and the one button. */
-function ToolSection({ tool: { tool, title, name }, client, canConnect, onChanged }: ToolSectionProps) {
+function ToolSection({ tool: { tool, title, name }, client, canConnect, onChanged, current, onPressed }: ToolSectionProps) {
   const status = clientStatus(client)
   const connected = isConnected(client)
   const [busy, setBusy] = useState(false)
@@ -90,6 +93,7 @@ function ToolSection({ tool: { tool, title, name }, client, canConnect, onChange
 
   const change = async (call: (t: ClientTool) => Promise<ClientChange>) => {
     if (busy) return
+    onPressed(tool)
     setBusy(true)
     setMessage('')
     setError('')
@@ -127,8 +131,8 @@ function ToolSection({ tool: { tool, title, name }, client, canConnect, onChange
           </Button>
         </>
       )}
-      {message && <p className="connect-muted" role="status">{message}</p>}
-      {error && <p className="connect-error" role="alert">{error}</p>}
+      {current && message && <p className="connect-muted" role="status">{message}</p>}
+      {current && error && <p className="connect-error" role="alert">{error}</p>}
     </section>
   )
 }
@@ -170,6 +174,8 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastChange, setLastChange] = useState<ClientChange | null>(null)
+  // The tool whose button was pressed last; a result shows under that tool only.
+  const [pressed, setPressed] = useState<ClientTool | null>(null)
   const noteClients = useNoteClients()
 
   // Read every time the window opens and after each change.
@@ -242,6 +248,8 @@ export function ConnectClientsDialog({ onClose }: ConnectClientsDialogProps) {
             tool={t}
             client={data[t.tool]!}
             canConnect={cliKnown}
+            current={pressed === t.tool}
+            onPressed={setPressed}
             onChanged={(change) => {
               setLastChange(change)
               void load()

@@ -146,11 +146,16 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 		}
 		return out
 	}
-	// label is "" when the section heading already says the state.
-	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string) []string {
+	// label is "" when the section heading already says the state. A ruled
+	// out finding's reason reads "Why it was ruled out:".
+	finding := func(statement, why string, imported bool, links []domain.EvidenceLink, label string, ruled bool) []string {
 		lines := []string{"- " + oneLine(statement) + stateWords(imported, label)}
 		if w := oneLine(why); w != "" {
-			lines = append(lines, "  - Why we think so: "+w)
+			whyLabel := "Why we think so: "
+			if ruled {
+				whyLabel = "Why it was ruled out: "
+			}
+			lines = append(lines, "  - "+whyLabel+w)
 		}
 		return append(lines, sources(links)...)
 	}
@@ -166,7 +171,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	sortByRef(claims, domain.RecordClaim, func(c domain.Claim) string { return c.Ref })
 	for _, c := range claims {
 		item := func(label string) []string {
-			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, label)
+			return finding(c.Statement, c.ConfidenceRationale, c.Imported, c.Links, label, c.Status == domain.ClaimStatusRejected)
 		}
 		switch {
 		case c.Status == domain.ClaimStatusSuperseded || c.Verification == domain.VerificationSuperseded:
@@ -183,7 +188,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	sortByRef(hyps, domain.RecordHypothesis, func(h domain.Hypothesis) string { return h.Ref })
 	for _, h := range hyps {
 		item := func(label string) []string {
-			return finding(h.Statement, h.Rationale, h.Imported, h.Links, label)
+			return finding(h.Statement, h.Rationale, h.Imported, h.Links, label, h.Status == domain.HypothesisStatusDisproven)
 		}
 		switch {
 		case h.Status == domain.HypothesisStatusSuperseded || h.Verification == domain.VerificationSuperseded:
@@ -225,6 +230,11 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 	for _, e := range evidence {
 		list = append(list, "- "+oneLine(e.Title)+stateWords(e.Imported, verificationLabel(e.Verification)))
 		from, dated := oneLine(e.SourceLabel), ", dated "
+		where := oneLine(e.SourceRef)
+		if from != "" && strings.HasPrefix(strings.ToLower(where), strings.ToLower(from)) {
+			// "Order list, April to October" already names the source: one line, not two.
+			from, where = where, ""
+		}
 		if from == "" {
 			from = e.SourceType.PlainLabel()
 			if e.SourceType == domain.SourceTypeManualObservation {
@@ -236,7 +246,7 @@ func (d *answerDoc) body(s Snapshot, allEvidence []domain.Evidence) {
 			from += dated + on
 		}
 		list = append(list, "  - "+from)
-		if where := oneLine(e.SourceRef); where != "" {
+		if where != "" {
 			list = append(list, "  - Where to find it: "+where)
 		}
 		if sum := oneLine(e.Summary); sum != "" {

@@ -46,9 +46,9 @@ describe('records', () => {
     expect(sourcesDisagree({ ...detail.hypotheses[1], links: against }, sources)).toBe(false)
   })
 
-  it('saves an answer with every current finding behind it, and none against it', () => {
+  it('saves an answer with the findings under What backs this up, none where sources disagree, and none against it', () => {
     const c = claim({ links: [link('E-003', 'contradicts')] })
-    expect(answerFindings([...detail.claims, c], sources)).toEqual({ supporting_claims: ['C-001', 'C-002', 'C-004', 'C-009'], contradicting_claims: [] })
+    expect(answerFindings([...detail.claims, c], sources)).toEqual({ supporting_claims: ['C-001', 'C-002'], contradicting_claims: [] })
   })
 
   it('lists the sources a person has not checked, in page order, without replaced ones', () => {

@@ -62,12 +62,10 @@ How we know: The billing team's notice, the call log and the billing team lead a
   - Sales manager, in the Monday sales meeting
   - The sales manager said in the Monday sales meeting that the call center was two people short in October. She thinks callers waited too long and hung up before buying.
 - Callers waited 40 seconds in September and 40 seconds in October (Not checked)
-  - Phone system waiting times
-  - Where to find it: Phone system waiting times, September and October
+  - Phone system waiting times, September and October
   - The phone system shows callers waited 40 seconds in September and 40 seconds in October. 3% of callers hung up while waiting in both months.
 - Calls about a bill: 400 in September, 1,070 in October (Not checked)
-  - Call log
-  - Where to find it: Call log, September and October, by reason
+  - Call log, September and October, by reason
   - The call log gives a reason for every call. Calls about a bill went from 400 in September to 1,070 in October. Calls to buy went from 2,000 to 2,050. The extra bill calls start on October 3.
 - Notice dated October 4: 1,900 customers were charged twice on October 3 (A person checked this)
   - Email from the billing team

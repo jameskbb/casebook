@@ -35,7 +35,7 @@ func TestConclusionAccountabilitySurvivesAllRenderingsAndBudget(t *testing.T) {
 			if !strings.Contains(text, `"verification": "human_verified"`) || !strings.Contains(text, `"needs_review": true`) {
 				t.Errorf("JSON lost labels: %s", text)
 			}
-		} else if !strings.Contains(text, "Answer marked: A person checked this") || !strings.Contains(text, "The answer needs checking again:") {
+		} else if !strings.Contains(text, "Answer marked: A person checked this before, and it has changed since") || strings.Contains(text, "Answer marked: A person checked this\n") || !strings.Contains(text, "The answer needs checking again:") {
 			t.Errorf("%s lost conclusion label or attention", name)
 		}
 	}

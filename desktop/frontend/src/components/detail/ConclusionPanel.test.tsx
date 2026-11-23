@@ -158,7 +158,7 @@ describe('ConclusionPanel editing', () => {
     const user = userEvent.setup()
     renderPanel({ ...investigation, conclusion: '', conclusion_confidence: 'unknown', conclusion_rationale: '' })
     expect(
-      within(panel()).getByText('No answer yet. Write it here when the findings back one.'),
+      within(panel()).getByText('No answer yet. Write it once a finding holds.'),
     ).toBeInTheDocument()
     await user.click(within(panel()).getByRole('button', { name: 'Write the answer' }))
     expect(within(panel()).getByLabelText('Answer')).toHaveValue('')
@@ -277,12 +277,22 @@ describe('Check the next source, I checked this answer and Share the answer', ()
     expect(onCheckSources).toHaveBeenCalledTimes(1)
   })
 
-  it('shows how many findings back the answer and how many of them sources disagree about, never that one goes against it', () => {
+  it('counts the findings under What backs this up, and those where sources disagree apart, never that one goes against it', () => {
     render(providers(<ConclusionPanel investigation={investigation} claims={detail.claims} evidence={detail.evidence} />))
-    // C-001, C-002 and C-004 stand; sources disagree about C-004; C-003 was replaced.
-    expect(within(panel()).getByText('3 findings back it')).toBeInTheDocument()
+    // C-001 and C-002 back it; sources disagree about C-004, so it is counted once, apart; C-003 was replaced.
+    expect(within(panel()).getByText('2 findings back it')).toBeInTheDocument()
     expect(within(panel()).getByText('1 where sources disagree')).toBeInTheDocument()
+    const lists = panel().querySelectorAll('details.conclusion-basis')
+    expect(lists[0].textContent).not.toContain(detail.claims[3].statement)
+    expect(lists[1].textContent).toContain(detail.claims[3].statement)
     expect(within(panel()).queryByText(/against it/)).toBeNull()
+  })
+
+  it('puts Undo my check on the same line as the check state', () => {
+    render(providers(<ConclusionPanel investigation={{ ...investigation, conclusion_reviewed_at: '2026-11-08T12:00:00.000Z', conclusion_needs_review: false }} />))
+    const undo = within(panel()).getByRole('button', { name: UNDO_ANSWER_CHECK })
+    expect(undo.parentElement).toHaveClass('conclusion-check-line')
+    expect(undo.parentElement).toContainElement(within(panel()).getByText(/You checked this answer on/).closest('p'))
   })
 
   it('says the answer is not checked after Undo my check, even right after the person wrote it', async () => {
@@ -360,11 +370,11 @@ describe('The findings an answer is saved with', () => {
     return vi.mocked(mocks.api.updateConclusion).mock.calls[0][1]
   }
 
-  it('sends every current finding as supporting, those where sources disagree too, and none as contradicting', async () => {
+  it('sends the findings under What backs this up as supporting, not those where sources disagree, and none as contradicting', async () => {
     // C-001 and C-002 stand, C-003 was replaced, C-004 has sources that disagree, C-005 is ruled out.
     const ruledOut: Claim = { ...detail.claims[1], id: 5, ref: 'C-005', status: 'rejected' }
     const sent = await edit(investigation, [...detail.claims, ruledOut])
-    expect(sent.supporting_claims).toEqual(['C-001', 'C-002', 'C-004'])
+    expect(sent.supporting_claims).toEqual(['C-001', 'C-002'])
     expect(sent.contradicting_claims).toEqual([])
     expect(sent.confidence).toBe(investigation.conclusion_confidence)
   })

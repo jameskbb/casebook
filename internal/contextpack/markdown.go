@@ -306,7 +306,11 @@ func (p Pack) conclusionAccountabilityLines(c PackConclusion) []string {
 	if verification == "" {
 		verification = domain.VerificationAIGenerated
 	}
-	lines := []string{"Answer marked: " + verificationLabel(verification)}
+	marked := verificationLabel(verification)
+	if verification == domain.VerificationHumanVerified && c.ReviewedAt != "" && c.NeedsReview {
+		marked = "A person checked this before, and it has changed since"
+	}
+	lines := []string{"Answer marked: " + marked}
 	for _, group := range []struct {
 		label  string
 		claims []PackConclusionClaim
