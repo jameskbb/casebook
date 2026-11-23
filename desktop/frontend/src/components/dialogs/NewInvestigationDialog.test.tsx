@@ -40,7 +40,7 @@ describe('NewInvestigationDialog', () => {
     renderDialog()
     const dialog = await screen.findByRole('dialog', { name: 'New question' })
     expect(within(dialog).getByLabelText("Make this your AI's current question")).not.toBeChecked()
-    expect(within(dialog).getByText("What do you want to know? For example: Why did our profit margin fall in Q3?")).toBeInTheDocument()
+    expect(within(dialog).getByText("What do you want to know? For example: Why did calls go up when sales stayed flat?")).toBeInTheDocument()
     expect(within(dialog).getByText('The period, the numbers, and where the data lives.')).toBeInTheDocument()
   })
 

@@ -7,9 +7,9 @@ import { VerificationBadge } from '../record/VerificationBadge'
 import { Button } from '../ui/Button'
 import './SampleCase.css'
 
-const SOURCE_TITLE = 'Carrier invoices, June and July'
-const FINDING = 'The carrier raised its rates 30% on July 1.'
-const NOT_TESTED = 'The same rate increase raised costs in our other regions.'
+const SOURCE_TITLE = 'Call log, September and October'
+const FINDING = 'Almost all of the extra calls were about a bill, not about buying.'
+const NOT_TESTED = 'A billing mistake in October charged some customers twice.'
 
 const sampleClaim: Claim = {
   id: 0,
@@ -54,14 +54,14 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
     })
   }
   return (
-    <article className="sample-case" aria-label="Margin example">
+    <article className="sample-case" aria-label="Call center example">
       <header className="sample-toolbar">
         <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>Back to your questions</Button>
         <span className="sample-readonly">Made-up example · Read-only</span>
       </header>
       <div className="sample-reading">
         <div className="sample-intro">
-          <h1 ref={headingRef} tabIndex={-1}>Why did our profit margin fall from 40% to 37% in Q3?</h1>
+          <h1 ref={headingRef} tabIndex={-1}>Why did calls go up 30% in October when sales stayed flat?</h1>
           <p className="sample-note">Every figure, source and finding below is made up. This example is never saved to your data.</p>
         </div>
         <section className="sample-section" aria-labelledby="sample-finding">
@@ -74,21 +74,21 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
           <div className="sample-source" ref={sourceRef} tabIndex={-1}>
             <div className="sample-source-head"><span className="sample-ref">E-001</span><VerificationBadge verification="ai_generated" /></div>
             <h3>{SOURCE_TITLE}</h3>
-            <p>Invoices from the carrier. Made up for this example.</p>
+            <p>Every call to the sales line, with the reason for the call. Made up for this example.</p>
             <Button variant="secondary" icon={ChevronDown} aria-expanded={sourceOpen} onClick={() => setSourceOpen((open) => !open)}>
               {sourceOpen ? 'Hide the source' : 'Read the source'}
             </Button>
             {sourceOpen && <div className="sample-source-detail">
               <table>
-                <caption>Average shipping cost per order</caption>
-                <thead><tr><th scope="col">Month</th><th scope="col">Cost per order</th></tr></thead>
+                <caption>Calls by reason</caption>
+                <thead><tr><th scope="col">Reason for the call</th><th scope="col">September</th><th scope="col">October</th></tr></thead>
                 <tbody>
-                  <tr><th scope="row">June</th><td>$9.00</td></tr>
-                  <tr><th scope="row">July</th><td>$11.70</td></tr>
-                  <tr><th scope="row">Change</th><td>+30%</td></tr>
+                  <tr><th scope="row">Wanted to buy</th><td>2,000</td><td>2,050</td></tr>
+                  <tr><th scope="row">Asked about a bill</th><td>400</td><td>1,070</td></tr>
+                  <tr><th scope="row">All calls</th><td>2,400</td><td>3,120</td></tr>
                 </tbody>
               </table>
-              <p>Open the invoices and check the months and the amounts yourself. They show that the cost went up. They do not show why.</p>
+              <p>Open the call log and count the calls yourself. It shows what the extra calls were about. It does not show why so many people asked about a bill.</p>
               <p>In your own question, open the finding, read its sources, then choose I checked this. Choose Sources disagree when a source contradicts it.</p>
             </div>}
           </div>
@@ -100,7 +100,7 @@ export function SampleCase({ onBack, onNew, onConnect }: SampleCaseProps) {
           <Button variant="secondary" aria-expanded={shareOpen} onClick={() => setShareOpen((open) => !open)}>{shareOpen ? 'Hide the example' : 'See an example'}</Button>
           {shareOpen && <div className="sample-summary">
             <h3>Example of a shared answer</h3>
-            <p><strong>Answer · Not checked:</strong> Our carrier raised shipping rates 30% on July 1. Shipping is the only cost that grew faster than sales.</p>
+            <p><strong>Answer · Not checked:</strong> The extra calls were customers asking about a bill. About the same number of people called to buy, so sales stayed flat.</p>
             <p><strong>C-001 · Not checked:</strong> {FINDING} Supports: E-001, {SOURCE_TITLE} (Not checked).</p>
             <p><strong>Not tested yet:</strong> {NOT_TESTED}</p>
             <p className="sample-note">Read the preview for anything sensitive before you copy or save it. Casebook prepares a file or text to paste; you choose where it goes.</p>

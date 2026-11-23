@@ -22,12 +22,12 @@ describe('first case guidance', () => {
   it('lets a person inspect a finding, its source and sharing labels without creating any records', async () => {
     const user = userEvent.setup()
     const { onNew, onImport } = renderEmpty()
-    await user.click(screen.getByRole('button', { name: 'Open the margin example' }))
+    await user.click(screen.getByRole('button', { name: 'Open the call center example' }))
     expect(screen.getByText('Made-up example · Read-only')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /E-001 supports this/ }))
-    expect(screen.getByRole('table', { name: 'Average shipping cost per order' })).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Calls by reason' })).toBeInTheDocument()
     expect(screen.getByText(/then choose I checked this/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'See an example' }))
     expect(screen.getByRole('heading', { name: 'Example of a shared answer' })).toBeInTheDocument()
@@ -37,7 +37,7 @@ describe('first case guidance', () => {
     for (const fn of Object.values(mocks.api)) expect(fn).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Back to your questions' }))
     expect(screen.getByRole('heading', { name: 'Check what your AI tells you' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open the margin example' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open the call center example' })).toHaveFocus())
   })
 
   it('opens client setup directly and returns to the example after setup closes', async () => {
@@ -46,16 +46,16 @@ describe('first case guidance', () => {
     await user.click(screen.getByRole('button', { name: 'Connect your AI' }))
     const dialog = await screen.findByRole('dialog', { name: 'Connect AI clients' })
     await user.click(within(dialog).getByRole('button', { name: 'Done' }))
-    await user.click(screen.getByRole('button', { name: 'Open the margin example' }))
+    await user.click(screen.getByRole('button', { name: 'Open the call center example' }))
     await user.click(screen.getByRole('button', { name: 'Connect your AI' }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Done' }))
-    expect(screen.getByRole('heading', { name: 'Why did our profit margin fall from 40% to 37% in Q3?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Why did calls go up 30% in October when sales stayed flat?' })).toBeInTheDocument()
   })
 
   it('starts a real case through the existing create action', async () => {
     const user = userEvent.setup()
     const { onNew } = renderEmpty()
-    await user.click(screen.getByRole('button', { name: 'Open the margin example' }))
+    await user.click(screen.getByRole('button', { name: 'Open the call center example' }))
     await user.click(screen.getByRole('button', { name: 'New question' }))
     expect(onNew).toHaveBeenCalledOnce()
     expect(screen.queryByRole('article')).not.toBeInTheDocument()
