@@ -1,5 +1,17 @@
 # Casebook
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-title-casebook-dark.png">
+  <img src="docs/images/readme-title-casebook.png" alt="Casebook: Your AI gives you possible causes. You check which are true. Beside it, the question Why did calls go up 30% in October when sales stayed the same?, its answer with 2 of 9 sources checked by you, and three findings: one you checked, one where the sources disagree, and one ruled out." width="100%">
+</picture>
+
+<p align="center">
+  <a href="https://github.com/jameskbb/casebook/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/jameskbb/casebook/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
+  <a href="https://github.com/jameskbb/casebook/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/jameskbb/casebook?sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=2e6b4e"></a>
+  <a href="docs/install.md"><img alt="Platforms" src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20CLI-23476b?style=for-the-badge"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/jameskbb/casebook?style=for-the-badge&label=License&color=blue"></a>
+</p>
+
 You ask AI why a number went up. It comes back with a long list of possible causes and some big statements, all written as if it were sure. You cannot tell which ones are true.
 
 Casebook keeps each one next to the report, email or person it came from. You check those sources yourself, and the answer you send shows which parts you checked.
@@ -132,13 +144,6 @@ Casebook is a desktop app and a command line tool named `casebook`; both open th
 - [Installing Casebook](docs/install.md#command-line-tool): the command line tool, and [the commands you use most](docs/install.md#everyday-commands).
 - [Development](docs/development.md): building and testing from source.
 - [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md).
-
-<p align="center">
-  <a href="https://github.com/jameskbb/casebook/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/jameskbb/casebook/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI"></a>
-  <a href="https://github.com/jameskbb/casebook/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/jameskbb/casebook?sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=2e6b4e"></a>
-  <a href="docs/install.md"><img alt="Platforms" src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20CLI-23476b?style=for-the-badge"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/jameskbb/casebook?style=for-the-badge&label=License&color=blue"></a>
-</p>
 
 ## License
 
