@@ -4,7 +4,7 @@ You ask AI why a number went up. It comes back with a long list of possible caus
 
 Casebook keeps each one next to the report, email or person it came from. You check those sources yourself, and the answer you send shows which parts you checked.
 
-Casebook is free, for Windows and Mac, and runs on your own computer with no account. It works with AI tools that can connect to apps on your computer, such as Claude Code, Codex, the Claude desktop app, Cursor and VS Code. It does not work with ChatGPT yet.
+Casebook is free, for Windows and Mac, and runs on your own computer with no account. It works with AI tools that can connect to apps on your computer, such as Claude Code, Codex, the Claude desktop app, Cursor and VS Code. The ChatGPT website cannot reach apps on your computer, so it cannot use Casebook.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/detail-dark.png">
@@ -35,7 +35,7 @@ You read the billing notice and choose **I checked this**. You ask the billing t
 
 > The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
-Your AI saved nine sources in all. Under the answer, Casebook shows **2 of 9 sources checked by you**, and so does the answer you send.
+The question now has nine sources. Under the answer, Casebook shows **2 of 9 sources checked by you**, and so does the answer you send.
 
 Now your boss asks "how do you know?" You can say: I read the billing notice and spoke to the billing team lead myself. The AI ruled out ads and prices, and I have not checked those two sources yet. The sources disagree about waiting.
 
@@ -91,10 +91,10 @@ A finding's label comes from its sources, such as **2 of 3 sources checked by yo
 
 - **Sources disagree**: a source goes against the finding. It stays that way until you decide.
 - **You decided this holds**: you looked at both sides and chose **It still holds**.
-- **Ruled out**: the finding turned out to be wrong. It is kept, so nobody checks the same idea twice.
+- **Ruled out**: the finding turned out to be wrong. It is kept, so nobody looks into the same idea again.
 - **Replaced**: a newer finding took its place.
 
-Casebook cannot tell whether you really opened a source. What it does guarantee: your AI cannot mark a source **You checked this**, and if your AI rewrites a finding you decided on, or the answer you checked, your check comes off. When you add a source yourself, tick **I have looked at this source myself** if you have.
+Casebook cannot tell whether you really opened a source. Your AI cannot mark a source **You checked this**. If your AI rewrites a finding you decided on, or the answer you checked, your check comes off. When you add a source yourself, tick **I have looked at this source myself** if you have.
 
 ## Share the answer
 
