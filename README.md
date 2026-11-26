@@ -62,7 +62,7 @@ What your AI saves appears in the app within a few seconds.
 
 1. Download the app for Windows or Mac from the [Releases page](https://github.com/jameskbb/casebook/releases). [Installing Casebook](docs/install.md#desktop-app) says which file to take.
 2. Open it. Windows and Mac show a warning the first time you open it. The install guide shows how to get past it.
-3. Choose **Connect your AI** on the first screen and pick the AI tool you use.
+3. Choose **Connect your AI** on the first screen.
 
 If Casebook finds Claude Code, Codex or the Claude desktop app on your computer, choose **Connect it for me**. For another AI tool, send what the app shows to whoever set it up. To look around first, choose **Open the call center example**.
 
@@ -94,7 +94,7 @@ A finding's label comes from its sources, such as **2 of 3 sources checked by yo
 - **Ruled out**: the finding turned out to be wrong. It is kept, so nobody looks into the same idea again.
 - **Replaced**: a newer finding took its place.
 
-Casebook cannot tell whether you really opened a source. Your AI cannot mark a source **You checked this**. If your AI rewrites a finding you decided on, or the answer you checked, your check comes off. When you add a source yourself, tick **I have looked at this source myself** if you have.
+Casebook cannot tell whether you really opened a source. Your AI cannot mark a source **You checked this**. Claude Code and Codex can run Casebook's own commands on your computer, though, and those can mark the answer checked in your name. If your AI rewrites a finding you decided on, or the answer you checked, your check comes off. When you add a source yourself, tick **I have looked at this source myself** if you have.
 
 ## Share the answer
 
@@ -112,7 +112,7 @@ The shared answer is word for word what is saved in Casebook. [Share a question]
 - Casebook goes online only when you choose **Look for updates...** in **Settings** and then **Look now**. It downloads nothing, so you update it yourself.
 - Your AI tool can read what is saved in Casebook. Like anything else you give it, that goes to the company that makes the tool.
 - Your AI can add sources, add and change findings, and write the answer. It cannot change or delete a source, and it cannot delete a finding.
-- Casebook is for one person on one computer. To move a question to another computer, save it as a file ([how](docs/sharing.md#move-a-question-or-hand-over-a-copy)).
+- Casebook is for one person on one computer. To move a question to another computer, save a copy of it ([how](docs/sharing.md#move-a-question-or-hand-over-a-copy)). Your checks do not come with it, so you check its sources again there.
 
 ## Guides
 
@@ -128,7 +128,7 @@ The shared answer is word for word what is saved in Casebook. [Share a question]
 Casebook is a desktop app and a command line tool named `casebook`; both open the same questions. The command line tool also runs the MCP server, the connection your AI uses to read and save questions. Linux has the command line tool only, and checking sources needs the app.
 
 - [Claude Code guide](docs/claude-code.md) and [Codex guide](docs/codex.md): connect from a terminal, and how to undo it.
-- [MCP guide](docs/mcp.md): Claude Desktop, Cursor, VS Code and other tools, and [what a new AI session reads](docs/mcp.md#what-a-new-ai-session-reads).
+- [MCP guide](docs/mcp.md): the Claude desktop app, Cursor, VS Code and other tools, and [what a new AI session reads](docs/mcp.md#what-a-new-ai-session-reads).
 - [Installing Casebook](docs/install.md#command-line-tool): the command line tool, and [the commands you use most](docs/install.md#everyday-commands).
 - [Development](docs/development.md): building and testing from source.
 - [Architecture](docs/architecture.md), [Engine API reference](docs/api.md), [Building releases](docs/building-releases.md) and the [agent evaluation](scripts/agent-eval/README.md).
