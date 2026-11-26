@@ -35,7 +35,7 @@ You read the billing notice and choose **I checked this**. You ask the billing t
 
 > The extra calls were customers asking about a bill. A billing mistake on October 3 charged some customers twice. About the same number of people called to buy, so sales stayed the same.
 
-The question now has nine sources. Under the answer, Casebook shows **2 of 9 sources checked by you**, and so does the answer you send.
+The question now has nine sources. Under the answer, Casebook shows **2 of 9 sources checked by you**. The answer you send shows the same count.
 
 Now your boss asks "how do you know?" You can say: I read the billing notice and spoke to the billing team lead myself. The AI ruled out ads and prices, and I have not checked those two sources yet. The sources disagree about waiting.
 
