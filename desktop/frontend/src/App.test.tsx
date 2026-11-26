@@ -76,7 +76,7 @@ describe('App main pane states', () => {
     expect(await within(main).findByRole('heading', { name: 'Check what your AI tells you' })).toBeInTheDocument()
     expect(
       within(main).getByText(
-        'You ask your AI why a number moved, and it gives you an answer. This app keeps what it found, where each finding came from, and which ones you have checked yourself.',
+        'You ask your AI why a number went up. It comes back with possible causes that all sound sure. This app keeps each one with the source it came from, so you can check which ones are true.',
       ),
     ).toBeInTheDocument()
     expect(within(main).getByRole('button', { name: 'Connect your AI' })).toHaveClass('btn-primary')

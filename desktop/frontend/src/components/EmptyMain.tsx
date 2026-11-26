@@ -35,7 +35,7 @@ export function EmptyMain({ onNew, onImport }: EmptyMainProps) {
           <EmptyState
             icon={Inbox}
             heading="Check what your AI tells you"
-            body="You ask your AI why a number moved, and it gives you an answer. This app keeps what it found, where each finding came from, and which ones you have checked yourself."
+            body="You ask your AI why a number went up. It comes back with possible causes that all sound sure. This app keeps each one with the source it came from, so you can check which ones are true."
           />
           <ol className="empty-main-steps" aria-label="How to use it">
             <li><strong>Connect your AI.</strong> You do this once.</li>
