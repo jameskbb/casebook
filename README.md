@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-title-casebook-dark.png">
-  <img src="docs/images/readme-title-casebook.png" alt="Casebook: Your AI gives you possible causes. You check which are true. Beside it, the question Why did calls go up 30% in October when sales stayed the same?, its answer with 2 of 9 sources checked by you, and three findings: one you checked, one where the sources disagree, and one ruled out." width="100%">
+  <img src="docs/images/readme-title-casebook.png" alt="Casebook: Your AI gives you possible causes. You check which are true. Beside it, the call center question and its findings." width="100%">
 </picture>
 
 <p align="center">
@@ -38,7 +38,7 @@ The chat does not say which of these are true.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-hero-split-dark.png">
-  <img src="docs/images/readme-hero-split.png" alt="Illustrative Claude Code session on the left: asked why calls went up in October, the AI lists four causes as if sure, saves them in Casebook and says which sources it did not open. On the right, Casebook shows the findings with their sources: the billing notice marked You checked this, other sources Not checked, and Callers waited too long marked Sources disagree, with one source backing it and one going against it." width="100%">
+  <img src="docs/images/readme-hero-split.png" alt="An AI chat lists four causes as if sure. Beside it, Casebook shows the sources behind each one, which you checked, and where they disagree." width="100%">
 </picture>
 
 Your AI saves each cause in Casebook as a **finding**, next to its **source**: the report, the email or the person it came from. To **check** a source, you open it and see whether it says what the AI wrote. Here is what the sources say:
@@ -95,7 +95,7 @@ Open a question. The answer is at the top, with each finding and its sources und
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/investigation-dark.png">
-  <img src="docs/screenshots/investigation.png" alt="What backs this up, for the call center answer: three findings, each with how many of its sources you checked and its sources listed under it as links. Each source is marked Not checked, AI checked the source or You checked this. Below them, Where sources disagree shows the finding Callers waited too long and hung up before buying, with the sales manager backing it, the 40 second waiting times going against it, and an outlined Decide button." width="100%">
+  <img src="docs/screenshots/investigation.png" alt="What backs this up, for the call center answer: each finding with its sources, each marked Not checked, AI checked the source or You checked this. Below, Where sources disagree shows the waiting finding with a source on each side and a Decide button." width="100%">
 </picture>
 
 1. Choose **Check the next source**. Casebook shows one source at a time, with the finding it is about.
