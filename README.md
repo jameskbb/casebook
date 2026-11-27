@@ -36,6 +36,11 @@ The AI comes back with four possible causes. Each one sounds sure:
 
 The chat does not say which of these are true.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-hero-split-dark.png">
+  <img src="docs/images/readme-hero-split.png" alt="Illustrative Claude Code session on the left: asked why calls went up in October, the AI lists four causes as if sure, saves them in Casebook and says which sources it did not open. On the right, Casebook shows the findings with their sources: the billing notice marked You checked this, other sources Not checked, and Callers waited too long marked Sources disagree, with one source backing it and one going against it." width="100%">
+</picture>
+
 Your AI saves each cause in Casebook as a **finding**, next to its **source**: the report, the email or the person it came from. To **check** a source, you open it and see whether it says what the AI wrote. Here is what the sources say:
 
 - **The new ad: ruled out.** The marketing calendar shows no new ads in October.
